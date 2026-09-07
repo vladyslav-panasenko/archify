@@ -159,6 +159,9 @@ function download(content, name, type) {
 function App() {
   const [state, setState] = useState(null),
     [draft, setDraft] = useState(null);
+  // React Flow measurements are presentation state, never diagram JSON. Keep
+  // them across coordinate updates or React Flow hides and remeasures each node.
+  const [measurements, setMeasurements] = useState({});
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [selection, setSelection] = useState([]),
@@ -233,6 +236,7 @@ function App() {
   });
 
   function load(data) {
+    setMeasurements({});
     assertDocument(data.document);
     setState(history(data.document));
     setDraft(null);
@@ -370,6 +374,7 @@ function App() {
         y = Math.min(...members.map((c) => c.pos[1])) - pad;
       return {
         id: `b:${index}`,
+        measured: measurements[`b:${index}`],
         type: "boundary",
         position: { x, y },
         data: b,
@@ -392,6 +397,7 @@ function App() {
       ...boundaries,
       ...cs.map((c) => ({
         id: `c:${c.id}`,
+        measured: measurements[`c:${c.id}`],
         type: "component",
         position: { x: c.pos[0], y: c.pos[1] },
         data: c,
@@ -400,7 +406,7 @@ function App() {
         ariaLabel: `${c.label}, ${c.type}`,
       })),
     ];
-  }, [documentModel, selection]);
+  }, [documentModel, selection, measurements]);
   const edges = useMemo(
     () =>
       (documentModel?.connections || []).map((e, index) => ({
@@ -641,6 +647,16 @@ function App() {
               multiSelectionKeyCode="Shift"
               onlyRenderVisibleElements={false}
               onNodesChange={(changes) => {
+                const dimensions = changes.filter(c => c.type === "dimensions" && c.dimensions);
+                if (dimensions.length) setMeasurements(previous => {
+                  let next = previous;
+                  for (const { id, dimensions: measured } of dimensions) {
+                    if (previous[id]?.width === measured.width && previous[id]?.height === measured.height) continue;
+                    if (next === previous) next = { ...previous };
+                    next[id] = measured;
+                  }
+                  return next;
+                });
                 const selections = changes.filter(
                   (c) => c.type === "select" && c.id.startsWith("c:"),
                 );

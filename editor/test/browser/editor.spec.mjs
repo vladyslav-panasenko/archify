@@ -4,6 +4,35 @@ import os from "node:os";
 import path from "node:path";
 import { createEditorServer } from "../../server.mjs";
 
+test("nodes and connections remain visible throughout dragging", async ({ page }) => {
+  await page.goto("/");
+  const node = page.locator('.react-flow__node[data-id="c:api"]');
+  await node.click();
+  await expect(page.locator('.react-flow__edge')).toHaveCount(9);
+  await page.evaluate(() => {
+    window.dragVisualChanges = [];
+    window.dragObserver = new MutationObserver(records => {
+      for (const record of records) {
+        if (record.type === 'attributes' && record.target.matches('.react-flow__node') &&
+          (record.target.style.visibility === 'hidden' || record.oldValue?.includes('visibility: hidden'))) {
+          window.dragVisualChanges.push('node hidden');
+        }
+        for (const removed of record.removedNodes) {
+          if (removed.nodeType === 1 && (removed.matches('.react-flow__edge') || removed.querySelector('.react-flow__edge'))) window.dragVisualChanges.push('edge removed');
+        }
+      }
+    });
+    window.dragObserver.observe(document.querySelector('.react-flow'), { subtree: true, childList: true, attributes: true, attributeFilter: ['style'], attributeOldValue: true });
+  });
+  const box = await node.boundingBox();
+  const x = box.x + box.width / 2, y = box.y + box.height / 2;
+  await page.mouse.move(x, y); await page.mouse.down();
+  await page.mouse.move(x + 70, y + 25, { steps: 25 }); await page.mouse.up();
+  const changes = await page.evaluate(() => { window.dragObserver.disconnect(); return window.dragVisualChanges; });
+  expect(changes).toEqual([]);
+  await expect(page.locator('.react-flow__edge')).toHaveCount(9);
+});
+
 test("edit, undo, download, reopen and render a real architecture document", async ({
   page,
 }) => {
