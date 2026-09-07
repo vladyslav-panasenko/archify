@@ -10,6 +10,8 @@
 
 # Archify
 
+This private copy includes a **[visual JSON editor](editor/README.md)**. Open an architecture diagram, move components, save the updated JSON, and render it through Archify. Start with `cd editor`, `npm ci`, `npm run build`, then `npm start`.
+
 **Turn a codebase or system description into a polished, interactive system map — directly in chat.**
 
 Archify is a Node.js rendering and validation system for Cursor, Claude Code, Codex CLI, and OpenCode. Agents produce typed JSON IR; Archify deterministically compiles it into HTML/SVG.
