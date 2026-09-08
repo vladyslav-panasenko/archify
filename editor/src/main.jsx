@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ReactFlow,
   Background,
   Controls,
+  NodeResizer,
   Handle,
   Position,
   BaseEdge,
@@ -41,10 +42,19 @@ const kinds = {
   messagebus: "MQ",
   external: "EX",
 };
+const Editing = createContext(null);
 
 function ComponentNode({ data, selected }) {
+  const editing = useContext(Editing);
+  const resize = (_, rect) => document => patchComponent(document, data.id, {
+    pos: [rect.x, rect.y], size: [rect.width, rect.height],
+  });
   return (
     <div className={`component kind-${data.type} ${selected ? "chosen" : ""}`}>
+      <NodeResizer isVisible={selected && editing?.enabled} minWidth={40} minHeight={24}
+        onResizeStart={() => editing.start()}
+        onResize={(event, rect) => editing.update(resize(event, rect))}
+        onResizeEnd={(event, rect) => editing.end(resize(event, rect))}/>
       {Object.entries(sides).map(([side, position]) => (
         <React.Fragment key={side}>
           <Handle
@@ -438,7 +448,7 @@ function App() {
       event.stopPropagation();
       return;
     }
-    if (editingText || busy || rawDirty || !state) return;
+    if (editingText || busy || rawDirty || !state || dragBase.current) return;
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       void saveJson(session.writable);
@@ -479,7 +489,12 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <Editing.Provider value={{
+      enabled: !busy && !rawDirty,
+      start: () => { dragBase.current = state.present; cancelled.current = false; },
+      update: edit => { if (dragBase.current && !cancelled.current) setDraft(previous => edit(previous || dragBase.current)); },
+      end: edit => { if (dragBase.current && !cancelled.current) change(edit(dragBase.current)); dragBase.current = null; setDraft(null); },
+    }}><div className="app">
       <header className="toolbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true">
@@ -1024,7 +1039,7 @@ function App() {
           />
         )}
       </dialog>
-    </div>
+    </div></Editing.Provider>
   );
 }
 

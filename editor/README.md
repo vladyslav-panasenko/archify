@@ -28,6 +28,7 @@ For development, use `npm run dev` (also accepts `-- --file ...` and `-- --port 
 
 - Drag components; Shift-click to select several. Drag a selection to move it together.
 - Use the Properties panel for exact X/Y coordinates, width, height, labels and sublabels.
+- Resize selected components with the corner/edge handles. Each resize is one undoable edit; Escape cancels it.
 - Arrow keys move selected components by one diagram unit; Shift+Arrow moves by ten.
 - Use the zoom buttons or mouse wheel. Hold Space while dragging to pan; middle/right mouse dragging also pans.
 - Enable **Snap to grid** for 10-unit drag increments. Escape cancels an active drag.
