@@ -4,6 +4,7 @@ import {
   ReactFlow,
   Background,
   Controls,
+  ViewportPortal,
   NodeResizer,
   EdgeLabelRenderer,
   useReactFlow,
@@ -32,7 +33,7 @@ import "./style.css";
 import { adapterFor, editingOptions, connections, sourceNodes, nodeKey, edgeKey } from './adapters/index.mjs';
 import { messageRange } from './adapters/sequence.mjs';
 import { automaticLabelPoint } from './label-placement.mjs';
-import { arrange, arrangements } from './arrangement.mjs';
+import { arrange, arrangements, snapPositions, snapResize } from './arrangement.mjs';
 
 const sides = {
   top: Position.Top,
@@ -53,9 +54,10 @@ const Editing = createContext(null);
 
 function ComponentNode({ data, selected }) {
   const editing = useContext(Editing);
-  const resize = (_, rect) => document => patchComponent(document, data.id, {
-    pos: [rect.x, rect.y], size: [rect.width, rect.height],
-  });
+  const resize = (event, rect) => document => {
+    const result = editing.resize(data.id,rect,event.altKey);
+    return patchComponent(document,data.id,{pos:[result.x,result.y],size:[result.width,result.height]});
+  };
   return (
     <div className={`component kind-${data.type} ${selected ? "chosen" : ""}`}>
       <NodeResizer isVisible={selected && editing?.enabled && editing.resizable !== false} minWidth={editing.minSize[0]} minHeight={editing.minSize[1]}
@@ -222,6 +224,7 @@ function App() {
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [canvasVersion, setCanvasVersion] = useState(0);
+  const [gridSize,setGridSize] = useState(10), [smartSnap,setSmartSnap] = useState(false), [guides,setGuides] = useState([]);
   const [selection, setSelection] = useState([]),
     [edgeIndex, setEdgeIndex] = useState(null);
   const [error, setError] = useState(""),
@@ -292,6 +295,7 @@ function App() {
   useEffect(() => {
     const cancel = () => {
       if (dragBase.current) {
+        setGuides([]);
         cancelled.current = true;
         dragBase.current = null;
         setDraft(null);
@@ -508,6 +512,7 @@ function App() {
       "input,textarea,select,[contenteditable]",
     );
     if (event.key === "Escape" && dragBase.current) {
+      setGuides([]);
       cancelled.current = true;
       setDraft(null);
       dragBase.current = null;
@@ -559,9 +564,10 @@ function App() {
       enabled: !busy && !rawDirty,
       minSize: options.minSize,
       resizable: options.resizable,
+      resize: (id,rect,bypass) => { const result=snapResize(dragBase.current || state.present,id,rect,{grid:snap?gridSize:0,smart:smartSnap,bypass}); setGuides(result.guides); return result.rect; },
       start: () => { dragBase.current = state.present; cancelled.current = false; },
       update: edit => { if (dragBase.current && !cancelled.current) setDraft(previous => edit(previous || dragBase.current)); },
-      end: edit => { if (edit && dragBase.current && !cancelled.current) change(edit(dragBase.current)); dragBase.current = null; setDraft(null); },
+      end: edit => { if (edit && dragBase.current && !cancelled.current) change(edit(dragBase.current)); dragBase.current = null; setDraft(null); setGuides([]); },
     }}><div className="app">
       <header className="toolbar">
         <div className="brand">
@@ -736,8 +742,8 @@ function App() {
               fitViewOptions={{ padding: 0.2 }}
               minZoom={0.15}
               maxZoom={3}
-              snapToGrid={snap}
-              snapGrid={[10, 10]}
+              snapToGrid={documentModel.diagram_type !== 'architecture' && snap}
+              snapGrid={[gridSize,gridSize]}
               nodesConnectable={false}
               deleteKeyCode={null}
               nodesDraggable={!busy && !rawDirty}
@@ -778,7 +784,7 @@ function App() {
                     c.position &&
                     c.id.startsWith("c:"),
                 );
-                if (positions.length && dragBase.current && !cancelled.current)
+                if (positions.length && dragBase.current && !cancelled.current && documentModel.diagram_type !== 'architecture')
                   setDraft((previous) =>
                     moveComponents(
                       previous || dragBase.current,
@@ -806,27 +812,34 @@ function App() {
                 dragBase.current = state.present;
                 cancelled.current = false;
               }}
-              onNodeDragStop={(_, node, draggedNodes) => {
+              onNodeDrag={(event,node,draggedNodes) => {
+                if (!dragBase.current || cancelled.current || documentModel.diagram_type !== 'architecture') return;
+                const result=snapPositions(dragBase.current,new Map((draggedNodes?.length?draggedNodes:[node]).filter(n=>n.id.startsWith('c:')).map(n=>[n.id.slice(2),[n.position.x,n.position.y]])),{grid:snap?gridSize:0,smart:smartSnap,bypass:event.altKey});
+                setGuides(result.guides); setDraft(moveComponents(dragBase.current,result.positions));
+              }}
+              onNodeDragStop={(event, node, draggedNodes) => {
                 if (!cancelled.current && dragBase.current)
                   change(
                     moveComponents(
                       dragBase.current,
-                      new Map(
+                      snapPositions(dragBase.current,new Map(
                         (draggedNodes?.length ? draggedNodes : [node])
                           .filter((n) => n.id.startsWith("c:"))
                           .map((n) => [
                             n.id.slice(2),
                             [n.position.x, n.position.y],
                           ]),
-                      ),
+                      ),{grid:snap?gridSize:0,smart:smartSnap,bypass:event.altKey}).positions,
                     ),
                   );
                 dragBase.current = null;
                 setDraft(null);
+                setGuides([]);
               }}
             >
               <Background gap={20} size={1} color="#cdd7dc" />
               <Controls showInteractive={false} />
+              <ViewportPortal><div className="snap-guides" aria-hidden="true">{guides.map((g,i)=><div key={i} className={`snap-guide ${g.axis?'horizontal':'vertical'}`} style={g.axis?{top:g.value}:{left:g.value}}><span>{g.kind}</span></div>)}</div></ViewportPortal>
             </ReactFlow>
           )}
           <div className="canvas-help">
@@ -925,6 +938,7 @@ function App() {
                   <fieldset disabled={busy || !!draft}>
                     {documentModel.diagram_type === 'architecture' && selection.length > 1 && <details open><summary>Arrange selection</summary><div className="button-row">{Object.entries(arrangements).map(([action,label]) => <button key={action} disabled={action.startsWith('distribute') && selection.length < 3} onClick={() => { try { change(arrange(state.present,selection,action)); } catch(e) { setError(e.message); } }}>{label}</button>)}</div></details>}
                     <legend>Component</legend>
+                    {documentModel.diagram_type === 'architecture' && <details><summary>Snapping</summary><label className="field">Grid spacing<input type="number" min="1" max="200" value={gridSize} onChange={e=>{const n=Number(e.target.value);if(Number.isInteger(n)&&n>=1&&n<=200)setGridSize(n);}}/></label><label><input type="checkbox" checked={smartSnap} onChange={e=>setSmartSnap(e.target.checked)}/> Smart guides</label><p className="muted">Hold Alt while dragging or resizing to bypass snapping.</p></details>}
                     {adapterFor(documentModel) && <div className="logical-properties">
                       <p className="muted">{options.hint || 'Dragging snaps horizontally to columns and adjusts the vertical offset within the same lane.'}</p>
                       {options.fields.map(field => <Field key={field} label={{ col: 'Column', yOffset: 'Vertical offset', stage: 'Stage', row: 'Row', order:'Participant order' }[field] || field} value={selected[field] ?? 0} number onCommit={value => applyPatch({ [field]: value })}/>)}

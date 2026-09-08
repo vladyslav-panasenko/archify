@@ -715,3 +715,10 @@ legend {
 .properties details .button-row { flex-wrap: wrap; justify-content: flex-start; }
 .properties details { margin-bottom: 16px; }
 .properties details summary { margin-bottom: 8px; cursor: pointer; }
+.snap-guides { pointer-events: none; }
+.snap-guide { position:absolute; z-index:20; border-color:#087b72; border-style:dashed; border-width:0; }
+.snap-guide.vertical { top:-5000px; height:10000px; border-left-width:1px; }
+.snap-guide.horizontal { left:-5000px; width:10000px; border-top-width:1px; }
+.snap-guide span { position:absolute; color:#087b72; background:#fff; font-size:10px; white-space:nowrap; }
+.snap-guide.vertical span { top:5100px; left:4px; }
+.snap-guide.horizontal span { left:5100px; top:4px; }
