@@ -4,6 +4,14 @@ import fs from 'node:fs/promises';
 import { moveComponents, components, patchComponent } from '../src/document.mjs';
 import { validate, render } from '../server.mjs';
 
+test('lifecycle movement preserves lane membership and authored transitions', async () => {
+  const doc = JSON.parse(await fs.readFile(new URL('../../archify/examples/agent-run.lifecycle.json', import.meta.url)));
+  const node = components(doc)[0]; const moved = moveComponents(doc, new Map([[node.id, [node.pos[0] + 154, node.pos[1] + 5]]]));
+  validate(moved); assert.equal(moved.states[0].col, 1); assert.equal(moved.states[0].yOffset, 5); assert.equal(moved.states[0].lane, doc.states[0].lane);
+  assert.deepEqual(moved.transitions, doc.transitions); assert.equal(moved.states[0].pos, undefined);
+  assert.match(await render(doc), /<svg/);
+});
+
 test('dataflow movement updates stage/row and retains flows and metadata', async () => {
   const doc = JSON.parse(await fs.readFile(new URL('../../archify/examples/event-stream.dataflow.json', import.meta.url)));
   const node = components(doc)[0]; const moved = moveComponents(doc, new Map([[node.id, [node.pos[0] + 215, node.pos[1] + 114]]]));

@@ -1,6 +1,16 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs/promises';
 
+test('lifecycle JSON edits offsets and renders its original schema', async ({ page }) => {
+  const doc = JSON.parse(await fs.readFile(new URL('../../../archify/examples/agent-run.lifecycle.json', import.meta.url)));
+  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Sample Web App' })).toBeVisible();
+  await page.locator('input[type=file]').setInputFiles({ name: 'lifecycle.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(doc)) });
+  await page.locator('.component-list button').first().click(); await page.getByLabel('Vertical offset', { exact: true }).fill('4'); await page.getByLabel('Vertical offset', { exact: true }).press('Tab');
+  await page.getByRole('button', { name: 'JSON', exact: true }).click(); const edited = JSON.parse(await page.getByLabel('Diagram JSON').inputValue());
+  expect(edited.states[0].yOffset).toBe(4); expect(edited.transitions).toEqual(doc.transitions);
+  await page.getByRole('button', { name: 'Undo', exact: true }).click(); await page.getByRole('button', { name: 'Render HTML', exact: true }).click(); await expect(page.getByRole('dialog')).toBeVisible();
+});
+
 test('dataflow JSON edits stage and row fields without losing flows', async ({ page }) => {
   const doc = JSON.parse(await fs.readFile(new URL('../../../archify/examples/event-stream.dataflow.json', import.meta.url)));
   await page.goto('/'); await expect(page.getByRole('heading', { name: 'Sample Web App' })).toBeVisible();
