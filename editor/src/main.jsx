@@ -32,6 +32,7 @@ import "./style.css";
 import { adapterFor, editingOptions, connections, sourceNodes, nodeKey, edgeKey } from './adapters/index.mjs';
 import { messageRange } from './adapters/sequence.mjs';
 import { automaticLabelPoint } from './label-placement.mjs';
+import { arrange, arrangements } from './arrangement.mjs';
 
 const sides = {
   top: Position.Top,
@@ -922,6 +923,7 @@ function App() {
                     <code>{selected.id}</code>
                   </div>
                   <fieldset disabled={busy || !!draft}>
+                    {documentModel.diagram_type === 'architecture' && selection.length > 1 && <details open><summary>Arrange selection</summary><div className="button-row">{Object.entries(arrangements).map(([action,label]) => <button key={action} disabled={action.startsWith('distribute') && selection.length < 3} onClick={() => { try { change(arrange(state.present,selection,action)); } catch(e) { setError(e.message); } }}>{label}</button>)}</div></details>}
                     <legend>Component</legend>
                     {adapterFor(documentModel) && <div className="logical-properties">
                       <p className="muted">{options.hint || 'Dragging snaps horizontally to columns and adjusts the vertical offset within the same lane.'}</p>

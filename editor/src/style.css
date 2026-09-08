@@ -711,3 +711,7 @@ legend {
     transition: none !important;
   }
 }
+.properties fieldset { min-width: 0; }
+.properties details .button-row { flex-wrap: wrap; justify-content: flex-start; }
+.properties details { margin-bottom: 16px; }
+.properties details summary { margin-bottom: 8px; cursor: pointer; }
