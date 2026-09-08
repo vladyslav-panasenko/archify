@@ -1,7 +1,8 @@
 import { workflow } from './workflow.mjs';
 import { dataflow } from './dataflow.mjs';
 import { lifecycle } from './lifecycle.mjs';
-const adapters = { workflow, dataflow, lifecycle };
+import { sequence } from './sequence.mjs';
+const adapters = { workflow, dataflow, lifecycle, sequence };
 export const adapterFor = document => adapters[document?.diagram_type];
 export const supportedTypes = ['architecture', ...Object.keys(adapters)];
 export const nodeKey = document => adapterFor(document)?.nodesKey || 'components';

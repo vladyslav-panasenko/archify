@@ -3,6 +3,8 @@ export default defineConfig({
   testDir: "./test/browser",
   timeout: 30000,
   fullyParallel: false,
+  // All UI tests share one loopback server, which intentionally allows one render.
+  workers: 1,
   use: {
     baseURL: "http://127.0.0.1:4175",
     viewport: { width: 1440, height: 940 },

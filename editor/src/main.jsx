@@ -30,6 +30,7 @@ import {
 } from "./document.mjs";
 import "./style.css";
 import { adapterFor, editingOptions, connections, sourceNodes, nodeKey, edgeKey } from './adapters/index.mjs';
+import { messageRange } from './adapters/sequence.mjs';
 
 const sides = {
   top: Position.Top,
@@ -55,7 +56,7 @@ function ComponentNode({ data, selected }) {
   });
   return (
     <div className={`component kind-${data.type} ${selected ? "chosen" : ""}`}>
-      <NodeResizer isVisible={selected && editing?.enabled} minWidth={editing.minSize[0]} minHeight={editing.minSize[1]}
+      <NodeResizer isVisible={selected && editing?.enabled && editing.resizable !== false} minWidth={editing.minSize[0]} minHeight={editing.minSize[1]}
         onResizeStart={() => editing.start()}
         onResize={(event, rect) => editing.update(resize(event, rect))}
         onResizeEnd={(event, rect) => editing.end(resize(event, rect))}/>
@@ -92,6 +93,7 @@ function BoundaryNode({ data }) {
     </div>
   );
 }
+function LifelineNode() { return <div className="lifeline"/>; }
 function DragPoint({ point, label, edit, children, className = '', onRemove }) {
   const editing = useContext(Editing), flow = useReactFlow(), drag = useRef(null);
   return <button className={`canvas-drag-point nodrag nopan ${className}`} aria-label={label}
@@ -132,6 +134,7 @@ function ConnectionEdge(props) {
       ...points[Math.floor(points.length / 2)],
     ];
   }
+  if (data.sequenceLine) result = [data.sequenceLine.map((p,i)=>`${i?'L':'M'} ${p[0]} ${p[1]}`).join(' '), ...data.labelAt];
   const point = data.labelAt || [
     result[1] + (data.labelDx || 0),
     result[2] + (data.labelDy || 0),
@@ -162,7 +165,7 @@ function ConnectionEdge(props) {
       </DragPoint>)}</EdgeLabelRenderer>}</>
   );
 }
-const nodeTypes = { component: ComponentNode, boundary: BoundaryNode },
+const nodeTypes = { component: ComponentNode, boundary: BoundaryNode, lifeline: LifelineNode },
   edgeTypes = { connection: ConnectionEdge };
 
 function Field({ label, value, onCommit, number = false }) {
@@ -462,7 +465,7 @@ function App() {
     });
     return [
       ...boundaries,
-      ...(options.regions?.(documentModel) || []).map(region => ({ id: region.id, type: 'boundary', data: { label: region.label }, position: { x: region.pos[0], y: region.pos[1] }, style: { width: region.size[0], height: region.size[1] }, measured: measurements[region.id], draggable: false, selectable: false, focusable: false, zIndex: -1 })),
+      ...(options.regions?.(documentModel) || []).map(region => ({ id: region.id, type: region.type || 'boundary', data: { label: region.label }, position: { x: region.pos[0], y: region.pos[1] }, style: { width: region.size[0], height: region.size[1] }, measured: measurements[region.id], draggable: false, selectable: false, focusable: false, zIndex: -1 })),
       ...cs.map((c) => ({
         id: `c:${c.id}`,
         measured: measurements[`c:${c.id}`],
@@ -483,7 +486,7 @@ function App() {
         target: `c:${e.to}`,
         sourceHandle: `source-${e.fromSide || "right"}`,
         targetHandle: `target-${e.toSide || "left"}`,
-        data: e,
+        data: options.edgeData?.(documentModel, e) || e,
         type: "connection",
         selected: index === edgeIndex,
         markerEnd: { type: "arrowclosed", color: "#82929c" },
@@ -550,6 +553,7 @@ function App() {
     <Editing.Provider value={{
       enabled: !busy && !rawDirty,
       minSize: options.minSize,
+      resizable: options.resizable,
       start: () => { dragBase.current = state.present; cancelled.current = false; },
       update: edit => { if (dragBase.current && !cancelled.current) setDraft(previous => edit(previous || dragBase.current)); },
       end: edit => { if (edit && dragBase.current && !cancelled.current) change(edit(dragBase.current)); dragBase.current = null; setDraft(null); },
@@ -916,7 +920,7 @@ function App() {
                     <legend>Component</legend>
                     {adapterFor(documentModel) && <div className="logical-properties">
                       <p className="muted">{options.hint || 'Dragging snaps horizontally to columns and adjusts the vertical offset within the same lane.'}</p>
-                      {options.fields.map(field => <Field key={field} label={{ col: 'Column', yOffset: 'Vertical offset', stage: 'Stage', row: 'Row' }[field] || field} value={selected[field] ?? 0} number onCommit={value => applyPatch({ [field]: value })}/>)}
+                      {options.fields.map(field => <Field key={field} label={{ col: 'Column', yOffset: 'Vertical offset', stage: 'Stage', row: 'Row', order:'Participant order' }[field] || field} value={selected[field] ?? 0} number onCommit={value => applyPatch({ [field]: value })}/>)}
                       {selected.lane && <label className="field">Lane<select value={selected.lane} onChange={e => applyPatch({ lane: e.target.value })}>{documentModel.lanes.map(lane => <option key={lane.id} value={lane.id}>{lane.label}</option>)}</select></label>}
                     </div>}
                     <Field
@@ -933,7 +937,7 @@ function App() {
                       value={selected.sublabel}
                       onCommit={(sublabel) => applyPatch({ sublabel })}
                     />
-                    <div className="field-grid">
+                    {options.resizable !== false && <div className="field-grid">
                       <Field
                         label="X"
                         value={selected.pos[0]}
@@ -966,7 +970,7 @@ function App() {
                           applyPatch({ size: [selected.size[0], h] })
                         }
                       />
-                    </div>
+                    </div>}
                     {documentModel.layout &&
                       Number.isInteger(selected.row) &&
                       Number.isInteger(selected.col) && (
@@ -992,6 +996,12 @@ function App() {
                   </div>
                   <fieldset disabled={busy}>
                     <legend>Routing</legend>
+                    {documentModel.diagram_type === 'sequence' ? <>
+                      <Field label="Message label" value={edge.label} onCommit={label=>edgePatch({label})}/>
+                      <Field label="Message Y" value={edge.y} number onCommit={y=>edgePatch({y})}/>
+                      <Field label="Message note" value={edge.note} onCommit={note=>edgePatch({note})}/>
+                      <p className="muted">Drag a message label vertically to adjust spacing. Allowed Y: {messageRange(documentModel,edgeIndex).join('–')}. Messages cannot cross each other or activation/segment boundaries. Messages on a boundary stay pinned.</p>
+                    </> : <>
                     {documentModel.diagram_type === 'architecture' && <button onClick={() => { change(removeConnection(state.present, edgeIndex)); setEdgeIndex(null); }}>Delete connection</button>}
                     <button onClick={() => { const from = items.find(c => c.id === edge.from), to = items.find(c => c.id === edge.to); edgePatch({ via: [...(edge.via || []), [(from.pos[0] + to.pos[0]) / 2, (from.pos[1] + to.pos[1]) / 2]] }); }}>Add waypoint</button>
                     <p className="muted">Drag numbered waypoints. Right-click a point, or focus it and press Delete, to remove it.</p>
@@ -1041,6 +1051,7 @@ function App() {
                       Blank coordinates restore automatic placement. Archify
                       computes the final route when rendering.
                     </p>
+                    </>}
                   </fieldset>
                 </>
               ) : (

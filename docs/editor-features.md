@@ -13,6 +13,6 @@ The editor edits Archify JSON. Archify owns final HTML rendering. Each feature b
 | F07 | Workflow support | Open/edit/save/render workflow JSON using its lane/column constraints. | Implemented |
 | F08 | Dataflow support | Open/edit/save/render dataflow JSON using its supported placement fields. | Implemented |
 | F09 | Lifecycle support | Open/edit/save/render lifecycle JSON using its supported placement fields. | Implemented |
-| F10 | Sequence support | Open/edit/save/render sequence JSON with participant ordering and message semantics preserved. | Pending |
+| F10 | Sequence support | Open/edit/save/render sequence JSON with participant ordering and message semantics preserved. | Implemented |
 
 The existing editor already has component dragging, multi-selection, numeric properties, JSON import/export, direct saving, undo/redo and HTML generation. Later diagram types expose only edits their schemas can represent; they do not acquire invented free-position fields. Tests must cover JSON round trips and the type's renderer as well as browser interaction.

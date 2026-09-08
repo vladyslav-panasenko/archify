@@ -1,8 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import { moveComponents, components, patchComponent } from '../src/document.mjs';
+import { moveComponents, components, patchComponent, patchConnection } from '../src/document.mjs';
 import { validate, render } from '../server.mjs';
+
+test('sequence reorder preserves messages; spacing cannot cross message or activation boundaries', async () => {
+  const doc = JSON.parse(await fs.readFile(new URL('../../archify/examples/cache-miss-request.sequence.json', import.meta.url)));
+  const node = components(doc)[0]; const moved = moveComponents(doc, new Map([[node.id, [node.pos[0] + 108, 500]]]));
+  validate(moved); assert.equal(moved.participants[1].id, node.id); assert.deepEqual(moved.messages, doc.messages); assert.deepEqual(moved.activations, doc.activations);
+  assert.equal(moved.participants[1].pos, undefined); assert.equal(moved.participants[1].order, undefined);
+  const spaced = patchConnection(doc,0,{y:186}); validate(spaced); assert.equal(spaced.messages[0].y,186);
+  assert.throws(()=>patchConnection(doc,0,{y:300}),/ordering/);
+  assert.equal(patchConnection(doc,0,{labelAt:[900,900]}).messages[0].y,219);
+  assert.throws(()=>patchComponent(doc,node.id,{size:[200,90]}),/sizes/);
+  assert.match(await render(spaced), /<svg/);
+});
 
 test('lifecycle movement preserves lane membership and authored transitions', async () => {
   const doc = JSON.parse(await fs.readFile(new URL('../../archify/examples/agent-run.lifecycle.json', import.meta.url)));

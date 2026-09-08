@@ -85,8 +85,10 @@ export function patchComponent(document, id, patch) {
   const item = sourceNodes(next).find((c) => c.id === id);
   if (!item) throw new Error(`Unknown component: ${id}`);
   for (const key of Object.keys(patch)) {
+    if (adapter?.patchNode?.(next, item, key, patch[key])) continue;
     if (adapter && key === 'pos') { adapter.move(next, item, patch.pos); continue; }
     if (adapter && key === 'size') {
+      if (adapter.resizable === false) throw new Error('This diagram type does not support individual sizes.');
       if (!patch.size.every((n, i) => Number.isFinite(n) && n >= adapter.minSize[i])) throw new Error(`Minimum size: ${adapter.minSize.join(' × ')}.`);
       [item.width, item.height] = patch.size; continue;
     }
@@ -112,6 +114,7 @@ export function patchConnection(document, index, patch) {
   const next = clone(document);
   const item = connections(next)[index];
   if (!item) throw new Error("Unknown connection.");
+  if (adapterFor(document)?.patchConnection) { adapterFor(document).patchConnection(next, index, patch); return next; }
   for (const key of Object.keys(patch)) {
     if (
       ![
@@ -135,7 +138,7 @@ export function patchConnection(document, index, patch) {
 export function moveComponents(document, positions) {
   const next = clone(document);
   const adapter = adapterFor(document);
-  for (const c of sourceNodes(next)) {
+  for (const c of [...sourceNodes(next)]) {
     const pos = positions.get(c.id);
     if (pos) {
       if (!pos.every(Number.isFinite))

@@ -207,7 +207,7 @@ test("Escape cancels a drag and a multi-selection moves in one undo step", async
   ).toBeDisabled();
   await page
     .locator('.react-flow__node[data-id="c:cache"]')
-    .click({ modifiers: ["Shift"] });
+    .click({ modifiers: ["Shift"], position: { x: 8, y: 8 } });
   await expect(page.locator(".react-flow__node.selected")).toHaveCount(2);
   const box = await api.boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
