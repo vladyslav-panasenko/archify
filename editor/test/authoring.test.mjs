@@ -7,6 +7,8 @@ import {createDiagram,addNode,saveEdge,saveLane,deleteLane,deleteNode} from '../
 import {saveStage,deleteStage} from '../src/topology.mjs';
 import {saveMessage,removeMessage,saveRange} from '../src/sequence-structure.mjs';
 import {patchSettings,settingFields} from '../src/settings.mjs';
+import {searchDiagram} from '../src/search.mjs';
+test('search finds connection IDs and labels without modifying source',()=>{const doc=sample(),before=JSON.stringify(doc);assert.equal(searchDiagram(doc,'AB')[0].kind,'connection');assert.equal(searchDiagram(doc,'a').filter(r=>r.kind==='node').length,1);assert.equal(JSON.stringify(doc),before);});
 test('settings preserve metadata and expose only type-specific supported fields',()=>{
  const doc=sample();doc.meta.custom={preserved:true};const next=patchSettings(doc,{title:'New title',visual_preset:'blueprint',canvasWidth:'1000',canvasHeight:'800'});assert.deepEqual(next.meta.custom,doc.meta.custom);assert.deepEqual(next.connections,doc.connections);assert.deepEqual(next.meta.viewBox,[1000,800]);assert.ok(!settingFields('workflow').some(f=>f.key==='column_fit'));assert.throws(()=>patchSettings(doc,{canvasWidth:'10',canvasHeight:'20'}));
 });

@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+test('keyboard search focuses a connection without editing JSON',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Search',exact:true}).click();const input=page.getByLabel('Find items and connections');await input.fill('read-through');await input.press('ArrowDown');await page.keyboard.press('Enter');await expect(page.locator('.react-flow__edge.selected')).toHaveCount(1);await expect(page.getByRole('button',{name:'Undo',exact:true})).toBeDisabled();await page.getByRole('button',{name:'Fit selection',exact:true}).click();
+});
+
 test('settings update the JSON title and rendered output',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByLabel('Title',{exact:true}).fill('Updated system');await page.getByRole('button',{name:'Save settings',exact:true}).click();await expect(page.getByRole('heading',{name:'Updated system',exact:true})).toBeVisible();await page.getByRole('button',{name:'Render HTML',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
 });
