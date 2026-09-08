@@ -1,5 +1,16 @@
 import { test, expect } from '@playwright/test';
 
+test('create a diagram, add a component and connect it', async ({ page }) => {
+  await page.goto('/'); await page.getByRole('button', { name: 'New diagram', exact: true }).click();
+  await page.getByLabel('Diagram title').fill('My system'); await page.getByRole('button', { name: 'Create', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'My system' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add component', exact: true }).click();
+  await page.getByLabel('New label').fill('Database'); await page.getByLabel('Component type').selectOption('database'); await page.getByRole('button', { name: 'Create', exact: true }).click();
+  await page.getByRole('button', { name: 'Add connection', exact: true }).click();
+  await page.getByLabel('To component').selectOption('component-2'); await page.getByLabel('New label').fill('SQL'); await page.getByRole('button', { name: 'Create', exact: true }).click();
+  await page.getByRole('button', { name: 'Render HTML', exact: true }).click(); await expect(page.getByRole('dialog')).toBeVisible();
+});
+
 test('renderer diagnostics navigate to the affected connection', async ({ page }) => {
   await page.goto('/'); await page.getByRole('button', { name: 'API Server api' }).click();
   await page.getByLabel('X', { exact: true }).fill('672'); await page.getByLabel('X', { exact: true }).press('Tab');

@@ -6,6 +6,32 @@ import {
 export const serialize = (document) => JSON.stringify(document, null, 2) + "\n";
 export const clone = (document) => structuredClone(document);
 
+export function newDocument(title = 'Untitled diagram') {
+  return { schema_version: 1, diagram_type: 'architecture', meta: { title }, components: [{ id: 'component-1', type: 'backend', label: 'Component 1', pos: [80, 120] }], connections: [] };
+}
+function uniqueId(items, prefix) { let n = 1; const ids = new Set(items.map(item => item.id)); while (ids.has(`${prefix}-${n}`)) n++; return `${prefix}-${n}`; }
+export function addComponent(document, { label, type = 'backend' }) {
+  if (!label.trim()) throw new Error('A label is required.');
+  const next = clone(document), id = uniqueId(next.components, 'component');
+  next.components.push({ id, type, label, pos: [80 + (next.components.length % 4) * 180, 120 + Math.floor(next.components.length / 4) * 120] });
+  return next;
+}
+export function addConnection(document, { from, to, label }) {
+  if (!document.components.some(c => c.id === from) || !document.components.some(c => c.id === to)) throw new Error('Choose both connection endpoints.');
+  const next = clone(document); next.connections ||= [];
+  next.connections.push({ id: uniqueId(next.connections, 'connection'), from, to, ...(label ? { label } : {}) }); return next;
+}
+export function removeComponent(document, id) {
+  if (document.components.length <= 1) throw new Error('Keep at least one component in the diagram.');
+  const next = clone(document); next.components = next.components.filter(c => c.id !== id);
+  if (next.connections) next.connections = next.connections.filter(c => c.from !== id && c.to !== id);
+  if (next.boundaries) next.boundaries = next.boundaries.map(b => ({ ...b, wraps: b.wraps.filter(member => member !== id) })).filter(b => b.wraps.length);
+  if (next.meta.views) next.meta.views = next.meta.views.map(v => ({ ...v, focus: v.focus.filter(member => member !== id) })).filter(v => v.focus.length);
+  if (next.meta.views?.length === 0) delete next.meta.views;
+  return next;
+}
+export function removeConnection(document, index) { const next = clone(document); next.connections.splice(index, 1); return next; }
+
 export function assertDocument(document) {
   if (document?.diagram_type !== "architecture")
     throw new Error(

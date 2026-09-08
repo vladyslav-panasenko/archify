@@ -26,6 +26,7 @@ import {
   undo,
   redo,
   layoutWarnings,
+  newDocument, addComponent, addConnection, removeComponent, removeConnection,
 } from "./document.mjs";
 import "./style.css";
 
@@ -209,6 +210,7 @@ function App() {
   // them across coordinate updates or React Flow hides and remeasures each node.
   const [measurements, setMeasurements] = useState({});
   const [diagnostics, setDiagnostics] = useState([]);
+  const [creation, setCreation] = useState(null);
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [selection, setSelection] = useState([]),
@@ -554,6 +556,9 @@ function App() {
           </span>
         </div>
         <nav aria-label="Document actions">
+          <button disabled={!session || busy || rawDirty || !!draft} onClick={() => setCreation('diagram')}>New diagram</button>
+          <button disabled={!state || busy || rawDirty || !!draft} onClick={() => setCreation('component')}>Add component</button>
+          <button disabled={!state || busy || rawDirty || !!draft} onClick={() => setCreation('connection')}>Add connection</button>
           <button
             disabled={!session || busy}
             onClick={() => picker.current.click()}
@@ -813,7 +818,23 @@ function App() {
               JSON
             </button>
           </div>
-          {panel === "json" ? (
+        {creation ? <form className="properties" onSubmit={event => {
+          event.preventDefault(); const fields = Object.fromEntries(new FormData(event.currentTarget));
+          try {
+            if (creation === 'diagram') {
+              if (hasUnsaved && !window.confirm('Discard unsaved changes and create a diagram?')) return;
+              load({ ...session, document: newDocument(fields.label), name: 'untitled.architecture.json', writable: false });
+              setSaved('');
+            } else if (creation === 'component') { const next = addComponent(state.present, fields); change(next); setSelection([next.components.at(-1).id]); setEdgeIndex(null); }
+            else { const next = addConnection(state.present, fields); change(next); setEdgeIndex(next.connections.length - 1); setSelection([]); }
+            setCreation(null); setPanel('inspector');
+          } catch (e) { setError(e.message); }
+        }}><h2>{creation === 'diagram' ? 'New diagram' : creation === 'component' ? 'New component' : 'New connection'}</h2>
+          <label className="field">{creation === 'diagram' ? 'Diagram title' : 'New label'}<input name="label" required={creation !== 'connection'} autoFocus/></label>
+          {creation === 'component' && <label className="field">Component type<select name="type">{Object.keys(kinds).map(kind => <option key={kind}>{kind}</option>)}</select></label>}
+          {creation === 'connection' && ['from', 'to'].map(key => <label className="field" key={key}>{key === 'from' ? 'From component' : 'To component'}<select name={key} required>{items.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>)}
+          <div className="button-row"><button type="button" onClick={() => setCreation(null)}>Cancel</button><button type="submit" className="primary">Create</button></div>
+        </form> : panel === "json" ? (
             <div className="json-panel">
               <p>Edit the source, then apply it to the canvas.</p>
               <textarea
@@ -924,6 +945,7 @@ function App() {
                     Moving this component keeps its connections and boundary
                     membership.
                   </p>
+                  <button disabled={busy} onClick={() => { if (!window.confirm('Delete this component and remove its connected edges and references?')) return; try { change(removeComponent(state.present, selected.id)); setSelection([]); } catch (e) { setError(e.message); } }}>Delete component</button>
                 </>
               ) : edge ? (
                 <>
@@ -936,6 +958,7 @@ function App() {
                   </div>
                   <fieldset disabled={busy}>
                     <legend>Routing</legend>
+                    <button onClick={() => { change(removeConnection(state.present, edgeIndex)); setEdgeIndex(null); }}>Delete connection</button>
                     <button onClick={() => { const from = items.find(c => c.id === edge.from), to = items.find(c => c.id === edge.to); edgePatch({ via: [...(edge.via || []), [(from.pos[0] + to.pos[0]) / 2, (from.pos[1] + to.pos[1]) / 2]] }); }}>Add waypoint</button>
                     <p className="muted">Drag numbered waypoints. Right-click a point, or focus it and press Delete, to remove it.</p>
                     <Field
