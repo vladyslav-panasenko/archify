@@ -32,6 +32,14 @@ export function removeComponent(document, id) {
   return next;
 }
 export function removeConnection(document, index) { const next = clone(document); next.connections.splice(index, 1); return next; }
+export function reconnectConnection(document,index,{from,to,fromSide,toSide}) {
+  if(document.diagram_type!=='architecture') throw new Error('Endpoint editing currently supports architecture diagrams.');
+  if(!document.components.some(c=>c.id===from)||!document.components.some(c=>c.id===to))throw new Error('Choose existing endpoints.');
+  const next=clone(document),edge=next.connections[index];if(!edge)throw new Error('Unknown connection.');
+  Object.assign(edge,{from,to});
+  if(fromSide!==undefined)edge.fromSide=fromSide;if(toSide!==undefined)edge.toSide=toSide;
+  return next;
+}
 
 export function assertDocument(document) {
   if (!supportedTypes.includes(document?.diagram_type))

@@ -722,3 +722,7 @@ legend {
 .snap-guide span { position:absolute; color:#087b72; background:#fff; font-size:10px; white-space:nowrap; }
 .snap-guide.vertical span { top:5100px; left:4px; }
 .snap-guide.horizontal span { left:5100px; top:4px; }
+.connection-mode { display:flex; gap:6px; padding:12px 16px; font-size:11px; border-bottom:1px solid #dbe2e6; }
+.connecting .react-flow__handle { opacity:1; width:9px; height:9px; background:#087b72; pointer-events:all; }
+.connecting .react-flow__handle.source { margin-left:-6px; }
+.connecting .react-flow__handle.target { margin-left:6px; background:#fff; border:2px solid #087b72; }

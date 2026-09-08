@@ -4,6 +4,13 @@ import { arrange } from '../src/arrangement.mjs';
 import { snapBox, snapPositions, snapResize } from '../src/arrangement.mjs';
 import { validate } from '../server.mjs';
 import { copySelection, pasteSelection } from '../src/clipboard.mjs';
+import { reconnectConnection } from '../src/document.mjs';
+test('reconnecting preserves authored routing and identity',()=>{
+ const doc=sample();doc.connections[0].id='edge';doc.connections[0].labelAt=[100,200];
+ const next=reconnectConnection(doc,0,{from:'a',to:'c',toSide:'left'});
+ assert.deepEqual(next.connections[0],{...doc.connections[0],to:'c',toSide:'left'});validate({...next,components:next.components.map(({custom,...c})=>c)});
+ assert.throws(()=>reconnectConnection(doc,0,{from:'a',to:'missing'}));
+});
 
 test('clipboard remaps internal edges and positions without losing unknown fields',()=>{
  const doc=sample(), payload=copySelection(doc,['a','b']); const result=pasteSelection(doc,payload);

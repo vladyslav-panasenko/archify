@@ -1,5 +1,15 @@
 import { test, expect } from '@playwright/test';
 
+test('mouse creates a connection and endpoint edits preserve its identity',async({page})=>{
+ await page.goto('/');await page.getByLabel('Draw / reconnect connections').check();
+ const a=page.getByLabel('Connect from Users bottom',{exact:true}), b=page.getByLabel('Connect to Worker bottom',{exact:true});
+ const ar=await a.boundingBox(),br=await b.boundingBox();await page.mouse.move(ar.x+ar.width/2,ar.y+ar.height/2);await page.mouse.down();await page.mouse.move(br.x+br.width/2,br.y+br.height/2,{steps:12});await page.mouse.up();
+ await expect(page.getByRole('heading',{name:'users → worker',exact:true})).toBeVisible();
+ await page.getByRole('combobox',{name:'To component',exact:true}).selectOption('queue');
+ await page.getByRole('button',{name:'JSON',exact:true}).click();const doc=JSON.parse(await page.getByLabel('Diagram JSON').inputValue());
+ expect(doc.connections.at(-1)).toMatchObject({id:'connection-1',from:'users',to:'queue',fromSide:'bottom',toSide:'bottom'});
+});
+
 test('duplicate and local copy/paste create fresh items and undo once',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Users users'}).click();
  await page.getByText('Copy and duplicate',{exact:true}).click();

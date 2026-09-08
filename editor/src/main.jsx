@@ -27,7 +27,7 @@ import {
   undo,
   redo,
   layoutWarnings,
-  newDocument, addComponent, addConnection, removeComponent, removeConnection,
+  newDocument, addComponent, addConnection, removeComponent, removeConnection, reconnectConnection,
 } from "./document.mjs";
 import "./style.css";
 import { adapterFor, editingOptions, connections, sourceNodes, nodeKey, edgeKey } from './adapters/index.mjs';
@@ -60,7 +60,7 @@ function ComponentNode({ data, selected }) {
     return patchComponent(document,data.id,{pos:[result.x,result.y],size:[result.width,result.height]});
   };
   return (
-    <div className={`component kind-${data.type} ${selected ? "chosen" : ""}`}>
+    <div className={`component kind-${data.type} ${selected ? "chosen" : ""} ${editing.connecting ? 'connecting' : ''}`}>
       <NodeResizer isVisible={selected && editing?.enabled && editing.resizable !== false} minWidth={editing.minSize[0]} minHeight={editing.minSize[1]}
         onResizeStart={() => editing.start()}
         onResize={(event, rect) => editing.update(resize(event, rect))}
@@ -71,13 +71,15 @@ function ComponentNode({ data, selected }) {
             id={`source-${side}`}
             type="source"
             position={position}
-            isConnectable={false}
+            isConnectable={editing.connecting && editing.enabled}
+            aria-label={`Connect from ${data.label} ${side}`}
           />
           <Handle
             id={`target-${side}`}
             type="target"
             position={position}
-            isConnectable={false}
+            isConnectable={editing.connecting && editing.enabled}
+            aria-label={`Connect to ${data.label} ${side}`}
           />
         </React.Fragment>
       ))}
@@ -226,6 +228,7 @@ function App() {
     [saved, setSaved] = useState("");
   const [canvasVersion, setCanvasVersion] = useState(0);
   const [clipboard,setClipboard] = useState(null);
+  const [drawConnections,setDrawConnections] = useState(false);
   const [gridSize,setGridSize] = useState(10), [smartSnap,setSmartSnap] = useState(false), [guides,setGuides] = useState([]);
   const [selection, setSelection] = useState([]),
     [edgeIndex, setEdgeIndex] = useState(null);
@@ -530,6 +533,7 @@ function App() {
     const editingText = event.target.closest(
       "input,textarea,select,[contenteditable]",
     );
+    if(event.key==='Escape'&&drawConnections){cancelled.current=true;setDrawConnections(false);}
     if (event.key === "Escape" && dragBase.current) {
       setGuides([]);
       cancelled.current = true;
@@ -582,6 +586,7 @@ function App() {
   return (
     <Editing.Provider value={{
       enabled: !busy && !rawDirty,
+      connecting: drawConnections && documentModel?.diagram_type==='architecture',
       minSize: options.minSize,
       resizable: options.resizable,
       resize: (id,rect,bypass) => { const result=snapResize(dragBase.current || state.present,id,rect,{grid:snap?gridSize:0,smart:smartSnap,bypass}); setGuides(result.guides); return result.rect; },
@@ -764,9 +769,20 @@ function App() {
               maxZoom={3}
               snapToGrid={documentModel.diagram_type !== 'architecture' && snap}
               snapGrid={[gridSize,gridSize]}
-              nodesConnectable={false}
+              nodesConnectable={drawConnections && !busy && !rawDirty}
+              edgesReconnectable={drawConnections && !busy && !rawDirty && documentModel.diagram_type==='architecture'}
+              onConnectStart={()=>{cancelled.current=false;}}
+              onReconnectStart={()=>{cancelled.current=false;}}
+              onConnect={connection=>{
+                if(cancelled.current||!drawConnections||documentModel.diagram_type!=='architecture')return;
+                try{let next=addConnection(state.present,{from:connection.source.slice(2),to:connection.target.slice(2)});next=reconnectConnection(next,next.connections.length-1,{from:connection.source.slice(2),to:connection.target.slice(2),fromSide:connection.sourceHandle?.replace('source-',''),toSide:connection.targetHandle?.replace('target-','')});change(next);setSelection([]);setEdgeIndex(next.connections.length-1);}catch(e){setError(e.message);}
+              }}
+              onReconnect={(edge,connection)=>{
+                if(cancelled.current||!drawConnections)return;
+                try{change(reconnectConnection(state.present,Number(edge.id.slice(2)),{from:connection.source.slice(2),to:connection.target.slice(2),fromSide:connection.sourceHandle?.replace('source-',''),toSide:connection.targetHandle?.replace('target-','')}));}catch(e){setError(e.message);}
+              }}
               deleteKeyCode={null}
-              nodesDraggable={!busy && !rawDirty}
+              nodesDraggable={!busy && !rawDirty && !drawConnections}
               elementsSelectable={!busy}
               selectionOnDrag
               panOnDrag={[1, 2]}
@@ -868,6 +884,7 @@ function App() {
           </div>
         </main>
         <aside className="inspector" aria-label="Document inspector">
+          {documentModel?.diagram_type==='architecture'&&<label className="connection-mode"><input type="checkbox" checked={drawConnections} disabled={busy||rawDirty} onChange={e=>setDrawConnections(e.target.checked)}/> Draw / reconnect connections</label>}
           <div className="tabs">
             <button
               className={panel === "inspector" ? "active" : ""}
@@ -1038,6 +1055,7 @@ function App() {
                   </div>
                   <fieldset disabled={busy}>
                     <legend>Routing</legend>
+                    {documentModel.diagram_type==='architecture'&&<>{['from','to'].map(key=><label key={key} className="field">{key==='from'?'From component':'To component'}<select value={edge[key]} onChange={e=>{try{change(reconnectConnection(state.present,edgeIndex,{from:edge.from,to:edge.to,[key]:e.target.value}));}catch(error){setError(error.message);}}}>{items.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></label>)}<p className="muted">Enable connection mode to drag between handles or move either endpoint. Escape exits connection mode.</p></>}
                     {documentModel.diagram_type === 'sequence' ? <>
                       <Field label="Message label" value={edge.label} onCommit={label=>edgePatch({label})}/>
                       <Field label="Message Y" value={edge.y} number onCommit={y=>edgePatch({y})}/>
