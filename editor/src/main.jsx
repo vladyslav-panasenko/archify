@@ -220,6 +220,7 @@ function App() {
   const recoveredText = useRef(null);
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
+  const [canvasVersion, setCanvasVersion] = useState(0);
   const [selection, setSelection] = useState([]),
     [edgeIndex, setEdgeIndex] = useState(null);
   const [error, setError] = useState(""),
@@ -320,7 +321,9 @@ function App() {
         ? "Local file opened."
         : "Sample opened. Import a JSON file to begin.",
     );
-    setTimeout(() => flow.current?.fitView({ padding: 0.15 }), 100);
+    // Fit once after React Flow measures a newly opened document. A delayed
+    // second fit can move a resize handle out from under the user's pointer.
+    setCanvasVersion(version => version + 1);
   }
   function change(next) {
     if (rawDirty) {
@@ -720,6 +723,7 @@ function App() {
           </div>
           {state && (
             <ReactFlow
+              key={canvasVersion}
               nodes={nodes}
               edges={edges}
               nodeTypes={nodeTypes}
