@@ -1,6 +1,6 @@
 import { clone, newDocument } from './document.mjs';
 import { sourceNodes, connections, nodeKey, edgeKey } from './adapters/index.mjs';
-export const authoringTypes=['architecture','workflow','dataflow','lifecycle'];
+export const authoringTypes=['architecture','workflow','dataflow','lifecycle','sequence'];
 export const stateKinds=['start','active','waiting','decision','success','failure','neutral','external'];
 export const componentKinds=['frontend','backend','database','cloud','security','messagebus','external'];
 export function freshId(items,prefix){let n=1;while(items.some(c=>c.id===`${prefix}-${n}`))n++;return `${prefix}-${n}`;}
@@ -9,6 +9,7 @@ export function createDiagram(type,title) {
  if(type==='workflow')return {schema_version:1,diagram_type:type,meta:{title},lanes:[{id:'lane-1',label:'Main'}],nodes:[{id:'node-1',type:'backend',label:'Start',lane:'lane-1',col:0}],edges:[]};
  if(type==='dataflow')return {schema_version:1,diagram_type:type,meta:{title},stages:[{label:'Source'},{label:'Destination'}],nodes:[{id:'node-1',type:'backend',label:'Source',stage:0,row:0},{id:'node-2',type:'database',label:'Store',stage:1,row:0}],flows:[]};
  if(type==='lifecycle')return {schema_version:1,diagram_type:type,meta:{title},lanes:[{id:'main',label:'Main'},{id:'event',label:'Events'},{id:'terminal',label:'Terminal'}],states:[{id:'node-1',type:'start',label:'Start',lane:'main',col:0},{id:'node-2',type:'active',label:'Active',lane:'main',col:1}],transitions:[]};
+ if(type==='sequence')return {schema_version:1,diagram_type:type,meta:{title},participants:[{id:'node-1',type:'frontend',label:'Client'},{id:'node-2',type:'backend',label:'Service'}],messages:[{id:'message-1',from:'node-1',to:'node-2',y:200,label:'Request'}]};
  throw new Error('Unsupported diagram creation.');
 }
 export function addNode(document,fields) {
@@ -16,6 +17,7 @@ export function addNode(document,fields) {
  const node={id:freshId(nodes,'node'),label:fields.label,type:fields.type||'backend'};
  if(['workflow','lifecycle'].includes(document.diagram_type))Object.assign(node,{lane:fields.lane,col:Number(fields.col)});
  else if(document.diagram_type==='dataflow')Object.assign(node,{stage:Number(fields.stage),row:Number(fields.row)});
+ else if(document.diagram_type==='sequence'){} // Participants have no free position fields.
  else throw new Error('Unsupported node creation.');
  nodes.push(node);return next;
 }
@@ -33,10 +35,10 @@ function cleanNodeReferences(next,ids){
  if(next.semanticChecks){for(const key of ['allowedRoots','allowedTerminals'])if(next.semanticChecks[key])next.semanticChecks[key]=next.semanticChecks[key].filter(id=>!ids.includes(id));for(const key of ['requiredEdges','requiredPaths'])if(next.semanticChecks[key])next.semanticChecks[key]=next.semanticChecks[key].filter(e=>!ids.includes(e.from)&&!ids.includes(e.to));}
 }
 export function deleteNode(document,id) {
- const next=clone(document),minimum=['dataflow','lifecycle'].includes(document.diagram_type)?2:1;if(sourceNodes(next).length<=minimum)throw new Error(`Keep at least ${minimum} nodes.`);
- next[nodeKey(next)]=sourceNodes(next).filter(c=>c.id!==id);cleanNodeReferences(next,[id]);return next;
+ const next=clone(document),minimum=['dataflow','lifecycle','sequence'].includes(document.diagram_type)?2:1;if(sourceNodes(next).length<=minimum)throw new Error(`Keep at least ${minimum} nodes.`);
+ next[nodeKey(next)]=sourceNodes(next).filter(c=>c.id!==id);cleanNodeReferences(next,[id]);if(next.diagram_type==='sequence'){if(!next.messages.length)throw new Error('Keep at least one message; reassign its endpoints first.');if(next.activations)next.activations=next.activations.filter(a=>a.participant!==id);}return next;
 }
 export function saveLane(document,index,fields){const next=clone(document);if(!fields.label.trim())throw new Error('A lane label is required.');if(document.diagram_type==='lifecycle'&&index===null&&next.lanes.length>=4)throw new Error('Lifecycle supports up to four lanes.');const item={...(index===null?{id:fields.id||freshId(next.lanes,'lane')}:next.lanes[index]),...fields};if(index===null&&next.lanes.some(l=>l.id===item.id))throw new Error('That lane already exists.');if(index===null)next.lanes.push(item);else next.lanes[index]=item;return next;}
-export function deleteLane(document,index,reassign){const next=clone(document),lane=next.lanes[index];if(next.lanes.length<=1)throw new Error('Keep at least one lane.');if(!next.lanes.some(l=>l.id===reassign&&l.id!==lane.id))throw new Error('Choose another lane for affected nodes and groups.');for(const node of sourceNodes(next))if(node.lane===lane.id)node.lane=reassign;for(const group of next.groups||[])if(group.lane===lane.id)group.lane=reassign;next.lanes.splice(index,1);return next;}
+export function deleteLane(document,index,reassign){const next=clone(document),lane=next.lanes[index];if(document.diagram_type==='lifecycle'&&lane.id==='main')throw new Error('The lifecycle main lane is required.');if(next.lanes.length<=1)throw new Error('Keep at least one lane.');if(!next.lanes.some(l=>l.id===reassign&&l.id!==lane.id))throw new Error('Choose another lane for affected nodes and groups.');for(const node of sourceNodes(next))if(node.lane===lane.id)node.lane=reassign;for(const group of next.groups||[])if(group.lane===lane.id)group.lane=reassign;next.lanes.splice(index,1);return next;}
 export function saveStage(document,index,label){if(!label.trim())throw new Error('A stage label is required.');const next=clone(document);if(index===null){if(next.stages.length>=5)throw new Error('Dataflow supports up to five stages.');next.stages.push({label});}else next.stages[index]={...next.stages[index],label};return next;}
 export function deleteStage(document,index,reassign){const next=clone(document);if(next.stages.length<=2)throw new Error('Keep at least two stages.');if(!Number.isInteger(reassign)||reassign===index||!next.stages[reassign])throw new Error('Choose another stage for affected nodes.');for(const node of next.nodes){const target=node.stage===index?reassign:node.stage;node.stage=target>index?target-1:target;}next.stages.splice(index,1);return next;}

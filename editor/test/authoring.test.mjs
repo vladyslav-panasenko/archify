@@ -5,6 +5,13 @@ import { snapBox, snapPositions, snapResize } from '../src/arrangement.mjs';
 import { validate } from '../server.mjs';
 import {createDiagram,addNode,saveEdge,saveLane,deleteLane,deleteNode} from '../src/topology.mjs';
 import {saveStage,deleteStage} from '../src/topology.mjs';
+import {saveMessage,removeMessage,saveRange} from '../src/sequence-structure.mjs';
+test('sequence structural edits require explicit range policy and preserve interval coordinates',()=>{
+ let doc=createDiagram('sequence','Sequence');doc=saveRange(doc,'activations',null,{participant:'node-2',from:180,to:300});
+ assert.throws(()=>saveMessage(doc,null,{from:'node-2',to:'node-1',label:'Response',y:260}));
+ doc=saveMessage(doc,null,{from:'node-2',to:'node-1',label:'Response',y:260},true);validate(doc);const moved=saveMessage(doc,1,{from:'node-2',to:'node-1',label:'Response',y:170},true);assert.equal(moved.messages[0].label,'Response');assert.deepEqual(moved.activations,doc.activations);
+ assert.equal(removeMessage(doc,0).messages.length,1);assert.throws(()=>removeMessage(createDiagram('sequence','X'),0));assert.throws(()=>deleteLane(createDiagram('lifecycle','X'),0,'terminal'));
+});
 test('lifecycle authoring creates state types and reassigns terminal membership',()=>{
  let doc=createDiagram('lifecycle','Lifecycle');doc=addNode(doc,{label:'Done',type:'success',lane:'terminal',col:0});doc=saveEdge(doc,null,{from:'node-2',to:'node-3',label:'Complete'});validate(doc);
  const reassigned=deleteLane(doc,2,'main');assert.equal(reassigned.states[2].lane,'main');assert.deepEqual(reassigned.transitions,doc.transitions);validate(reassigned);assert.throws(()=>deleteNode(createDiagram('lifecycle','X'),'node-1'));

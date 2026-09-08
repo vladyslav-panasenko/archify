@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+test('new sequence creates messages and activations and renders',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'New diagram',exact:true}).click();await page.getByLabel('Diagram title').fill('Sequence');await page.getByRole('combobox',{name:'Diagram type',exact:true}).selectOption('sequence');await page.getByRole('button',{name:'Create',exact:true}).click();await page.getByRole('button',{name:'Structure',exact:true}).click();
+ await page.getByLabel('Message text',{exact:true}).last().fill('Response');await page.getByRole('button',{name:'Create message',exact:true}).click();
+ await page.getByText('Activations',{exact:true}).click();await page.getByRole('button',{name:'Create range',exact:true}).first().click();
+ await page.getByRole('button',{name:'Render HTML',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
+});
+
 test('new lifecycle creates a transition and renders',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'New diagram',exact:true}).click();await page.getByLabel('Diagram title').fill('Lifecycle');await page.getByRole('combobox',{name:'Diagram type',exact:true}).selectOption('lifecycle');await page.getByRole('button',{name:'Create',exact:true}).click();
  await page.getByRole('button',{name:'Structure',exact:true}).click();await page.locator('.properties summary').filter({hasText:/^Connections$/}).click();await page.getByRole('button',{name:'Create connection',exact:true}).click();await page.getByRole('button',{name:'Render HTML',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();

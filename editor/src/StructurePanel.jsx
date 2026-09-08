@@ -1,6 +1,7 @@
 import React from 'react';
 import { saveBoundary, deleteBoundary, moveBoundary } from './structure.mjs';
 import TopologyPanel from './TopologyPanel.jsx';
+import SequencePanel from './SequencePanel.jsx';
 
 function BoundaryForm({document,boundary,index,onChange,onSelect}) {
  return <details open={index===null}><summary>{boundary?.label||'New boundary'}</summary><form onSubmit={event=>{
@@ -10,6 +11,7 @@ function BoundaryForm({document,boundary,index,onChange,onSelect}) {
  </details>;
 }
 export default function StructurePanel({document,onChange,onSelect}) {
+ if(document.diagram_type==='sequence')return <SequencePanel document={document} onChange={onChange} onSelect={onSelect}/>;
  if(document.diagram_type!=='architecture')return <TopologyPanel document={document} onChange={onChange} onSelect={onSelect}/>;
  return <div className="properties"><h2>Boundaries</h2><p className="muted">Select members to drag them together, or enter an offset. Deleting a boundary keeps its components.</p>{(document.boundaries||[]).map((b,index)=><BoundaryForm key={`${index}:${JSON.stringify(b)}`} document={document} boundary={b} index={index} onChange={onChange} onSelect={onSelect}/>)}<BoundaryForm key={`new:${document.boundaries?.length||0}`} document={document} index={null} onChange={onChange}/></div>;
 }
