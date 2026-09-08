@@ -5,6 +5,9 @@
   font-synthesis: none;
   font-size: 13px;
 }
+.canvas-drag-point { position: absolute; pointer-events: all; touch-action: none; cursor: move; }
+.connection-label { font-size: 10px; padding: 3px 5px; background: #f8fafb; border: 1px solid transparent; }
+.connection-label:hover { border-color: #087b72; }
 * {
   box-sizing: border-box;
 }

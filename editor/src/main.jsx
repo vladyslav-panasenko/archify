@@ -5,6 +5,8 @@ import {
   Background,
   Controls,
   NodeResizer,
+  EdgeLabelRenderer,
+  useReactFlow,
   Handle,
   Position,
   BaseEdge,
@@ -88,6 +90,33 @@ function BoundaryNode({ data }) {
     </div>
   );
 }
+function DragPoint({ point, label, edit, children, className = '' }) {
+  const editing = useContext(Editing), flow = useReactFlow(), drag = useRef(null);
+  const pointAt = event => {
+    const cursor = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    return [point[0] + cursor.x - drag.current.x, point[1] + cursor.y - drag.current.y].map(n => Math.round(n * 100) / 100);
+  };
+  return <button className={`canvas-drag-point nodrag nopan ${className}`} aria-label={label}
+    disabled={!editing.enabled} style={{ transform: `translate(-50%, -50%) translate(${point[0]}px, ${point[1]}px)` }}
+    onPointerDown={event => {
+      if (event.button !== 0) return; event.stopPropagation();
+      const cursor = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      drag.current = { ...cursor, origin: point, moved: false }; editing.start(); event.currentTarget.setPointerCapture(event.pointerId);
+    }}
+    onPointerMove={event => {
+      if (!drag.current) return; event.stopPropagation();
+      const cursor = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      const target = [drag.current.origin[0] + cursor.x - drag.current.x, drag.current.origin[1] + cursor.y - drag.current.y].map(n => Math.round(n * 100) / 100);
+      drag.current.moved = true; drag.current.target = target; editing.update(edit(target));
+    }}
+    onPointerUp={event => { if (!drag.current) return; event.stopPropagation(); editing.end(drag.current.moved ? edit(drag.current.target) : null); drag.current = null; }}
+    onPointerCancel={() => { drag.current = null; editing.end(null); }}
+    onKeyDown={event => {
+      const delta = { ArrowLeft: [-1,0], ArrowRight: [1,0], ArrowUp: [0,-1], ArrowDown: [0,1] }[event.key];
+      if (!delta) return; event.preventDefault(); event.stopPropagation();
+      const step = event.shiftKey ? 10 : 1; editing.start(); editing.end(edit([point[0] + delta[0] * step, point[1] + delta[1] * step]));
+    }}>{children}</button>;
+}
 function ConnectionEdge(props) {
   const { data, sourceX, sourceY, targetX, targetY } = props;
   let result =
@@ -106,7 +135,7 @@ function ConnectionEdge(props) {
     result[2] + (data.labelDy || 0),
   ];
   return (
-    <BaseEdge
+    <><BaseEdge
       id={props.id}
       path={result[0]}
       markerEnd={props.markerEnd}
@@ -115,13 +144,15 @@ function ConnectionEdge(props) {
         strokeWidth: props.selected ? 2.5 : 1.5,
         strokeDasharray: data.variant === "dashed" ? "5 4" : undefined,
       }}
-      label={data.label}
+      label={undefined}
       labelX={point[0]}
       labelY={point[1]}
       labelStyle={{ fill: "#3d4d57", fontSize: 10 }}
       labelBgStyle={{ fill: "#f8fafb", fillOpacity: 0.96 }}
       labelBgPadding={[5, 3]}
-    />
+    />{data.label && <EdgeLabelRenderer><DragPoint point={point} label={`Move label: ${data.label}`}
+      edit={labelAt => document => patchConnection(document, Number(props.id.slice(2)), { labelAt })}
+      className="connection-label">{data.label}</DragPoint></EdgeLabelRenderer>}</>
   );
 }
 const nodeTypes = { component: ComponentNode, boundary: BoundaryNode },
@@ -493,7 +524,7 @@ function App() {
       enabled: !busy && !rawDirty,
       start: () => { dragBase.current = state.present; cancelled.current = false; },
       update: edit => { if (dragBase.current && !cancelled.current) setDraft(previous => edit(previous || dragBase.current)); },
-      end: edit => { if (dragBase.current && !cancelled.current) change(edit(dragBase.current)); dragBase.current = null; setDraft(null); },
+      end: edit => { if (edit && dragBase.current && !cancelled.current) change(edit(dragBase.current)); dragBase.current = null; setDraft(null); },
     }}><div className="app">
       <header className="toolbar">
         <div className="brand">
