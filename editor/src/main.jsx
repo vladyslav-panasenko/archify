@@ -41,6 +41,7 @@ import { createDiagram, authoringTypes } from './topology.mjs';
 import SettingsPanel from './SettingsPanel.jsx';
 import SearchPanel from './SearchPanel.jsx';
 import ReviewPanel from './ReviewPanel.jsx';
+import ConflictPanel from './ConflictPanel.jsx';
 
 const sides = {
   top: Position.Top,
@@ -235,6 +236,7 @@ function App() {
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [canvasVersion, setCanvasVersion] = useState(0);
+  const [sourceBase,setSourceBase]=useState(null),[conflict,setConflict]=useState(null);
   const [clipboard,setClipboard] = useState(null);
   const [drawConnections,setDrawConnections] = useState(false);
   const [locked,setLocked] = useState([]);
@@ -328,6 +330,7 @@ function App() {
   });
 
   function load(data) {
+    setSourceBase(data.document);setConflict(null);
     try{const value=JSON.parse(localStorage.getItem(lockKey(data))||'[]');setLocked(Array.isArray(value)?value.filter(id=>typeof id==='string'):[]);}catch{setLocked([]);}
     setMeasurements({});
     assertDocument(data.document);
@@ -370,7 +373,7 @@ function App() {
     });
     if (!response.ok) {
       const data = await response.json();
-      throw Object.assign(new Error(data.error), { diagnostics: data.diagnostics });
+      throw Object.assign(new Error(data.error), { diagnostics: data.diagnostics,status:response.status });
     }
     return response;
   }
@@ -394,7 +397,8 @@ function App() {
     await act(async () => {
       const snapshot = state.present;
       if (direct) {
-        const data = await (await request("document", snapshot, "PUT")).json();
+        let data;try{data = await (await request("document", snapshot, "PUT")).json();}catch(e){if(e.status===409){await compareSource(snapshot);return;}throw e;}
+        setSourceBase(snapshot);
         setSession((s) => ({ ...s, revision: data.revision }));
       } else {
         await request("validate", snapshot);
@@ -424,6 +428,8 @@ function App() {
       setNotice("JSON imported. Changes can be downloaded.");
     });
   }
+  async function compareSource(local=state.present){const response=await fetch('/api/document');const data=await response.json();if(!response.ok)throw new Error(data.error);setConflict({base:sourceBase,local,remote:data.document,revision:data.revision});setPanel('conflict');setCreation(null);setNotice('Source changed. Compare and resolve changes before saving.');}
+  async function applyMerge(merged){await act(async()=>{if(serialize(state.present)!==serialize(conflict.local))throw new Error('Your draft changed during comparison. Refresh the comparison first.');await request('validate',merged);change(merged);setSourceBase(conflict.remote);setSaved(serialize(conflict.remote));setSession(s=>({...s,revision:conflict.revision}));setConflict(null);setPanel('review');setNotice('Merged draft validated. Review it and save to write the file.');});}
   function applyPatch(patch) {
     try {
       change(patchComponent(state.present, selection[0], patch));
@@ -942,7 +948,7 @@ function App() {
           {creation === 'component' && <label className="field">Component type<select name="type">{Object.keys(kinds).map(kind => <option key={kind}>{kind}</option>)}</select></label>}
           {creation === 'connection' && ['from', 'to'].map(key => <label className="field" key={key}>{key === 'from' ? 'From component' : 'To component'}<select name={key} required>{items.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>)}
           <div className="button-row"><button type="button" onClick={() => setCreation(null)}>Cancel</button><button type="submit" className="primary">Create</button></div>
-        </form> : panel==='review' ? <fieldset disabled={busy||!!draft}><ReviewPanel baseline={saved?JSON.parse(saved):null} document={documentModel} writable={session.writable} onSave={saveJson}/></fieldset> : panel==='search' ? <SearchPanel document={documentModel} onFocus={result=>{setSelection(result.kind==='node'?result.ids:[]);setEdgeIndex(result.kind==='connection'?result.index:null);flow.current?.fitView({nodes:result.ids.map(id=>({id:`c:${id}`})),padding:0.5,maxZoom:1.5});}} onFit={()=>{const ids=selection.length?selection:edge?[edge.from,edge.to]:[];if(ids.length)flow.current?.fitView({nodes:ids.map(id=>({id:`c:${id}`})),padding:0.5,maxZoom:1.5});}}/> : panel==='settings' ? <fieldset disabled={busy||!!draft}><SettingsPanel document={documentModel} onChange={operation=>act(async()=>{const next=operation();await request('validate',next);change(next);})}/></fieldset> : panel==='structure' ? <fieldset disabled={busy||!!draft}><StructurePanel document={documentModel} onChange={operation=>act(async()=>{const next=operation();await request('validate',next);change(next);})} onSelect={ids=>{setSelection(ids);setEdgeIndex(null);setPanel('inspector');}}/></fieldset> : panel === "json" ? (
+        </form> : panel==='conflict'&&conflict ? <fieldset disabled={busy||!!draft}><ConflictPanel key={JSON.stringify(conflict)} conflict={conflict} onApply={applyMerge} onRefresh={()=>act(()=>compareSource())} onCancel={()=>{setConflict(null);setPanel('review');}}/></fieldset> : panel==='review' ? <fieldset disabled={busy||!!draft}><ReviewPanel baseline={saved?JSON.parse(saved):null} document={documentModel} writable={session.writable} onSave={saveJson}/></fieldset> : panel==='search' ? <SearchPanel document={documentModel} onFocus={result=>{setSelection(result.kind==='node'?result.ids:[]);setEdgeIndex(result.kind==='connection'?result.index:null);flow.current?.fitView({nodes:result.ids.map(id=>({id:`c:${id}`})),padding:0.5,maxZoom:1.5});}} onFit={()=>{const ids=selection.length?selection:edge?[edge.from,edge.to]:[];if(ids.length)flow.current?.fitView({nodes:ids.map(id=>({id:`c:${id}`})),padding:0.5,maxZoom:1.5});}}/> : panel==='settings' ? <fieldset disabled={busy||!!draft}><SettingsPanel document={documentModel} onChange={operation=>act(async()=>{const next=operation();await request('validate',next);change(next);})}/></fieldset> : panel==='structure' ? <fieldset disabled={busy||!!draft}><StructurePanel document={documentModel} onChange={operation=>act(async()=>{const next=operation();await request('validate',next);change(next);})} onSelect={ids=>{setSelection(ids);setEdgeIndex(null);setPanel('inspector');}}/></fieldset> : panel === "json" ? (
             <div className="json-panel">
               <p>Edit the source, then apply it to the canvas.</p>
               <textarea

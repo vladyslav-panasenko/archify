@@ -14,3 +14,18 @@ export function documentChanges(before,after){const changes=[];
  }
  walk(before||{},after||{},[]);return changes;
 }
+export function mergeDocuments(base,local,remote,choices={}){
+ const conflicts=[];
+ function conflict(b,l,r,path){const key=JSON.stringify(path);if(!['local','remote'].includes(choices[key]))conflicts.push({key,path,base:b,local:l,remote:r});return choices[key]==='remote'?r:l;}
+ function merge(b,l,r,path){
+  if(equal(l,r))return l;if(equal(b,l))return r;if(equal(b,r))return l;
+  if(object(b)&&object(l)&&object(r))return Object.fromEntries([...new Set([...Object.keys(b),...Object.keys(l),...Object.keys(r)])].map(key=>[key,merge(b[key],l[key],r[key],[...path,key])]).filter(([,value])=>value!==undefined));
+  if([b,l,r].every(Array.isArray)&&[b,l,r].every(a=>a.every(v=>object(v)&&typeof v.id==='string')&&new Set(a.map(v=>v.id)).size===a.length)){
+   const values=new Map();for(const id of new Set([...b,...l,...r].map(v=>v.id))){const value=merge(b.find(v=>v.id===id),l.find(v=>v.id===id),r.find(v=>v.id===id),[...path,id]);if(value!==undefined)values.set(id,value);}
+   const order=merge(b.map(v=>v.id),l.map(v=>v.id),r.map(v=>v.id),[...path,'order']);
+   return [...new Set([...order,...values.keys()])].filter(id=>values.has(id)).map(id=>values.get(id));
+  }
+  return conflict(b,l,r,path);
+ }
+ return {document:structuredClone(merge(base,local,remote,[])),conflicts};
+}

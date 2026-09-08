@@ -8,7 +8,12 @@ import {saveStage,deleteStage} from '../src/topology.mjs';
 import {saveMessage,removeMessage,saveRange} from '../src/sequence-structure.mjs';
 import {patchSettings,settingFields} from '../src/settings.mjs';
 import {searchDiagram} from '../src/search.mjs';
-import {documentChanges} from '../src/review.mjs';
+import {documentChanges,mergeDocuments} from '../src/review.mjs';
+test('three-way merge preserves independent changes and requires explicit delete/edit resolution',()=>{
+ const base=sample(),local=structuredClone(base),remote=structuredClone(base);local.components[0].pos=[99,20];remote.components[1].label='Remote';let result=mergeDocuments(base,local,remote);assert.equal(result.conflicts.length,0);assert.equal(result.document.components[1].label,'Remote');assert.equal(result.document.components[0].pos[0],99);
+ remote.components.shift();result=mergeDocuments(base,local,remote);assert.ok(result.conflicts.some(c=>c.path.at(-1)==='a'));const choices=Object.fromEntries(result.conflicts.map(c=>[c.key,'remote']));assert.ok(!mergeDocuments(base,local,remote,choices).document.components.some(c=>c.id==='a'));
+ const conflict=mergeDocuments({a:[1]},{a:[2]},{a:[3]});assert.equal(conflict.conflicts.length,1);assert.deepEqual(mergeDocuments({a:[1]},{a:[2]},{a:[3]},{'["a"]':'remote'}).document,{a:[3]});
+});
 test('review matches stable IDs across ordering and identifies layout versus topology',()=>{const doc=sample(),next=structuredClone(doc);next.components.reverse();next.components[0].pos=[500,300];next.connections[0].to='c';const changes=documentChanges(doc,next);assert.equal(changes.filter(c=>c.category==='layout').length,1);assert.ok(changes.some(c=>c.path.join('/')==='components/order'));assert.ok(changes.some(c=>c.path.at(-1)==='to'&&c.category==='topology'));assert.deepEqual(documentChanges(doc,structuredClone(doc)),[]);});
 test('search finds connection IDs and labels without modifying source',()=>{const doc=sample(),before=JSON.stringify(doc);assert.equal(searchDiagram(doc,'AB')[0].kind,'connection');assert.equal(searchDiagram(doc,'a').filter(r=>r.kind==='node').length,1);assert.equal(JSON.stringify(doc),before);});
 test('settings preserve metadata and expose only type-specific supported fields',()=>{
