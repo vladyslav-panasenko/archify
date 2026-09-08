@@ -1,4 +1,35 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { createEditorServer } from '../../server.mjs';
+
+test('recovery cannot overwrite a source changed outside the editor', async ({ page }) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'archify-recovery-'));
+  const file = path.join(directory, 'source.json');
+  const original = JSON.parse(await fs.readFile(new URL('../../../archify/examples/web-app.architecture.json', import.meta.url)));
+  await fs.writeFile(file, JSON.stringify(original)); const server = await createEditorServer({ file });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    await page.goto(`http://127.0.0.1:${server.address().port}`); await page.getByRole('button', { name: 'Users users' }).click();
+    await page.getByLabel('X', { exact: true }).fill('55'); await page.getByLabel('X', { exact: true }).press('Tab');
+    original.components[0].pos = [60, 300]; await fs.writeFile(file, JSON.stringify(original));
+    page.on('dialog', dialog => dialog.accept()); await page.reload(); await page.getByRole('button', { name: 'Restore draft' }).click();
+    await expect(page.getByRole('button', { name: 'Save file', exact: true })).toHaveCount(0);
+    expect(JSON.parse(await fs.readFile(file, 'utf8')).components[0].pos).toEqual([60, 300]);
+  } finally { await page.close(); await new Promise(resolve => server.close(resolve)); await fs.rm(directory, { recursive: true, force: true }); }
+});
+
+test('unsaved JSON and unapplied text can be recovered after reload', async ({ page }) => {
+  await page.goto('/'); await page.getByRole('button', { name: 'Users users' }).click();
+  await page.getByLabel('X', { exact: true }).fill('55'); await page.getByLabel('X', { exact: true }).press('Tab');
+  page.on('dialog', dialog => dialog.accept()); await page.reload();
+  await page.getByRole('button', { name: 'Restore draft' }).click();
+  await page.getByRole('button', { name: 'Users users' }).click(); await expect(page.getByLabel('X', { exact: true })).toHaveValue('55');
+  await page.getByRole('button', { name: 'JSON', exact: true }).click(); await page.getByLabel('Diagram JSON').fill('{ unfinished');
+  await page.reload(); await page.getByRole('button', { name: 'Restore draft' }).click();
+  await expect(page.getByLabel('Diagram JSON')).toHaveValue('{ unfinished');
+});
 
 test('create a diagram, add a component and connect it', async ({ page }) => {
   await page.goto('/'); await page.getByRole('button', { name: 'New diagram', exact: true }).click();

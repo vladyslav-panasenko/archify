@@ -211,6 +211,8 @@ function App() {
   const [measurements, setMeasurements] = useState({});
   const [diagnostics, setDiagnostics] = useState([]);
   const [creation, setCreation] = useState(null);
+  const [recovery, setRecovery] = useState(null);
+  const recoveredText = useRef(null);
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [selection, setSelection] = useState([]),
@@ -241,6 +243,10 @@ function App() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
         load(data);
+        try {
+          const stored = localStorage.getItem(`archify-draft:${data.recoveryKey}`);
+          if (stored) { const candidate = JSON.parse(stored); if (candidate.version === 1 && candidate.document) setRecovery(candidate); }
+        } catch { setNotice('The saved recovery draft could not be read.'); }
       })
       .catch((e) => {
         setError(e.message);
@@ -258,10 +264,18 @@ function App() {
     return () => window.removeEventListener("beforeunload", before);
   }, [hasUnsaved]);
   useEffect(() => {
-    if (state) setJsonText(serialize(state.present));
+    if (state) { setJsonText(recoveredText.current ?? serialize(state.present)); recoveredText.current = null; }
     setHtml(null);
     setDiagnostics([]);
   }, [state]);
+  useEffect(() => {
+    if (!session?.recoveryKey || !state || recovery) return;
+    const key = `archify-draft:${session.recoveryKey}`;
+    try {
+      if (dirty || rawDirty) localStorage.setItem(key, JSON.stringify({ version: 1, document: state.present, rawText: rawDirty ? jsonText : null, saved, name: session.name, writable: session.writable, revision: session.revision, savedAt: new Date().toISOString() }));
+      else localStorage.removeItem(key);
+    } catch { setNotice('Draft recovery storage is unavailable. Save or download your JSON.'); }
+  }, [state, session, dirty, rawDirty, jsonText, saved, recovery]);
   useEffect(() => {
     if (html) dialog.current?.showModal();
   }, [html]);
@@ -618,6 +632,17 @@ function App() {
           }}
         />
       </header>
+      {recovery && <div className="recovery-banner" role="status"><span>Unsaved draft available: {recovery.name}. {recovery.revision !== session.revision ? 'The source changed; recovery will open a separate draft.' : 'Restore it or keep the file currently open.'}</span>
+        <button onClick={() => act(async () => {
+          assertDocument(recovery.document); await request('validate', recovery.document);
+          const changedSource = recovery.revision !== session.revision;
+          setSession(current => ({ ...current, name: recovery.name, writable: Boolean(recovery.writable && !changedSource) }));
+          recoveredText.current = recovery.rawText; setState(history(recovery.document)); setSaved(recovery.saved);
+          setPanel(recovery.rawText ? 'json' : 'inspector'); setRecovery(null);
+          setNotice(changedSource ? 'Recovered separately. Download this draft to avoid overwriting the changed source.' : 'Unsaved draft restored.');
+        })}>Restore draft</button>
+        <button onClick={() => { localStorage.removeItem(`archify-draft:${session.recoveryKey}`); setRecovery(null); }}>Discard recovery</button>
+      </div>}
       <div className="workspace">
         <aside className="outline" aria-label="Components">
           <div className="section-heading">

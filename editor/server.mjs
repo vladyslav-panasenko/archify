@@ -134,6 +134,7 @@ export async function createEditorServer({ file, dev = false } = {}) {
             token,
             revision: hash(text),
             writable: Boolean(filePath),
+            recoveryKey: hash(filePath || path.join(root, 'sample')),
             name: path.basename(filePath || "web-app.architecture.json"),
           });
         }
