@@ -90,13 +90,10 @@ function BoundaryNode({ data }) {
     </div>
   );
 }
-function DragPoint({ point, label, edit, children, className = '' }) {
+function DragPoint({ point, label, edit, children, className = '', onRemove }) {
   const editing = useContext(Editing), flow = useReactFlow(), drag = useRef(null);
-  const pointAt = event => {
-    const cursor = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
-    return [point[0] + cursor.x - drag.current.x, point[1] + cursor.y - drag.current.y].map(n => Math.round(n * 100) / 100);
-  };
   return <button className={`canvas-drag-point nodrag nopan ${className}`} aria-label={label}
+    onClick={event => event.stopPropagation()}
     disabled={!editing.enabled} style={{ transform: `translate(-50%, -50%) translate(${point[0]}px, ${point[1]}px)` }}
     onPointerDown={event => {
       if (event.button !== 0) return; event.stopPropagation();
@@ -111,13 +108,16 @@ function DragPoint({ point, label, edit, children, className = '' }) {
     }}
     onPointerUp={event => { if (!drag.current) return; event.stopPropagation(); editing.end(drag.current.moved ? edit(drag.current.target) : null); drag.current = null; }}
     onPointerCancel={() => { drag.current = null; editing.end(null); }}
+    onContextMenu={event => { if (onRemove) { event.preventDefault(); onRemove(); } }}
     onKeyDown={event => {
+      if (onRemove && ['Delete', 'Backspace'].includes(event.key)) { event.preventDefault(); event.stopPropagation(); onRemove(); return; }
       const delta = { ArrowLeft: [-1,0], ArrowRight: [1,0], ArrowUp: [0,-1], ArrowDown: [0,1] }[event.key];
       if (!delta) return; event.preventDefault(); event.stopPropagation();
       const step = event.shiftKey ? 10 : 1; editing.start(); editing.end(edit([point[0] + delta[0] * step, point[1] + delta[1] * step]));
     }}>{children}</button>;
 }
 function ConnectionEdge(props) {
+  const editing = useContext(Editing);
   const { data, sourceX, sourceY, targetX, targetY } = props;
   let result =
     data.route === "straight"
@@ -152,7 +152,12 @@ function ConnectionEdge(props) {
       labelBgPadding={[5, 3]}
     />{data.label && <EdgeLabelRenderer><DragPoint point={point} label={`Move label: ${data.label}`}
       edit={labelAt => document => patchConnection(document, Number(props.id.slice(2)), { labelAt })}
-      className="connection-label">{data.label}</DragPoint></EdgeLabelRenderer>}</>
+      className="connection-label">{data.label}</DragPoint></EdgeLabelRenderer>}
+      {props.selected && <EdgeLabelRenderer>{(data.via || []).map((point, index) => <DragPoint key={index} point={point}
+        label={`Move waypoint ${index + 1}`} className="waypoint" edit={target => document => patchConnection(document, Number(props.id.slice(2)), { via: data.via.map((p, i) => i === index ? target : p) })}
+        onRemove={() => { editing.start(); editing.end(document => patchConnection(document, Number(props.id.slice(2)), { via: data.via.filter((_, i) => i !== index) })); }}>
+        {index + 1}
+      </DragPoint>)}</EdgeLabelRenderer>}</>
   );
 }
 const nodeTypes = { component: ComponentNode, boundary: BoundaryNode },
@@ -479,7 +484,7 @@ function App() {
       event.stopPropagation();
       return;
     }
-    if (editingText || busy || rawDirty || !state || dragBase.current) return;
+    if (editingText || event.target.closest('.canvas-drag-point') || busy || rawDirty || !state || dragBase.current) return;
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       void saveJson(session.writable);
@@ -643,6 +648,9 @@ function App() {
                 </button>
               ))}
           </div>
+          <details className="connection-list"><summary>Connections</summary>{(documentModel?.connections || []).map((connection, index) =>
+            <button key={index} onClick={() => { setEdgeIndex(index); setSelection([]); }}>{connection.from} → {connection.to}</button>
+          )}</details>
           <div className="outline-foot">
             Architecture diagram
             <br />
@@ -924,6 +932,8 @@ function App() {
                   </div>
                   <fieldset disabled={busy}>
                     <legend>Routing</legend>
+                    <button onClick={() => { const from = items.find(c => c.id === edge.from), to = items.find(c => c.id === edge.to); edgePatch({ via: [...(edge.via || []), [(from.pos[0] + to.pos[0]) / 2, (from.pos[1] + to.pos[1]) / 2]] }); }}>Add waypoint</button>
+                    <p className="muted">Drag numbered waypoints. Right-click a point, or focus it and press Delete, to remove it.</p>
                     <Field
                       label="Label"
                       value={edge.label}

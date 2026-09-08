@@ -6,7 +6,7 @@ The editor edits Archify JSON. Archify owns final HTML rendering. Each feature b
 | --- | --- | --- | --- |
 | F01 | Mouse resizing | Resize a selected component with handles, preserve JSON fields, undo once, and cancel with Escape. | Implemented |
 | F02 | Draggable connection labels | Drag labels in diagram coordinates, save label placement, undo and cancel. | Implemented |
-| F03 | Draggable waypoints | Add, move and remove route points visually without replacing unrelated routing fields. | Pending |
+| F03 | Draggable waypoints | Add, move and remove route points visually without replacing unrelated routing fields. | Implemented |
 | F04 | Actionable validation | Select affected items from diagnostics and see supported corrective actions without silently changing JSON. | Pending |
 | F05 | Diagram creation | Start an architecture document, add/remove components and connections, and undo topology edits without dangling references. | Pending |
 | F06 | Draft recovery | Recover unsaved local drafts after refresh; keep recovery separate from the source file and detect a changed source. | Pending |

@@ -1,5 +1,18 @@
 import { test, expect } from '@playwright/test';
 
+test('waypoints can be added, dragged, deleted and undone', async ({ page }) => {
+  await page.goto('/'); await page.locator('.connection-list summary').click();
+  await page.getByRole('button', { name: 'users → cdn', exact: true }).click();
+  await page.getByRole('button', { name: 'Add waypoint' }).click();
+  const handle = page.getByRole('button', { name: 'Move waypoint 1' });
+  const box = await handle.boundingBox();
+  await page.mouse.move(box.x + 11, box.y + 11); await page.mouse.down(); await page.mouse.move(box.x + 35, box.y - 20, { steps: 8 }); await page.mouse.up();
+  await expect(page.getByLabel('Waypoints · [[x, y], …]')).not.toHaveValue('[[145,300]]');
+  await handle.focus(); await page.keyboard.press('Delete');
+  await expect(handle).toHaveCount(0);
+  await page.getByRole('button', { name: 'Undo', exact: true }).click(); await expect(handle).toBeVisible();
+});
+
 test('dragging a label saves labelAt and undo restores automatic placement', async ({ page }) => {
   await page.goto('/');
   const label = page.getByRole('button', { name: 'Move label: HTTPS', exact: true });
