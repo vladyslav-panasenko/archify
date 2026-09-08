@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+test('new workflow can add topology and render JSON',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'New diagram',exact:true}).click();await page.getByLabel('Diagram title').fill('Workflow');await page.getByRole('combobox',{name:'Diagram type',exact:true}).selectOption('workflow');await page.getByRole('button',{name:'Create',exact:true}).click();
+ await page.getByRole('button',{name:'Structure',exact:true}).click();await page.getByLabel('Node label',{exact:true}).fill('Next');await page.getByRole('button',{name:'Create node',exact:true}).click();
+ await page.locator('.properties summary').filter({hasText:/^Connections$/}).click();await page.getByRole('button',{name:'Create connection',exact:true}).click();
+ await page.getByRole('button',{name:'Render HTML',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
+});
+
 test('boundary authoring creates membership and moves its members',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Structure',exact:true}).click();const form=page.locator('details').filter({has:page.getByText('New boundary',{exact:true})});
  await form.getByLabel('Boundary label').fill('Team');await form.getByLabel('Users',{exact:true}).check();await form.getByRole('button',{name:'Create boundary',exact:true}).click();

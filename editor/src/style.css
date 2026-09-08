@@ -729,3 +729,5 @@ legend {
 .member-choice { display:flex; gap:6px; align-items:center; margin:6px 0; font-size:12px; }
 .properties form { margin-bottom:12px; }
 .tabs { flex-wrap:wrap; }
+.structure-item { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.structure-item span { width:100%; }

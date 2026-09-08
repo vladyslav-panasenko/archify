@@ -37,6 +37,7 @@ import { arrange, arrangements, snapPositions, snapResize } from './arrangement.
 import { copySelection, pasteSelection } from './clipboard.mjs';
 import { commonValue, bulkPatch, deletionSummary, removeSelection, resetFields } from './selection.mjs';
 import StructurePanel from './StructurePanel.jsx';
+import { createDiagram, authoringTypes } from './topology.mjs';
 
 const sides = {
   top: Position.Top,
@@ -896,7 +897,7 @@ function App() {
         <aside className="inspector" aria-label="Document inspector">
           {documentModel?.diagram_type==='architecture'&&<label className="connection-mode"><input type="checkbox" checked={drawConnections} disabled={busy||rawDirty} onChange={e=>setDrawConnections(e.target.checked)}/> Draw / reconnect connections</label>}
           <div className="tabs">
-            {documentModel?.diagram_type==='architecture'&&<button disabled={rawDirty||busy||!!draft} onClick={()=>{setCreation(null);setPanel('structure');}}>Structure</button>}
+            {authoringTypes.includes(documentModel?.diagram_type)&&<button disabled={rawDirty||busy||!!draft} onClick={()=>{setCreation(null);setPanel('structure');}}>Structure</button>}
             <button
               className={panel === "inspector" ? "active" : ""}
               onClick={() => {
@@ -923,7 +924,7 @@ function App() {
           try {
             if (creation === 'diagram') {
               if (hasUnsaved && !window.confirm('Discard unsaved changes and create a diagram?')) return;
-              load({ ...session, document: newDocument(fields.label), name: 'untitled.architecture.json', writable: false });
+              load({ ...session, document: createDiagram(fields.diagramType,fields.label), name: `untitled.${fields.diagramType}.json`, writable: false });
               setSaved('');
             } else if (creation === 'component') { const next = addComponent(state.present, fields); change(next); setSelection([next.components.at(-1).id]); setEdgeIndex(null); }
             else { const next = addConnection(state.present, fields); change(next); setEdgeIndex(next.connections.length - 1); setSelection([]); }
@@ -931,6 +932,7 @@ function App() {
           } catch (e) { setError(e.message); }
         }}><h2>{creation === 'diagram' ? 'New diagram' : creation === 'component' ? 'New component' : 'New connection'}</h2>
           <label className="field">{creation === 'diagram' ? 'Diagram title' : 'New label'}<input name="label" required={creation !== 'connection'} autoFocus/></label>
+          {creation==='diagram'&&<label className="field">Diagram type<select name="diagramType">{authoringTypes.map(type=><option key={type}>{type}</option>)}</select></label>}
           {creation === 'component' && <label className="field">Component type<select name="type">{Object.keys(kinds).map(kind => <option key={kind}>{kind}</option>)}</select></label>}
           {creation === 'connection' && ['from', 'to'].map(key => <label className="field" key={key}>{key === 'from' ? 'From component' : 'To component'}<select name={key} required>{items.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>)}
           <div className="button-row"><button type="button" onClick={() => setCreation(null)}>Cancel</button><button type="submit" className="primary">Create</button></div>
