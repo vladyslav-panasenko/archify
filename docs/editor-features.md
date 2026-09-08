@@ -21,7 +21,7 @@ The existing editor already has component dragging, multi-selection, numeric pro
 
 ## Proposed next batch
 
-F11–F28 are approved for implementation. **Implemented: F11–F22.** Remaining features are pending. Priority reflects the benefit to manual refinement: P1 removes common editing friction, P2 expands visual authoring, and P3 improves larger-document workflows.
+F11–F28 are approved for implementation. **Implemented: F11–F23.** Remaining features are pending. Priority reflects the benefit to manual refinement: P1 removes common editing friction, P2 expands visual authoring, and P3 improves larger-document workflows.
 
 ### P1 — Faster manual refinement
 

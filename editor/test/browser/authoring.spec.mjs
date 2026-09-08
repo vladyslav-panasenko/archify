@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+test('settings update the JSON title and rendered output',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByLabel('Title',{exact:true}).fill('Updated system');await page.getByRole('button',{name:'Save settings',exact:true}).click();await expect(page.getByRole('heading',{name:'Updated system',exact:true})).toBeVisible();await page.getByRole('button',{name:'Render HTML',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
+});
+
 test('new sequence creates messages and activations and renders',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'New diagram',exact:true}).click();await page.getByLabel('Diagram title').fill('Sequence');await page.getByRole('combobox',{name:'Diagram type',exact:true}).selectOption('sequence');await page.getByRole('button',{name:'Create',exact:true}).click();await page.getByRole('button',{name:'Structure',exact:true}).click();
  await page.getByLabel('Message text',{exact:true}).last().fill('Response');await page.getByRole('button',{name:'Create message',exact:true}).click();

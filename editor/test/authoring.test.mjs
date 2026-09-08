@@ -6,6 +6,10 @@ import { validate } from '../server.mjs';
 import {createDiagram,addNode,saveEdge,saveLane,deleteLane,deleteNode} from '../src/topology.mjs';
 import {saveStage,deleteStage} from '../src/topology.mjs';
 import {saveMessage,removeMessage,saveRange} from '../src/sequence-structure.mjs';
+import {patchSettings,settingFields} from '../src/settings.mjs';
+test('settings preserve metadata and expose only type-specific supported fields',()=>{
+ const doc=sample();doc.meta.custom={preserved:true};const next=patchSettings(doc,{title:'New title',visual_preset:'blueprint',canvasWidth:'1000',canvasHeight:'800'});assert.deepEqual(next.meta.custom,doc.meta.custom);assert.deepEqual(next.connections,doc.connections);assert.deepEqual(next.meta.viewBox,[1000,800]);assert.ok(!settingFields('workflow').some(f=>f.key==='column_fit'));assert.throws(()=>patchSettings(doc,{canvasWidth:'10',canvasHeight:'20'}));
+});
 test('sequence structural edits require explicit range policy and preserve interval coordinates',()=>{
  let doc=createDiagram('sequence','Sequence');doc=saveRange(doc,'activations',null,{participant:'node-2',from:180,to:300});
  assert.throws(()=>saveMessage(doc,null,{from:'node-2',to:'node-1',label:'Response',y:260}));
