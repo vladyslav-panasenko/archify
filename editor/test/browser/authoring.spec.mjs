@@ -1,5 +1,14 @@
 import { test, expect } from '@playwright/test';
 
+test('duplicate and local copy/paste create fresh items and undo once',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Users users'}).click();
+ await page.getByText('Copy and duplicate',{exact:true}).click();
+ await page.getByRole('button',{name:'Copy selection',exact:true}).click();await page.getByRole('button',{name:'Paste selection',exact:true}).click();
+ await expect(page.locator('[data-id="c:users-copy-1"]')).toBeVisible();
+ await page.getByRole('button',{name:'Duplicate selection',exact:true}).click();await expect(page.locator('[data-id="c:users-copy-1-copy-1"]')).toBeVisible();
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(page.locator('[data-id="c:users-copy-1-copy-1"]')).toHaveCount(0);
+});
+
 test('configurable grid snapping applies to dragging and Alt bypasses it',async({page})=>{
   await page.goto('/'); await page.getByRole('button',{name:'Users users'}).click();
   await page.getByText('Snapping',{exact:true}).click(); await page.getByLabel('Grid spacing').fill('25');

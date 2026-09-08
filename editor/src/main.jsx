@@ -34,6 +34,7 @@ import { adapterFor, editingOptions, connections, sourceNodes, nodeKey, edgeKey 
 import { messageRange } from './adapters/sequence.mjs';
 import { automaticLabelPoint } from './label-placement.mjs';
 import { arrange, arrangements, snapPositions, snapResize } from './arrangement.mjs';
+import { copySelection, pasteSelection } from './clipboard.mjs';
 
 const sides = {
   top: Position.Top,
@@ -224,6 +225,7 @@ function App() {
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [canvasVersion, setCanvasVersion] = useState(0);
+  const [clipboard,setClipboard] = useState(null);
   const [gridSize,setGridSize] = useState(10), [smartSnap,setSmartSnap] = useState(false), [guides,setGuides] = useState([]);
   const [selection, setSelection] = useState([]),
     [edgeIndex, setEdgeIndex] = useState(null);
@@ -414,6 +416,23 @@ function App() {
       setError(e.message);
     }
   }
+  function paste(payload) {
+    try { const result=pasteSelection(state.present,payload); change(result.document);setSelection(result.ids);setEdgeIndex(null); }
+    catch(e){setError(e.message);}
+  }
+  useEffect(()=>{
+    const onCopy=event=>{
+      if(event.target.closest('input,textarea,select,[contenteditable]')||!selection.length||!state||busy||rawDirty||state.present.diagram_type!=='architecture')return;
+      try {const payload=copySelection(state.present,selection);event.clipboardData.setData('text/plain',JSON.stringify(payload));event.preventDefault();setClipboard(payload);setNotice('Selection copied.');}catch(e){setError(e.message);}
+    };
+    const onPaste=event=>{
+      if(event.target.closest('input,textarea,select,[contenteditable]')||!state||busy||rawDirty)return;
+      const text=event.clipboardData.getData('text/plain');if(!text.includes('archify-selection'))return;
+      event.preventDefault(); void act(async()=>{if(text.length>5*1024*1024)throw new Error('Selection exceeds 5 MB.');const result=pasteSelection(state.present,JSON.parse(text));await request('validate',result.document);change(result.document);setSelection(result.ids);setEdgeIndex(null);});
+    };
+    window.addEventListener('copy',onCopy);window.addEventListener('paste',onPaste);
+    return()=>{window.removeEventListener('copy',onCopy);window.removeEventListener('paste',onPaste);};
+  });
   function edgePatch(patch) {
     try {
       change(patchConnection(state.present, edgeIndex, patch));
@@ -520,6 +539,7 @@ function App() {
       return;
     }
     if (editingText || event.target.closest('.canvas-drag-point') || busy || rawDirty || !state || dragBase.current) return;
+    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='d'&&selection.length&&state.present.diagram_type==='architecture') {event.preventDefault();paste(copySelection(state.present,selection));return;}
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       void saveJson(session.writable);
@@ -938,6 +958,7 @@ function App() {
                   <fieldset disabled={busy || !!draft}>
                     {documentModel.diagram_type === 'architecture' && selection.length > 1 && <details open><summary>Arrange selection</summary><div className="button-row">{Object.entries(arrangements).map(([action,label]) => <button key={action} disabled={action.startsWith('distribute') && selection.length < 3} onClick={() => { try { change(arrange(state.present,selection,action)); } catch(e) { setError(e.message); } }}>{label}</button>)}</div></details>}
                     <legend>Component</legend>
+                    {documentModel.diagram_type==='architecture'&&<details><summary>Copy and duplicate</summary><div className="button-row"><button onClick={()=>paste(copySelection(state.present,selection))}>Duplicate selection</button><button onClick={()=>{setClipboard(copySelection(state.present,selection));setNotice('Selection copied inside the editor. Use Ctrl/Cmd+C on the canvas to copy to another window.');}}>Copy selection</button><button disabled={!clipboard} onClick={()=>paste(clipboard)}>Paste selection</button></div><p className="muted">Ctrl/Cmd+D duplicates. Ctrl/Cmd+C and V copy and paste on the canvas.</p></details>}
                     {documentModel.diagram_type === 'architecture' && <details><summary>Snapping</summary><label className="field">Grid spacing<input type="number" min="1" max="200" value={gridSize} onChange={e=>{const n=Number(e.target.value);if(Number.isInteger(n)&&n>=1&&n<=200)setGridSize(n);}}/></label><label><input type="checkbox" checked={smartSnap} onChange={e=>setSmartSnap(e.target.checked)}/> Smart guides</label><p className="muted">Hold Alt while dragging or resizing to bypass snapping.</p></details>}
                     {adapterFor(documentModel) && <div className="logical-properties">
                       <p className="muted">{options.hint || 'Dragging snaps horizontally to columns and adjusts the vertical offset within the same lane.'}</p>

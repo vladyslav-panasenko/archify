@@ -3,6 +3,17 @@ import assert from 'node:assert/strict';
 import { arrange } from '../src/arrangement.mjs';
 import { snapBox, snapPositions, snapResize } from '../src/arrangement.mjs';
 import { validate } from '../server.mjs';
+import { copySelection, pasteSelection } from '../src/clipboard.mjs';
+
+test('clipboard remaps internal edges and positions without losing unknown fields',()=>{
+ const doc=sample(), payload=copySelection(doc,['a','b']); const result=pasteSelection(doc,payload);
+ assert.equal(result.document.components.length,5); assert.deepEqual(result.document.components[3].custom,{keep:true});
+ assert.deepEqual(result.document.connections[1].via,[[174,54]]);
+ assert.equal(result.document.connections[1].from,result.ids[0]);assert.equal(result.document.connections[1].to,result.ids[1]);
+ assert.equal(new Set(pasteSelection(result.document,payload).document.components.map(c=>c.id)).size,7);
+ assert.throws(()=>pasteSelection({...doc,diagram_type:'sequence'},payload));
+ assert.equal(doc.components.length,3);
+});
 
 const sample = () => ({ schema_version:1, diagram_type:'architecture', meta:{title:'Arrange'}, components:[
   {id:'a',type:'backend',label:'A',pos:[20,20],size:[100,40],custom:{keep:true}},
