@@ -5,6 +5,14 @@ import { snapBox, snapPositions, snapResize } from '../src/arrangement.mjs';
 import { validate } from '../server.mjs';
 import { copySelection, pasteSelection } from '../src/clipboard.mjs';
 import { reconnectConnection } from '../src/document.mjs';
+import { commonValue, bulkPatch, removeSelection } from '../src/selection.mjs';
+test('bulk editing preserves individual geometry and deletion cleans references atomically',()=>{
+ const doc=sample();doc.boundaries=[{kind:'region',label:'Group',wraps:['a','b']}];doc.meta.views=[{id:'v',label:'View',focus:['a','c']}];
+ assert.equal(commonValue(doc,['a','b'],'width'),undefined); const next=bulkPatch(doc,['a','b'],'width',150);
+ assert.deepEqual(next.components.map(c=>c.size[1]),[40,80,60]);assert.equal(next.components[1].size[0],150);
+ const removed=removeSelection(doc,['a','b']);assert.equal(removed.connections.length,0);assert.equal(removed.boundaries.length,0);assert.deepEqual(removed.meta.views[0].focus,['c']);
+ assert.throws(()=>removeSelection(doc,['a','b','c']));assert.equal(doc.components.length,3);
+});
 test('reconnecting preserves authored routing and identity',()=>{
  const doc=sample();doc.connections[0].id='edge';doc.connections[0].labelAt=[100,200];
  const next=reconnectConnection(doc,0,{from:'a',to:'c',toSide:'left'});

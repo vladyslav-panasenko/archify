@@ -35,6 +35,7 @@ import { messageRange } from './adapters/sequence.mjs';
 import { automaticLabelPoint } from './label-placement.mjs';
 import { arrange, arrangements, snapPositions, snapResize } from './arrangement.mjs';
 import { copySelection, pasteSelection } from './clipboard.mjs';
+import { commonValue, bulkPatch, deletionSummary, removeSelection } from './selection.mjs';
 
 const sides = {
   top: Position.Top,
@@ -175,7 +176,7 @@ function ConnectionEdge(props) {
 const nodeTypes = { component: ComponentNode, boundary: BoundaryNode, lifeline: LifelineNode },
   edgeTypes = { connection: ConnectionEdge };
 
-function Field({ label, value, onCommit, number = false }) {
+function Field({ label, value, onCommit, number = false, mixed = false }) {
   const [text, setText] = useState(String(value ?? ""));
   useEffect(() => setText(String(value ?? "")), [value]);
   const save = () => {
@@ -192,6 +193,7 @@ function Field({ label, value, onCommit, number = false }) {
       <input
         type={number ? "number" : "text"}
         value={text}
+        placeholder={mixed ? 'Mixed values' : undefined}
         onChange={(e) => setText(e.target.value)}
         onBlur={save}
         onKeyDown={(e) => {
@@ -966,7 +968,7 @@ function App() {
                   <div className="selected-heading">
                     <span className="eyebrow">
                       {selection.length > 1
-                        ? `${selection.length} selected · editing first`
+                        ? `${selection.length} selected`
                         : selected.type}
                     </span>
                     <h2>{selected.label}</h2>
@@ -975,9 +977,10 @@ function App() {
                   <fieldset disabled={busy || !!draft}>
                     {documentModel.diagram_type === 'architecture' && selection.length > 1 && <details open><summary>Arrange selection</summary><div className="button-row">{Object.entries(arrangements).map(([action,label]) => <button key={action} disabled={action.startsWith('distribute') && selection.length < 3} onClick={() => { try { change(arrange(state.present,selection,action)); } catch(e) { setError(e.message); } }}>{label}</button>)}</div></details>}
                     <legend>Component</legend>
+                    {selection.length>1&&<><p className="muted">Changes apply to every selected item. Blank mixed fields remain unchanged.</p>{['label','sublabel',...(options.resizable===false?[]:['width','height'])].map(field=>{const value=commonValue(documentModel,selection,field);return <Field key={field} label={`Selection ${field}`} value={value} mixed={value===undefined} number={['width','height'].includes(field)} onCommit={value=>{try{change(bulkPatch(state.present,selection,field,value));}catch(e){setError(e.message);}}}/>;})}</>}
                     {documentModel.diagram_type==='architecture'&&<details><summary>Copy and duplicate</summary><div className="button-row"><button onClick={()=>paste(copySelection(state.present,selection))}>Duplicate selection</button><button onClick={()=>{setClipboard(copySelection(state.present,selection));setNotice('Selection copied inside the editor. Use Ctrl/Cmd+C on the canvas to copy to another window.');}}>Copy selection</button><button disabled={!clipboard} onClick={()=>paste(clipboard)}>Paste selection</button></div><p className="muted">Ctrl/Cmd+D duplicates. Ctrl/Cmd+C and V copy and paste on the canvas.</p></details>}
                     {documentModel.diagram_type === 'architecture' && <details><summary>Snapping</summary><label className="field">Grid spacing<input type="number" min="1" max="200" value={gridSize} onChange={e=>{const n=Number(e.target.value);if(Number.isInteger(n)&&n>=1&&n<=200)setGridSize(n);}}/></label><label><input type="checkbox" checked={smartSnap} onChange={e=>setSmartSnap(e.target.checked)}/> Smart guides</label><p className="muted">Hold Alt while dragging or resizing to bypass snapping.</p></details>}
-                    {adapterFor(documentModel) && <div className="logical-properties">
+                    {selection.length===1&&<>{adapterFor(documentModel) && <div className="logical-properties">
                       <p className="muted">{options.hint || 'Dragging snaps horizontally to columns and adjusts the vertical offset within the same lane.'}</p>
                       {options.fields.map(field => <Field key={field} label={{ col: 'Column', yOffset: 'Vertical offset', stage: 'Stage', row: 'Row', order:'Participant order' }[field] || field} value={selected[field] ?? 0} number onCommit={value => applyPatch({ [field]: value })}/>)}
                       {selected.lane && <label className="field">Lane<select value={selected.lane} onChange={e => applyPatch({ lane: e.target.value })}>{documentModel.lanes.map(lane => <option key={lane.id} value={lane.id}>{lane.label}</option>)}</select></label>}
@@ -1037,12 +1040,13 @@ function App() {
                           Reset to grid position
                         </button>
                       )}
+                    </>}
                   </fieldset>
                   <p className="muted">
                     Moving this component keeps its connections and boundary
                     membership.
                   </p>
-                  {documentModel.diagram_type === 'architecture' && <button disabled={busy} onClick={() => { if (!window.confirm('Delete this component and remove its connected edges and references?')) return; try { change(removeComponent(state.present, selected.id)); setSelection([]); } catch (e) { setError(e.message); } }}>Delete component</button>}
+                  {documentModel.diagram_type === 'architecture' && <button disabled={busy} onClick={() => { if (!window.confirm(`Delete ${deletionSummary(state.present,selection)}? Undo restores the complete edit.`)) return; try { change(removeSelection(state.present, selection)); setSelection([]); } catch (e) { setError(e.message); } }}>{selection.length>1?'Delete selection':'Delete component'}</button>}
                 </>
               ) : edge ? (
                 <>

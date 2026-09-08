@@ -1,5 +1,14 @@
 import { test, expect } from '@playwright/test';
 
+test('mixed bulk values apply together and deletion is undoable',async({page})=>{
+ await page.goto('/');await page.locator('[data-id="c:users"]').click();await page.locator('[data-id="c:api"]').click({modifiers:['Shift']});
+ await expect(page.getByLabel('Selection width')).toHaveAttribute('placeholder','Mixed values');
+ await page.getByLabel('Selection width').fill('150');await page.getByLabel('Selection width').press('Tab');
+ await expect(page.getByLabel('Selection width')).toHaveValue('150');
+ page.on('dialog',d=>d.accept());await page.getByRole('button',{name:'Delete selection',exact:true}).click();await expect(page.locator('[data-id="c:users"]')).toHaveCount(0);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(page.locator('[data-id="c:users"]')).toBeVisible();
+});
+
 test('mouse creates a connection and endpoint edits preserve its identity',async({page})=>{
  await page.goto('/');await page.getByLabel('Draw / reconnect connections').check();
  const a=page.getByLabel('Connect from Users bottom',{exact:true}), b=page.getByLabel('Connect to Worker bottom',{exact:true});
