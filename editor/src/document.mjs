@@ -172,7 +172,16 @@ export function assertDocument(document) {
   return document;
 }
 
+// Documents are immutable history snapshots. Weak keys release old projections
+// when their snapshots leave history.
+const projections = new WeakMap();
 export function components(document) {
+  if (projections.has(document)) return projections.get(document);
+  const result = projectComponents(document);
+  projections.set(document, result);
+  return result;
+}
+function projectComponents(document) {
   const adapter = adapterFor(document);
   if (adapter)
     return sourceNodes(document).map((node) => adapter.project(document, node));
@@ -267,6 +276,14 @@ export function patchConnection(document, index, patch) {
 }
 
 export function moveComponents(document, positions) {
+  if (document.diagram_type === "architecture") {
+    return {...document, components: document.components.map(c => {
+      const pos = positions.get(c.id);
+      if (!pos) return c;
+      if (!point(pos)) throw new Error("Coordinates must be finite numbers.");
+      return {...c, pos: pos.map(n => Math.round(n * 100) / 100)};
+    })};
+  }
   const next = clone(document);
   const adapter = adapterFor(document);
   for (const c of [...sourceNodes(next)]) {

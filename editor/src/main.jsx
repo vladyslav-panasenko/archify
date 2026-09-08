@@ -432,9 +432,10 @@ function App() {
     dialog = useRef();
   const documentModel = draft || state?.present;
   const options = editingOptions(documentModel);
-  const dirty = Boolean(state && serialize(state.present) !== saved);
+  const presentText = useMemo(() => state ? serialize(state.present) : "", [state?.present]);
+  const dirty = Boolean(state && presentText !== saved);
   const rawDirty = Boolean(
-    state && panel === "json" && jsonText !== serialize(state.present),
+    state && panel === "json" && jsonText !== presentText,
   );
   const hasUnsaved = dirty || rawDirty || Boolean(draft);
 
@@ -879,7 +880,9 @@ function App() {
       })),
     [documentModel, edgeIndex],
   );
-  const warnings = documentModel ? layoutWarnings(documentModel) : [];
+  // Overlap diagnostics describe committed edits; dragging must not run the
+  // quadratic all-pairs check on every pointer event.
+  const warnings = useMemo(() => state ? layoutWarnings(state.present) : [], [state?.present]);
   const selected = items.find((c) => c.id === selection[0]),
     edge = connections(documentModel)[edgeIndex];
 

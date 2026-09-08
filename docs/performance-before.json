@@ -1,0 +1,11 @@
+{
+  "nodes": 500,
+  "edges": 480,
+  "nodeVersion": "v24.11.1",
+  "projection20FramesMs": 100,
+  "renderMs": 163,
+  "htmlBytes": 1231126,
+  "browserOpenMs": 307,
+  "browserSearchAndFocusMs": 303,
+  "browserDrag20StepsMs": 2326
+}
