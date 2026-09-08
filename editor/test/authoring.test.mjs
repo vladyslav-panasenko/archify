@@ -4,6 +4,11 @@ import { arrange } from '../src/arrangement.mjs';
 import { snapBox, snapPositions, snapResize } from '../src/arrangement.mjs';
 import { validate } from '../server.mjs';
 import {createDiagram,addNode,saveEdge,saveLane,deleteLane,deleteNode} from '../src/topology.mjs';
+import {saveStage,deleteStage} from '../src/topology.mjs';
+test('dataflow stage deletion remaps indices and retains flow endpoints',()=>{
+ let doc=createDiagram('dataflow','Data');doc=saveStage(doc,null,'Third');doc=addNode(doc,{label:'Extra',type:'backend',stage:2,row:1});doc=saveEdge(doc,null,{from:'node-1',to:'node-3',label:'Data'});
+ const next=deleteStage(doc,1,0);assert.equal(next.nodes[1].stage,0);assert.equal(next.nodes[2].stage,1);assert.deepEqual(next.flows,doc.flows);validate(next);assert.throws(()=>deleteStage(next,0,1));assert.throws(()=>deleteNode(createDiagram('dataflow','Data'),'node-1'));
+});
 test('workflow topology preserves version and reassigns dependent lane groups',()=>{
  let doc=createDiagram('workflow','Workflow');doc.schema_version=2;doc=saveLane(doc,null,{label:'Second'});doc=addNode(doc,{label:'Next',type:'backend',lane:'lane-2',col:1});doc=saveEdge(doc,null,{from:'node-1',to:'node-2',label:'Next'});
  doc.groups=[{id:'g',label:'Group',lane:'lane-2',fromCol:0,toCol:1}];doc=deleteLane(doc,1,'lane-1');assert.equal(doc.nodes[1].lane,'lane-1');assert.equal(doc.groups[0].lane,'lane-1');assert.equal(doc.schema_version,2);validate(doc);assert.equal(deleteNode(doc,'node-2').edges.length,0);

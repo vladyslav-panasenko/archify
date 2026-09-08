@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test';
 
+test('new dataflow creates a flow and renders',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'New diagram',exact:true}).click();await page.getByLabel('Diagram title').fill('Dataflow');await page.getByRole('combobox',{name:'Diagram type',exact:true}).selectOption('dataflow');await page.getByRole('button',{name:'Create',exact:true}).click();
+ await page.getByRole('button',{name:'Structure',exact:true}).click();await page.locator('.properties summary').filter({hasText:/^Connections$/}).click();await page.getByLabel('Connection label',{exact:true}).fill('Data');await page.getByRole('button',{name:'Create connection',exact:true}).click();
+ await page.getByRole('button',{name:'Render HTML',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
+});
+
 test('new workflow can add topology and render JSON',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'New diagram',exact:true}).click();await page.getByLabel('Diagram title').fill('Workflow');await page.getByRole('combobox',{name:'Diagram type',exact:true}).selectOption('workflow');await page.getByRole('button',{name:'Create',exact:true}).click();
  await page.getByRole('button',{name:'Structure',exact:true}).click();await page.getByLabel('Node label',{exact:true}).fill('Next');await page.getByRole('button',{name:'Create node',exact:true}).click();
