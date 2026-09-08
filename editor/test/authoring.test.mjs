@@ -3,6 +3,12 @@ import assert from 'node:assert/strict';
 import { arrange } from '../src/arrangement.mjs';
 import { snapBox, snapPositions, snapResize } from '../src/arrangement.mjs';
 import { validate } from '../server.mjs';
+import { saveBoundary, moveBoundary, deleteBoundary } from '../src/structure.mjs';
+test('boundary creation, membership and group movement preserve components and edges',()=>{
+ const doc=sample(),grouped=saveBoundary(doc,null,{label:'Region',kind:'region',pad:30,wraps:['a','b']});
+ const moved=moveBoundary(grouped,0,50,20);assert.deepEqual(moved.components[0].pos,[70,40]);assert.deepEqual(moved.components[2],doc.components[2]);assert.deepEqual(moved.connections,doc.connections);
+ assert.equal(deleteBoundary(moved,0).components.length,3);assert.throws(()=>saveBoundary(doc,null,{label:'X',kind:'region',pad:0,wraps:[]}));
+});
 import { copySelection, pasteSelection } from '../src/clipboard.mjs';
 import { reconnectConnection } from '../src/document.mjs';
 import { commonValue, bulkPatch, removeSelection, resetFields } from '../src/selection.mjs';

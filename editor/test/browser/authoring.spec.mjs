@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+test('boundary authoring creates membership and moves its members',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Structure',exact:true}).click();const form=page.locator('details').filter({has:page.getByText('New boundary',{exact:true})});
+ await form.getByLabel('Boundary label').fill('Team');await form.getByLabel('Users',{exact:true}).check();await form.getByRole('button',{name:'Create boundary',exact:true}).click();
+ await page.getByText('Team',{exact:true}).last().click();const group=page.locator('details').filter({has:page.getByText('Team',{exact:true})});await group.getByLabel('Move X').fill('20');await group.getByRole('button',{name:'Move members',exact:true}).click();
+ await page.getByRole('button',{name:'JSON',exact:true}).click();const doc=JSON.parse(await page.getByLabel('Diagram JSON').inputValue());expect(doc.boundaries.at(-1).wraps).toEqual(['users']);expect(doc.components.find(c=>c.id==='users').pos[0]).toBe(60);
+});
+
 test('manual size reset explains removed fields and undo restores them',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Users users'}).click();await page.getByLabel('Width',{exact:true}).fill('180');await page.getByLabel('Width',{exact:true}).press('Tab');
  await page.getByText('Reset manual layout',{exact:true}).click();page.on('dialog',d=>{expect(d.message()).toContain('users.size');d.accept();});

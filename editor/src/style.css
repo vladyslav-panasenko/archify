@@ -726,3 +726,6 @@ legend {
 .connecting .react-flow__handle { opacity:1; width:9px; height:9px; background:#087b72; pointer-events:all; }
 .connecting .react-flow__handle.source { margin-left:-6px; }
 .connecting .react-flow__handle.target { margin-left:6px; background:#fff; border:2px solid #087b72; }
+.member-choice { display:flex; gap:6px; align-items:center; margin:6px 0; font-size:12px; }
+.properties form { margin-bottom:12px; }
+.tabs { flex-wrap:wrap; }
