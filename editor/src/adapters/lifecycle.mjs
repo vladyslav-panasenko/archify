@@ -60,11 +60,12 @@ export const lifecycle = {
   },
   validate(document) {
     if (!document.lanes?.length) throw new Error("Lifecycle needs lanes.");
+    if(!document.lanes.some(l=>l.id==='main'))throw new Error('Lifecycle needs the main lane.');
     for (const node of document.states) {
       if (!document.lanes.some((l) => l.id === node.lane))
         throw new Error(`Unknown lane for ${node.id}.`);
-      if (!Number.isInteger(node.col) || node.col < 0 || node.col > 4)
-        throw new Error("Lifecycle columns must be between 0 and 4.");
+      if (!Number.isInteger(node.col) || node.col < 0 || node.col >= band(node.lane).xs.length)
+        throw new Error(`Lane ${node.lane} supports columns 0–${band(node.lane).xs.length-1}.`);
     }
   },
 };

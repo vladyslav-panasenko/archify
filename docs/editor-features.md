@@ -69,9 +69,24 @@ For every feature:
 - Keep selection, guides, locks and other editor preferences outside exported diagram JSON.
 - When implementation is requested, deliver one tested commit and push per feature, as in the first batch.
 
+## Third batch — reliability and larger workflows
+
+F29–F36 are approved for implementation. Each item is delivered as a tested commit and push. F29 and F30 establish the baseline before adding new authoring workflows.
+
+| ID | Feature | Done when | Status |
+| --- | --- | --- | --- |
+| F29 | Editor hardening | Audit all five adapters, reject malformed references and geometry without losing the draft, and verify long undo/redo sessions and cancellation. Record findings and fixes. | Implemented |
+| F30 | Large-diagram performance | Record repeatable measurements for selection, dragging and rendering hundreds of nodes; fix measured bottlenecks and document practical limits. | Pending |
+| F31 | Auto-arrange selection | Preview a deterministic architecture layout, preserve locked/unselected items and authored routes, then apply as one undoable JSON edit or cancel. | Pending |
+| F32 | Reusable templates | Save, rename, export/import and insert architecture fragments with fresh IDs and remapped internal connections; preserve unrelated JSON and bound local storage. | Pending |
+| F33 | Schema-aware JSON editing | Offer schema-based field/value suggestions, inline validation with locations, and navigation between source fields and canvas items while preserving unapplied text. | Pending |
+| F34 | Local project workspace | Browse diagrams under an explicitly opened local directory, switch documents while retaining separate drafts/history, and save with per-file revision and path checks. | Pending |
+| F35 | Layout comparison | Compare two compatible JSON versions on the canvas and selectively accept supported placement changes by stable item ID, with undo and topology preserved. | Pending |
+| F36 | Accessibility pass | Audit keyboard workflows, focus/selection announcements, labels, contrast and hit targets; fix barriers and verify desktop/narrow layouts. | Pending |
+
 ## Delivery commits
 
-All features are pushed to `main` in the private repository.
+Completed features are pushed to `main` in the private repository.
 
 | Feature | Commit    |
 | ------- | --------- |
