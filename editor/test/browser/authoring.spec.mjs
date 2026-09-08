@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+test('review shows layout diff and can download reviewed JSON',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Users users'}).click();await page.getByLabel('X',{exact:true}).fill('55');await page.getByLabel('X',{exact:true}).press('Tab');await page.getByRole('button',{name:'Review',exact:true}).click();await expect(page.locator('.change-entry')).toContainText('pos · layout');
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'Download reviewed JSON',exact:true}).click();await download;await expect(page.getByText('No changes since the baseline.',{exact:true})).toBeVisible();
+});
+
 test('keyboard search focuses a connection without editing JSON',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Search',exact:true}).click();const input=page.getByLabel('Find items and connections');await input.fill('read-through');await input.press('ArrowDown');await page.keyboard.press('Enter');await expect(page.locator('.react-flow__edge.selected')).toHaveCount(1);await expect(page.getByRole('button',{name:'Undo',exact:true})).toBeDisabled();await page.getByRole('button',{name:'Fit selection',exact:true}).click();
 });

@@ -40,6 +40,7 @@ import StructurePanel from './StructurePanel.jsx';
 import { createDiagram, authoringTypes } from './topology.mjs';
 import SettingsPanel from './SettingsPanel.jsx';
 import SearchPanel from './SearchPanel.jsx';
+import ReviewPanel from './ReviewPanel.jsx';
 
 const sides = {
   top: Position.Top,
@@ -899,6 +900,7 @@ function App() {
         <aside className="inspector" aria-label="Document inspector">
           {documentModel?.diagram_type==='architecture'&&<label className="connection-mode"><input type="checkbox" checked={drawConnections} disabled={busy||rawDirty} onChange={e=>setDrawConnections(e.target.checked)}/> Draw / reconnect connections</label>}
           <div className="tabs">
+            <button disabled={!state||rawDirty||busy||!!draft} onClick={()=>{setCreation(null);setPanel('review');}}>Review</button>
             <button disabled={!state||rawDirty||busy||!!draft} onClick={()=>{setCreation(null);setPanel('search');}}>Search</button>
             <button disabled={!state||rawDirty||busy||!!draft} onClick={()=>{setCreation(null);setPanel('settings');}}>Settings</button>
             {authoringTypes.includes(documentModel?.diagram_type)&&<button disabled={rawDirty||busy||!!draft} onClick={()=>{setCreation(null);setPanel('structure');}}>Structure</button>}
@@ -940,7 +942,7 @@ function App() {
           {creation === 'component' && <label className="field">Component type<select name="type">{Object.keys(kinds).map(kind => <option key={kind}>{kind}</option>)}</select></label>}
           {creation === 'connection' && ['from', 'to'].map(key => <label className="field" key={key}>{key === 'from' ? 'From component' : 'To component'}<select name={key} required>{items.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>)}
           <div className="button-row"><button type="button" onClick={() => setCreation(null)}>Cancel</button><button type="submit" className="primary">Create</button></div>
-        </form> : panel==='search' ? <SearchPanel document={documentModel} onFocus={result=>{setSelection(result.kind==='node'?result.ids:[]);setEdgeIndex(result.kind==='connection'?result.index:null);flow.current?.fitView({nodes:result.ids.map(id=>({id:`c:${id}`})),padding:0.5,maxZoom:1.5});}} onFit={()=>{const ids=selection.length?selection:edge?[edge.from,edge.to]:[];if(ids.length)flow.current?.fitView({nodes:ids.map(id=>({id:`c:${id}`})),padding:0.5,maxZoom:1.5});}}/> : panel==='settings' ? <fieldset disabled={busy||!!draft}><SettingsPanel document={documentModel} onChange={operation=>act(async()=>{const next=operation();await request('validate',next);change(next);})}/></fieldset> : panel==='structure' ? <fieldset disabled={busy||!!draft}><StructurePanel document={documentModel} onChange={operation=>act(async()=>{const next=operation();await request('validate',next);change(next);})} onSelect={ids=>{setSelection(ids);setEdgeIndex(null);setPanel('inspector');}}/></fieldset> : panel === "json" ? (
+        </form> : panel==='review' ? <fieldset disabled={busy||!!draft}><ReviewPanel baseline={saved?JSON.parse(saved):null} document={documentModel} writable={session.writable} onSave={saveJson}/></fieldset> : panel==='search' ? <SearchPanel document={documentModel} onFocus={result=>{setSelection(result.kind==='node'?result.ids:[]);setEdgeIndex(result.kind==='connection'?result.index:null);flow.current?.fitView({nodes:result.ids.map(id=>({id:`c:${id}`})),padding:0.5,maxZoom:1.5});}} onFit={()=>{const ids=selection.length?selection:edge?[edge.from,edge.to]:[];if(ids.length)flow.current?.fitView({nodes:ids.map(id=>({id:`c:${id}`})),padding:0.5,maxZoom:1.5});}}/> : panel==='settings' ? <fieldset disabled={busy||!!draft}><SettingsPanel document={documentModel} onChange={operation=>act(async()=>{const next=operation();await request('validate',next);change(next);})}/></fieldset> : panel==='structure' ? <fieldset disabled={busy||!!draft}><StructurePanel document={documentModel} onChange={operation=>act(async()=>{const next=operation();await request('validate',next);change(next);})} onSelect={ids=>{setSelection(ids);setEdgeIndex(null);setPanel('inspector');}}/></fieldset> : panel === "json" ? (
             <div className="json-panel">
               <p>Edit the source, then apply it to the canvas.</p>
               <textarea
