@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+test('guided views save focus references and render through Archify',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Structure',exact:true}).click();await page.getByText('Guided views',{exact:true}).click();const form=page.locator('form').filter({has:page.getByRole('button',{name:'Create view',exact:true})});await form.getByLabel('View label').fill('Entry');await form.getByLabel('Users',{exact:true}).check();await form.getByRole('button',{name:'Create view',exact:true}).click();await page.getByRole('button',{name:'Render HTML',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
+});
+
 test('checkpoint restore is undoable and can be exported',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Checkpoints',exact:true}).click();await page.getByLabel('Checkpoint name').fill('Before');await page.getByRole('button',{name:'Create checkpoint',exact:true}).click();await page.getByRole('button',{name:'Properties',exact:true}).click();await page.getByRole('button',{name:'Users users'}).click();await page.getByLabel('X',{exact:true}).fill('90');await page.getByLabel('X',{exact:true}).press('Tab');await page.getByRole('button',{name:'Checkpoints',exact:true}).click();page.on('dialog',d=>d.accept());await page.getByRole('button',{name:'Restore Before',exact:true}).click();await page.getByRole('button',{name:'Undo',exact:true}).click();await page.getByRole('button',{name:'Properties',exact:true}).click();await page.getByRole('button',{name:'Users users'}).click();await expect(page.getByLabel('X',{exact:true})).toHaveValue('90');await page.getByRole('button',{name:'Checkpoints',exact:true}).click();const download=page.waitForEvent('download');await page.getByRole('button',{name:'Export Before',exact:true}).click();await download;
 });

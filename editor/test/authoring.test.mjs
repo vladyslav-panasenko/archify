@@ -39,7 +39,8 @@ test('workflow topology preserves version and reassigns dependent lane groups',(
  let doc=createDiagram('workflow','Workflow');doc.schema_version=2;doc=saveLane(doc,null,{label:'Second'});doc=addNode(doc,{label:'Next',type:'backend',lane:'lane-2',col:1});doc=saveEdge(doc,null,{from:'node-1',to:'node-2',label:'Next'});
  doc.groups=[{id:'g',label:'Group',lane:'lane-2',fromCol:0,toCol:1}];doc=deleteLane(doc,1,'lane-1');assert.equal(doc.nodes[1].lane,'lane-1');assert.equal(doc.groups[0].lane,'lane-1');assert.equal(doc.schema_version,2);validate(doc);assert.equal(deleteNode(doc,'node-2').edges.length,0);
 });
-import { saveBoundary, moveBoundary, deleteBoundary } from '../src/structure.mjs';
+import { saveBoundary, moveBoundary, deleteBoundary, saveView, deleteView } from '../src/structure.mjs';
+test('guided views retain identity and topology deletion cleans focus references',()=>{let doc=saveView(sample(),null,{label:'Overview',note:'Focus',focus:['a','b']});const id=doc.meta.views[0].id;doc=saveView(doc,0,{label:'Renamed',focus:['b']});assert.equal(doc.meta.views[0].id,id);assert.equal(doc.meta.views[0].note,'Focus');assert.throws(()=>saveView(doc,null,{label:'Missing',focus:['missing']}));assert.equal(removeSelection(doc,['b']).meta.views,undefined);assert.equal(deleteView(doc,0).meta.views,undefined);});
 test('boundary creation, membership and group movement preserve components and edges',()=>{
  const doc=sample(),grouped=saveBoundary(doc,null,{label:'Region',kind:'region',pad:30,wraps:['a','b']});
  const moved=moveBoundary(grouped,0,50,20);assert.deepEqual(moved.components[0].pos,[70,40]);assert.deepEqual(moved.components[2],doc.components[2]);assert.deepEqual(moved.connections,doc.connections);

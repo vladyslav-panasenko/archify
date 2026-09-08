@@ -19,9 +19,9 @@ The editor edits Archify JSON. Archify owns final HTML rendering. The first batc
 
 The existing editor already has component dragging, multi-selection, numeric properties, JSON import/export, direct saving, undo/redo and HTML generation. Later diagram types expose only edits their schemas can represent; they do not acquire invented free-position fields. Tests must cover JSON round trips and the type's renderer as well as browser interaction.
 
-## Proposed next batch
+## Second batch
 
-F11–F28 are approved for implementation. **Implemented: F11–F27.** Remaining features are pending. Priority reflects the benefit to manual refinement: P1 removes common editing friction, P2 expands visual authoring, and P3 improves larger-document workflows.
+**Implemented: F11–F28.** Priority reflects the benefit to manual refinement: P1 removes common editing friction, P2 expands visual authoring, and P3 improves larger-document workflows.
 
 ### P1 — Faster manual refinement
 
