@@ -7,16 +7,19 @@ import { randomBytes, createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { validateSchema } from "../archify/renderers/shared/validator.mjs";
+import { validateGuidedViews } from "../archify/renderers/shared/cli.mjs";
 import { assertDocument, serialize } from "./src/document.mjs";
-import { supportedTypes, sourceNodes } from './src/adapters/index.mjs';
+import { supportedTypes, sourceNodes } from "./src/adapters/index.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const execute = promisify(execFile);
 const hash = (text) => createHash("sha256").update(text).digest("hex");
 const MAX_BYTES = 5 * 1024 * 1024;
 export function validate(document) {
-  if (!supportedTypes.includes(document?.diagram_type)) throw new Error('Unsupported diagram type.');
+  if (!supportedTypes.includes(document?.diagram_type))
+    throw new Error("Unsupported diagram type.");
   validateSchema(document.diagram_type, document);
+  validateGuidedViews(document.diagram_type, document);
   return assertDocument(document);
 }
 
@@ -78,8 +81,15 @@ export async function render(document) {
     } catch (error) {
       const stderr = error.stderr?.trim() || error.message;
       let report;
-      try { report = JSON.parse(stderr); } catch { /* non-renderer process failure */ }
-      if (report?.diagnostics) throw Object.assign(new Error(report.error), { archifyDiagnostics: report.diagnostics });
+      try {
+        report = JSON.parse(stderr);
+      } catch {
+        /* non-renderer process failure */
+      }
+      if (report?.diagnostics)
+        throw Object.assign(new Error(report.error), {
+          archifyDiagnostics: report.diagnostics,
+        });
       // Present compiler diagnostics without Node stack frames or local source paths.
       const message =
         stderr.match(/Error: ([\s\S]*?)(?:\n\s+at |\nNode\.js|$)/)?.[1] ||
@@ -136,7 +146,7 @@ export async function createEditorServer({ file, dev = false } = {}) {
             token,
             revision: hash(text),
             writable: Boolean(filePath),
-            recoveryKey: hash(filePath || path.join(root, 'sample')),
+            recoveryKey: hash(filePath || path.join(root, "sample")),
             name: path.basename(filePath || "web-app.architecture.json"),
           });
         }
@@ -237,7 +247,10 @@ export async function createEditorServer({ file, dev = false } = {}) {
         send(404, "Not found. Run npm run build first.", "text/plain");
       }
     } catch (error) {
-      send(error.status || 400, { error: error.message, diagnostics: error.archifyDiagnostics || [] });
+      send(error.status || 400, {
+        error: error.message,
+        diagnostics: error.archifyDiagnostics || [],
+      });
     }
   });
   server.on("close", () => {

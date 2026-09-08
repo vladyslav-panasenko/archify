@@ -10,26 +10,26 @@
 
 ## Delivery sequence
 
-| Feature | Implementation files | Verification |
-| --- | --- | --- |
-| F11 | `editor/src/arrangement.mjs`, `editor/src/main.jsx` | Edge/center alignment, equal gaps, preservation, one-step undo |
-| F12 | `editor/src/arrangement.mjs`, `editor/src/main.jsx`, `editor/src/style.css` | Drag/resize snapping, guides, bypass, cancellation |
-| F13 | `editor/src/clipboard.mjs`, `editor/src/main.jsx` | ID remapping, unknown fields, type rejection, browser paste |
-| F14 | `editor/src/document.mjs`, `editor/src/main.jsx` | Mouse connection creation/reconnection and preservation |
-| F15 | `editor/src/selection.mjs`, `editor/src/main.jsx` | Mixed properties, reference cleanup, minimum nodes, undo |
-| F16 | `editor/src/main.jsx` | Locked drag/resize/nudge, local persistence and unlock |
-| F17 | `editor/src/selection.mjs`, `editor/src/main.jsx` | Reset only optional placement fields, schema validity |
-| F18 | `editor/src/structure.mjs`, `editor/src/StructurePanel.jsx` | Boundary membership, movement and deletion |
-| F19 | `editor/src/topology.mjs`, `editor/src/StructurePanel.jsx`, `editor/src/main.jsx` | Workflow versions, lane/node/edge operations, renderer |
-| F20 | Same topology and structure files | Stage/node/flow operations, references, renderer |
-| F21 | Same topology and structure files | Lifecycle lanes/states/transitions, renderer |
-| F22 | Same topology and structure files | Sequence messages, participants, activation/segment ranges, renderer |
-| F23 | `editor/src/SettingsPanel.jsx`, `editor/src/main.jsx` | Supported settings, unknown metadata and renderer |
-| F24 | `editor/src/main.jsx` | Keyboard search, connections, fit selection, JSON unchanged |
-| F25 | `editor/src/review.mjs`, `editor/src/ReviewPanel.jsx` | Field-level diff and save/download baseline |
-| F26 | Same review files, `editor/server.mjs`, `editor/src/main.jsx` | Three-way conflicts, explicit resolution, revision race |
-| F27 | `editor/src/CheckpointsPanel.jsx`, `editor/src/main.jsx` | Storage limits, restore/undo, export, source unchanged |
-| F28 | Structure files | Views, focus references, topology cleanup, renderer |
+| Feature | Implementation files                                                              | Verification                                                         |
+| ------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| F11     | `editor/src/arrangement.mjs`, `editor/src/main.jsx`                               | Edge/center alignment, equal gaps, preservation, one-step undo       |
+| F12     | `editor/src/arrangement.mjs`, `editor/src/main.jsx`, `editor/src/style.css`       | Drag/resize snapping, guides, bypass, cancellation                   |
+| F13     | `editor/src/clipboard.mjs`, `editor/src/main.jsx`                                 | ID remapping, unknown fields, type rejection, browser paste          |
+| F14     | `editor/src/document.mjs`, `editor/src/main.jsx`                                  | Mouse connection creation/reconnection and preservation              |
+| F15     | `editor/src/selection.mjs`, `editor/src/main.jsx`                                 | Mixed properties, reference cleanup, minimum nodes, undo             |
+| F16     | `editor/src/main.jsx`                                                             | Locked drag/resize/nudge, local persistence and unlock               |
+| F17     | `editor/src/selection.mjs`, `editor/src/main.jsx`                                 | Reset only optional placement fields, schema validity                |
+| F18     | `editor/src/structure.mjs`, `editor/src/StructurePanel.jsx`                       | Boundary membership, movement and deletion                           |
+| F19     | `editor/src/topology.mjs`, `editor/src/StructurePanel.jsx`, `editor/src/main.jsx` | Workflow versions, lane/node/edge operations, renderer               |
+| F20     | Same topology and structure files                                                 | Stage/node/flow operations, references, renderer                     |
+| F21     | Same topology and structure files                                                 | Lifecycle lanes/states/transitions, renderer                         |
+| F22     | Same topology and structure files                                                 | Sequence messages, participants, activation/segment ranges, renderer |
+| F23     | `editor/src/SettingsPanel.jsx`, `editor/src/main.jsx`                             | Supported settings, unknown metadata and renderer                    |
+| F24     | `editor/src/main.jsx`                                                             | Keyboard search, connections, fit selection, JSON unchanged          |
+| F25     | `editor/src/review.mjs`, `editor/src/ReviewPanel.jsx`                             | Field-level diff and save/download baseline                          |
+| F26     | Same review files, `editor/server.mjs`, `editor/src/main.jsx`                     | Three-way conflicts, explicit resolution, revision race              |
+| F27     | `editor/src/CheckpointsPanel.jsx`, `editor/src/main.jsx`                          | Storage limits, restore/undo, export, source unchanged               |
+| F28     | Structure files                                                                   | Views, focus references, topology cleanup, renderer                  |
 
 ## Per-feature procedure
 

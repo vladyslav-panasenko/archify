@@ -1,3 +1,83 @@
-import React from 'react';
-import {saveView,deleteView} from './structure.mjs';
-export default function ViewsPanel({document,onChange,onSelect}){return <details><summary>Guided views</summary><p className="muted">Up to five views. Archify renders their focus controls and notes in the final HTML.</p>{[...document.meta.views||[],null].map((view,index)=><details key={view?`${index}:${JSON.stringify(view)}`:`new:${document.meta.views?.length||0}`} open={!view}><summary>{view?.label||'New view'}</summary><form onSubmit={e=>{e.preventDefault();const data=new FormData(e.currentTarget);onChange(()=>saveView(document,view?index:null,{label:data.get('label'),note:data.get('note'),focus:data.getAll('focus')}));}}><label className="field">View label<input name="label" required maxLength="48" defaultValue={view?.label||''}/></label><label className="field">View note<input name="note" maxLength="140" defaultValue={view?.note||''}/></label><fieldset><legend>Focus components</legend>{document.components.map(c=><label className="member-choice" key={c.id}><input name="focus" type="checkbox" value={c.id} defaultChecked={view?.focus.includes(c.id)}/>{c.label}</label>)}</fieldset><button>{view?'Save view':'Create view'}</button></form>{view&&<div className="review-actions"><button onClick={()=>onSelect(view.focus)}>Select view components</button><button onClick={()=>onChange(()=>deleteView(document,index))}>Delete view</button></div>}</details>)}</details>;}
+import React from "react";
+import { saveView, deleteView } from "./structure.mjs";
+export default function ViewsPanel({ document, onChange, onSelect }) {
+  return (
+    <details>
+      <summary>Guided views</summary>
+      <p className="muted">
+        Up to five views. Archify renders their focus controls and notes in the
+        final HTML.
+      </p>
+      {[...(document.meta.views || []), null].map((view, index) => (
+        <details
+          key={
+            view
+              ? `${index}:${JSON.stringify(view)}`
+              : `new:${document.meta.views?.length || 0}`
+          }
+          open={!view}
+        >
+          <summary>{view?.label || "New view"}</summary>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const data = new FormData(e.currentTarget);
+              onChange(() =>
+                saveView(document, view ? index : null, {
+                  label: data.get("label"),
+                  note: data.get("note"),
+                  focus: data.getAll("focus"),
+                }),
+              );
+            }}
+          >
+            <label className="field">
+              View label
+              <input
+                name="label"
+                required
+                maxLength="48"
+                defaultValue={view?.label || ""}
+              />
+            </label>
+            <label className="field">
+              View note
+              <input
+                name="note"
+                maxLength="140"
+                defaultValue={view?.note || ""}
+              />
+            </label>
+            <fieldset>
+              <legend>Focus components</legend>
+              {document.components.map((c) => (
+                <label className="member-choice" key={c.id}>
+                  <input
+                    name="focus"
+                    type="checkbox"
+                    value={c.id}
+                    defaultChecked={view?.focus.includes(c.id)}
+                  />
+                  {c.label}
+                </label>
+              ))}
+            </fieldset>
+            <button>{view ? "Save view" : "Create view"}</button>
+          </form>
+          {view && (
+            <div className="review-actions">
+              <button onClick={() => onSelect(view.focus)}>
+                Select view components
+              </button>
+              <button
+                onClick={() => onChange(() => deleteView(document, index))}
+              >
+                Delete view
+              </button>
+            </div>
+          )}
+        </details>
+      ))}
+    </details>
+  );
+}

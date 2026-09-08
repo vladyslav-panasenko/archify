@@ -2,52 +2,131 @@ import {
   gridLayout,
   resolveComponentPos,
 } from "../../archify/renderers/architecture/grid.mjs";
-import { adapterFor, supportedTypes, sourceNodes, connections, nodeKey, edgeKey } from './adapters/index.mjs';
+import {
+  adapterFor,
+  supportedTypes,
+  sourceNodes,
+  connections,
+  nodeKey,
+  edgeKey,
+} from "./adapters/index.mjs";
 
 export const serialize = (document) => JSON.stringify(document, null, 2) + "\n";
 export const clone = (document) => structuredClone(document);
 
-export function newDocument(title = 'Untitled diagram') {
-  return { schema_version: 1, diagram_type: 'architecture', meta: { title }, components: [{ id: 'component-1', type: 'backend', label: 'Component 1', pos: [80, 120] }], connections: [] };
+export function newDocument(title = "Untitled diagram") {
+  return {
+    schema_version: 1,
+    diagram_type: "architecture",
+    meta: { title },
+    components: [
+      {
+        id: "component-1",
+        type: "backend",
+        label: "Component 1",
+        pos: [80, 120],
+      },
+    ],
+    connections: [],
+  };
 }
-function uniqueId(items, prefix) { let n = 1; const ids = new Set(items.map(item => item.id)); while (ids.has(`${prefix}-${n}`)) n++; return `${prefix}-${n}`; }
-export function addComponent(document, { label, type = 'backend' }) {
-  if (!label.trim()) throw new Error('A label is required.');
-  const next = clone(document), id = uniqueId(next.components, 'component');
-  next.components.push({ id, type, label, pos: [80 + (next.components.length % 4) * 180, 120 + Math.floor(next.components.length / 4) * 120] });
+function uniqueId(items, prefix) {
+  let n = 1;
+  const ids = new Set(items.map((item) => item.id));
+  while (ids.has(`${prefix}-${n}`)) n++;
+  return `${prefix}-${n}`;
+}
+export function addComponent(document, { label, type = "backend" }) {
+  if (!label.trim()) throw new Error("A label is required.");
+  const next = clone(document),
+    id = uniqueId(next.components, "component");
+  next.components.push({
+    id,
+    type,
+    label,
+    pos: [
+      80 + (next.components.length % 4) * 180,
+      120 + Math.floor(next.components.length / 4) * 120,
+    ],
+  });
   return next;
 }
 export function addConnection(document, { from, to, label }) {
-  if (!document.components.some(c => c.id === from) || !document.components.some(c => c.id === to)) throw new Error('Choose both connection endpoints.');
-  const next = clone(document); next.connections ||= [];
-  next.connections.push({ id: uniqueId(next.connections, 'connection'), from, to, ...(label ? { label } : {}) }); return next;
+  if (
+    !document.components.some((c) => c.id === from) ||
+    !document.components.some((c) => c.id === to)
+  )
+    throw new Error("Choose both connection endpoints.");
+  const next = clone(document);
+  next.connections ||= [];
+  next.connections.push({
+    id: uniqueId(next.connections, "connection"),
+    from,
+    to,
+    ...(label ? { label } : {}),
+  });
+  return next;
 }
 export function removeComponent(document, id) {
-  if (document.components.length <= 1) throw new Error('Keep at least one component in the diagram.');
-  const next = clone(document); next.components = next.components.filter(c => c.id !== id);
-  if (next.connections) next.connections = next.connections.filter(c => c.from !== id && c.to !== id);
-  if (next.boundaries) next.boundaries = next.boundaries.map(b => ({ ...b, wraps: b.wraps.filter(member => member !== id) })).filter(b => b.wraps.length);
-  if (next.meta.views) next.meta.views = next.meta.views.map(v => ({ ...v, focus: v.focus.filter(member => member !== id) })).filter(v => v.focus.length);
+  if (document.components.length <= 1)
+    throw new Error("Keep at least one component in the diagram.");
+  const next = clone(document);
+  next.components = next.components.filter((c) => c.id !== id);
+  if (next.connections)
+    next.connections = next.connections.filter(
+      (c) => c.from !== id && c.to !== id,
+    );
+  if (next.boundaries)
+    next.boundaries = next.boundaries
+      .map((b) => ({ ...b, wraps: b.wraps.filter((member) => member !== id) }))
+      .filter((b) => b.wraps.length);
+  if (next.meta.views)
+    next.meta.views = next.meta.views
+      .map((v) => ({ ...v, focus: v.focus.filter((member) => member !== id) }))
+      .filter((v) => v.focus.length);
   if (next.meta.views?.length === 0) delete next.meta.views;
   return next;
 }
-export function removeConnection(document, index) { const next = clone(document); next.connections.splice(index, 1); return next; }
-export function reconnectConnection(document,index,{from,to,fromSide,toSide}) {
-  if(document.diagram_type!=='architecture') throw new Error('Endpoint editing currently supports architecture diagrams.');
-  if(!document.components.some(c=>c.id===from)||!document.components.some(c=>c.id===to))throw new Error('Choose existing endpoints.');
-  const next=clone(document),edge=next.connections[index];if(!edge)throw new Error('Unknown connection.');
-  Object.assign(edge,{from,to});
-  if(fromSide!==undefined)edge.fromSide=fromSide;if(toSide!==undefined)edge.toSide=toSide;
+export function removeConnection(document, index) {
+  const next = clone(document);
+  next.connections.splice(index, 1);
+  return next;
+}
+export function reconnectConnection(
+  document,
+  index,
+  { from, to, fromSide, toSide },
+) {
+  if (document.diagram_type !== "architecture")
+    throw new Error(
+      "Endpoint editing currently supports architecture diagrams.",
+    );
+  if (
+    !document.components.some((c) => c.id === from) ||
+    !document.components.some((c) => c.id === to)
+  )
+    throw new Error("Choose existing endpoints.");
+  const next = clone(document),
+    edge = next.connections[index];
+  if (!edge) throw new Error("Unknown connection.");
+  Object.assign(edge, { from, to });
+  if (fromSide !== undefined) edge.fromSide = fromSide;
+  if (toSide !== undefined) edge.toSide = toSide;
   return next;
 }
 
 export function assertDocument(document) {
   if (!supportedTypes.includes(document?.diagram_type))
     throw new Error(
-      `Unsupported diagram type. Supported: ${supportedTypes.join(', ')}.`,
+      `Unsupported diagram type. Supported: ${supportedTypes.join(", ")}.`,
     );
-  if (!Array.isArray(document[nodeKey(document)]) || !sourceNodes(document).length)
-    throw new Error(`The diagram needs at least one item in ${nodeKey(document)}.`);
+  if (
+    !Array.isArray(document[nodeKey(document)]) ||
+    !sourceNodes(document).length
+  )
+    throw new Error(
+      `The diagram needs at least one item in ${nodeKey(document)}.`,
+    );
   const adapter = adapterFor(document);
   adapter?.validate(document);
   const ids = new Set();
@@ -55,7 +134,9 @@ export function assertDocument(document) {
     if (ids.has(component.id))
       throw new Error(`Duplicate component ID: ${component.id}`);
     ids.add(component.id);
-    const pos = adapter ? adapter.project(document, component).pos : resolveComponentPos(component, gridLayout(document));
+    const pos = adapter
+      ? adapter.project(document, component).pos
+      : resolveComponentPos(component, gridLayout(document));
     if (!pos.every(Number.isFinite))
       throw new Error(
         `Component ${component.id} needs pos or valid grid row/col.`,
@@ -78,7 +159,8 @@ export function assertDocument(document) {
 
 export function components(document) {
   const adapter = adapterFor(document);
-  if (adapter) return sourceNodes(document).map(node => adapter.project(document, node));
+  if (adapter)
+    return sourceNodes(document).map((node) => adapter.project(document, node));
   const grid = gridLayout(document);
   return document.components.map((c) => ({
     ...c,
@@ -94,16 +176,34 @@ export function patchComponent(document, id, patch) {
   if (!item) throw new Error(`Unknown component: ${id}`);
   for (const key of Object.keys(patch)) {
     if (adapter?.patchNode?.(next, item, key, patch[key])) continue;
-    if (adapter && key === 'pos') { adapter.move(next, item, patch.pos); continue; }
-    if (adapter && key === 'size') {
-      if (adapter.resizable === false) throw new Error('This diagram type does not support individual sizes.');
-      if (!patch.size.every((n, i) => Number.isFinite(n) && n >= adapter.minSize[i])) throw new Error(`Minimum size: ${adapter.minSize.join(' × ')}.`);
-      [item.width, item.height] = patch.size; continue;
+    if (adapter && key === "pos") {
+      adapter.move(next, item, patch.pos);
+      continue;
     }
-    if (adapter && (adapter.fields.includes(key) || key === 'lane')) {
-      if (key === 'col' && (!Number.isInteger(patch[key]) || patch[key] < 0 || patch[key] >= adapter.columns)) throw new Error('Column is outside the supported range.');
-      if (key === 'lane' && !next.lanes.some(l => l.id === patch[key])) throw new Error('Unknown lane.');
-      item[key] = patch[key]; continue;
+    if (adapter && key === "size") {
+      if (adapter.resizable === false)
+        throw new Error("This diagram type does not support individual sizes.");
+      if (
+        !patch.size.every(
+          (n, i) => Number.isFinite(n) && n >= adapter.minSize[i],
+        )
+      )
+        throw new Error(`Minimum size: ${adapter.minSize.join(" × ")}.`);
+      [item.width, item.height] = patch.size;
+      continue;
+    }
+    if (adapter && (adapter.fields.includes(key) || key === "lane")) {
+      if (
+        key === "col" &&
+        (!Number.isInteger(patch[key]) ||
+          patch[key] < 0 ||
+          patch[key] >= adapter.columns)
+      )
+        throw new Error("Column is outside the supported range.");
+      if (key === "lane" && !next.lanes.some((l) => l.id === patch[key]))
+        throw new Error("Unknown lane.");
+      item[key] = patch[key];
+      continue;
     }
     if (!["pos", "size", "label", "sublabel", "tag"].includes(key))
       throw new Error(`Unsupported component edit: ${key}`);
@@ -122,7 +222,10 @@ export function patchConnection(document, index, patch) {
   const next = clone(document);
   const item = connections(next)[index];
   if (!item) throw new Error("Unknown connection.");
-  if (adapterFor(document)?.patchConnection) { adapterFor(document).patchConnection(next, index, patch); return next; }
+  if (adapterFor(document)?.patchConnection) {
+    adapterFor(document).patchConnection(next, index, patch);
+    return next;
+  }
   for (const key of Object.keys(patch)) {
     if (
       ![

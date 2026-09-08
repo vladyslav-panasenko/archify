@@ -20,7 +20,7 @@ To save directly to an existing file:
 npm start -- --file "D:\Diagrams\system.architecture.json"
 ```
 
-The path is resolved relative to the terminal's working directory. **Save file** updates only that opened file. A revision check rejects saves if another process has changed it; download your draft before reloading in that case. Saves use a temporary sibling file followed by replacement. This detects external changes before replacement but is not a shared editing or filesystem locking protocol.
+The path is resolved relative to the terminal's working directory. **Save file** updates only that opened file. If another process changes it, the editor opens a three-way comparison of the original source, your draft and the current file. Choose a version for every conflict, apply the validated merged draft, then review and save. Saving checks the revision again. Collections without stable IDs are resolved as whole arrays. You can also download your draft separately. Saves use a temporary sibling file followed by replacement; this is not a shared editing or filesystem locking protocol.
 
 For development, use `npm run dev` (also accepts `-- --file ...` and `-- --port 4174`). Assets are local; there are no runtime CDN dependencies.
 
@@ -31,7 +31,7 @@ For development, use `npm run dev` (also accepts `-- --file ...` and `-- --port 
 - Resize selected components with the corner/edge handles. Each resize is one undoable edit; Escape cancels it. Sequence participant sizes are defined by Archify and cannot be resized individually.
 - Arrow keys move selected components by one diagram unit; Shift+Arrow moves by ten.
 - Use the zoom buttons or mouse wheel. Hold Space while dragging to pan; middle/right mouse dragging also pans.
-- Enable **Snap to grid** for 10-unit drag increments. Escape cancels an active drag.
+- Enable **Snap to grid** for drag increments. Architecture's **Snapping** controls set grid spacing and enable alignment/equal-spacing guides; hold Alt while dragging or resizing to bypass snapping. Escape cancels an active drag.
 - Undo/redo records a whole drag as one edit. Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl/Cmd+Y are supported outside text fields.
 - Drag connection labels to position them. Select a connection on the canvas or in the Connections list to edit routing and endpoint sides. **Add waypoint** creates a numbered handle; drag it to refine the route, or right-click / press Delete on the focused handle to remove it. Arrow keys also move focused labels and waypoints. Each gesture is one undoable edit.
 - Open the JSON panel to edit other supported fields. **Apply JSON** validates and updates the canvas. Unapplied text blocks canvas edits and saving until applied or discarded.
@@ -40,19 +40,35 @@ Layout edits patch the original document. Existing metadata, sources, views, com
 
 ## Creating diagrams
 
-**New diagram** creates an architecture document with one initial component. **Add component** chooses a label and type; **Add connection** chooses its endpoints and optional label. IDs are generated without collisions. Delete a component from its inspector to remove it, its incident connections, and its references in boundaries and guided views. Undo restores the complete edit. A diagram must retain at least one component.
+The architecture option in **New diagram** creates a document with one initial component. **Add component** chooses a label and type; **Add connection** chooses its endpoints and optional label. IDs are generated without collisions. Delete a component from its inspector to remove it, its incident connections, and its references in boundaries and guided views. Undo restores the complete edit. A diagram must retain at least one component.
 
-Creation and deletion controls currently target architecture diagrams. Other types support editing existing documents and validated source changes through the JSON panel.
+Choose any of the five types in **New diagram**. For workflow, dataflow and lifecycle, use **Structure** to add nodes and connections and edit lanes or stages. Deleting a lane or stage requires a destination for its affected nodes; dataflow stage indices are remapped. Workflow schema versions are preserved. Lifecycle's main lane is required, terminal is the outcome band, and other lanes share the event band. Creation produces schema-valid drafts; run **Check diagram** to check final layout after adding items.
+
+For sequence diagrams, **Structure** edits participants, messages, activations and segments. Message Y determines ordering. Structural timing changes ask you to acknowledge that existing ranges retain their absolute coordinates. Participant deletion removes its incident messages and activations; the diagram must keep two participants and one message. Workflow keeps at least one node; dataflow and lifecycle keep at least two.
+
+## Arrangement and authoring tools
+
+- **Arrange selection** aligns architecture components and distributes equal gaps. Each operation is one undo step. Constrained diagram types retain their logical placement controls.
+- **Copy and duplicate** copies architecture selections inside the editor. Ctrl/Cmd+D duplicates; Ctrl/Cmd+C and V copy between editor windows when focus is on the canvas. Pasted items get fresh IDs; internal edges and authored coordinates are remapped and offset. Other diagram types cannot receive these selections.
+- With multiple items selected, shared property controls display mixed values and apply edits together. Architecture **Delete selection** summarizes affected components, connections, boundaries and views before deletion.
+- **Lock selection** prevents canvas dragging, resizing and keyboard nudging. Unlock through the same control. Locks are stored locally by document name and source context, and are never exported. Explicit inspector edits remain available.
+- **Reset manual layout** removes optional node position or size overrides. Required free coordinates and logical placement fields remain. Connections have independent reset actions for label coordinates and waypoints; the confirmation lists removed fields.
+- **Draw / reconnect connections** enables architecture handles for mouse creation and endpoint dragging. The connection inspector also offers endpoint dropdowns. Reconnection preserves edge identity and other authored routing; Escape exits connection mode.
+- Architecture **Structure** edits boundaries and guided views. Select boundary members to drag them together, or move them by an explicit offset. Guided views support up to five named focus sets, which Archify renders in the final HTML.
+- **Settings** exposes supported metadata, visual presets, animation, canvas dimensions and type-specific layout options. These affect exported JSON; editor preferences remain local.
+- **Search** finds component and connection IDs and labels. Arrow keys navigate results, Enter selects and fits a result, and **Fit selection** centers the current selection without changing JSON.
+- **Review** compares the current draft with the last opened or saved version, grouping layout, topology and content changes by item. Review is optional; its save/download buttons use the same validation and revision checks as the toolbar.
+- **Checkpoints** stores up to ten named snapshots and 2 MB per document in browser storage. Restoring is undoable and never writes the source file. Export a checkpoint to keep an independent JSON copy; older checkpoints are never silently evicted.
 
 ## Diagram types
 
-| Type | Canvas edits saved to JSON |
-| --- | --- |
-| Architecture | Free component `pos` and `size`, connection `via` and `labelAt`. |
-| Workflow | Logical `col`, `yOffset`, `width`, `height`; lane membership changes explicitly in the inspector. Both schema versions remain unchanged. |
-| Dataflow | `stage`, `row`, `yOffset`, `width`, `height`. Stages and rows constrain horizontal/vertical placement. |
-| Lifecycle | `col`, `yOffset`, `width`, `height`; lane membership changes explicitly. Main, event and terminal bands follow the renderer's rules. |
-| Sequence | Horizontal participant reordering changes only the participants array order. Dragging message labels vertically changes `y`; endpoints and relative message ordering stay intact. |
+| Type         | Canvas edits saved to JSON                                                                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Architecture | Free component `pos` and `size`, connection `via` and `labelAt`.                                                                                                                  |
+| Workflow     | Logical `col`, `yOffset`, `width`, `height`; lane membership changes explicitly in the inspector. Both schema versions remain unchanged.                                          |
+| Dataflow     | `stage`, `row`, `yOffset`, `width`, `height`. Stages and rows constrain horizontal/vertical placement.                                                                            |
+| Lifecycle    | `col`, `yOffset`, `width`, `height`; lane membership changes explicitly. Main, event and terminal bands follow the renderer's rules.                                              |
+| Sequence     | Horizontal participant reordering changes only the participants array order. Dragging message labels vertically changes `y`; endpoints and relative message ordering stay intact. |
 
 Sequence messages cannot cross adjacent messages or activation/segment boundaries during spacing edits. Messages exactly on a boundary remain pinned. Use **Participant order** or **Message Y** for keyboard editing. Sequence JSON has no per-participant free positions/sizes or message waypoints, so those controls are absent. Raw JSON changes can explicitly revise the wider model and are validated before application.
 
@@ -60,7 +76,7 @@ Automatic labels avoid component hit targets in the editor. This display adjustm
 
 ## Render
 
-**Render HTML** sends the current applied JSON to the unchanged Archify architecture CLI in a temporary directory. A successful result opens in an isolated preview and can be downloaded as self-contained HTML. `meta.output` is preserved in JSON but never used as permission to write an arbitrary path.
+**Render HTML** sends the current applied JSON to the matching Archify CLI in a temporary directory. A successful result opens in an isolated preview and can be downloaded as self-contained HTML. `meta.output` is preserved in JSON but never used as permission to write an arbitrary path.
 
 Schema-valid drafts can be saved with overlapping components. The canvas reports basic overlap/bounds notes; Archify performs its full route, label and layout validation at render time. Errors leave the draft intact. A changed document invalidates the prior preview.
 

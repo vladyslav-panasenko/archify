@@ -4,33 +4,56 @@ import os from "node:os";
 import path from "node:path";
 import { createEditorServer } from "../../server.mjs";
 
-test("nodes and connections remain visible throughout dragging", async ({ page }) => {
+test("nodes and connections remain visible throughout dragging", async ({
+  page,
+}) => {
   await page.goto("/");
   const node = page.locator('.react-flow__node[data-id="c:api"]');
   await node.click();
-  await expect(page.locator('.react-flow__edge')).toHaveCount(9);
+  await expect(page.locator(".react-flow__edge")).toHaveCount(9);
   await page.evaluate(() => {
     window.dragVisualChanges = [];
-    window.dragObserver = new MutationObserver(records => {
+    window.dragObserver = new MutationObserver((records) => {
       for (const record of records) {
-        if (record.type === 'attributes' && record.target.matches('.react-flow__node') &&
-          (record.target.style.visibility === 'hidden' || record.oldValue?.includes('visibility: hidden'))) {
-          window.dragVisualChanges.push('node hidden');
+        if (
+          record.type === "attributes" &&
+          record.target.matches(".react-flow__node") &&
+          (record.target.style.visibility === "hidden" ||
+            record.oldValue?.includes("visibility: hidden"))
+        ) {
+          window.dragVisualChanges.push("node hidden");
         }
         for (const removed of record.removedNodes) {
-          if (removed.nodeType === 1 && (removed.matches('.react-flow__edge') || removed.querySelector('.react-flow__edge'))) window.dragVisualChanges.push('edge removed');
+          if (
+            removed.nodeType === 1 &&
+            (removed.matches(".react-flow__edge") ||
+              removed.querySelector(".react-flow__edge"))
+          )
+            window.dragVisualChanges.push("edge removed");
         }
       }
     });
-    window.dragObserver.observe(document.querySelector('.react-flow'), { subtree: true, childList: true, attributes: true, attributeFilter: ['style'], attributeOldValue: true });
+    window.dragObserver.observe(document.querySelector(".react-flow"), {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["style"],
+      attributeOldValue: true,
+    });
   });
   const box = await node.boundingBox();
-  const x = box.x + box.width / 2, y = box.y + box.height / 2;
-  await page.mouse.move(x, y); await page.mouse.down();
-  await page.mouse.move(x + 70, y + 25, { steps: 25 }); await page.mouse.up();
-  const changes = await page.evaluate(() => { window.dragObserver.disconnect(); return window.dragVisualChanges; });
+  const x = box.x + box.width / 2,
+    y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 70, y + 25, { steps: 25 });
+  await page.mouse.up();
+  const changes = await page.evaluate(() => {
+    window.dragObserver.disconnect();
+    return window.dragVisualChanges;
+  });
   expect(changes).toEqual([]);
-  await expect(page.locator('.react-flow__edge')).toHaveCount(9);
+  await expect(page.locator(".react-flow__edge")).toHaveCount(9);
 });
 
 test("edit, undo, download, reopen and render a real architecture document", async ({
@@ -98,13 +121,11 @@ test("edit, undo, download, reopen and render a real architecture document", asy
   );
   original.components.find((c) => c.id === "api").pos = [672, 300];
   expect(result).toEqual(original);
-  await page
-    .locator('input[type="file"]')
-    .setInputFiles({
-      name: "round-trip.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(result)),
-    });
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "round-trip.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(result)),
+  });
   await expect(
     page.getByText("round-trip.json", { exact: false }),
   ).toBeVisible();
@@ -148,13 +169,11 @@ test("invalid JSON stays available and unsupported files do not replace the diag
     page.getByRole("button", { name: "Download JSON" }),
   ).toBeDisabled();
   await page.getByRole("button", { name: "Discard text" }).click();
-  await page
-    .locator('input[type="file"]')
-    .setInputFiles({
-      name: "workflow.json",
-      mimeType: "application/json",
-      buffer: Buffer.from('{"diagram_type":"unsupported"}'),
-    });
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "workflow.json",
+    mimeType: "application/json",
+    buffer: Buffer.from('{"diagram_type":"unsupported"}'),
+  });
   await expect(page.getByRole("alert")).toContainText("architecture");
   await expect(
     page.getByRole("heading", { name: "Sample Web App" }),
@@ -268,13 +287,11 @@ test("direct file save survives reload and imported JSON cannot overwrite that f
     const expected = structuredClone(original);
     expected.components[0].pos = [42, 300];
     expect(JSON.parse(await fs.readFile(file, "utf8"))).toEqual(expected);
-    await page
-      .locator('input[type="file"]')
-      .setInputFiles({
-        name: "another.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(original)),
-      });
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "another.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(original)),
+    });
     await expect(
       page.getByRole("button", { name: "Save file", exact: true }),
     ).toHaveCount(0);

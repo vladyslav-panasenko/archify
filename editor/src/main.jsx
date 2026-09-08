@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createRoot } from "react-dom/client";
 import {
   ReactFlow,
@@ -27,22 +34,45 @@ import {
   undo,
   redo,
   layoutWarnings,
-  newDocument, addComponent, addConnection, removeComponent, removeConnection, reconnectConnection,
+  newDocument,
+  addComponent,
+  addConnection,
+  removeComponent,
+  removeConnection,
+  reconnectConnection,
 } from "./document.mjs";
 import "./style.css";
-import { adapterFor, editingOptions, connections, sourceNodes, nodeKey, edgeKey } from './adapters/index.mjs';
-import { messageRange } from './adapters/sequence.mjs';
-import { automaticLabelPoint } from './label-placement.mjs';
-import { arrange, arrangements, snapPositions, snapResize } from './arrangement.mjs';
-import { copySelection, pasteSelection } from './clipboard.mjs';
-import { commonValue, bulkPatch, deletionSummary, removeSelection, resetFields } from './selection.mjs';
-import StructurePanel from './StructurePanel.jsx';
-import { createDiagram, authoringTypes } from './topology.mjs';
-import SettingsPanel from './SettingsPanel.jsx';
-import SearchPanel from './SearchPanel.jsx';
-import ReviewPanel from './ReviewPanel.jsx';
-import ConflictPanel from './ConflictPanel.jsx';
-import CheckpointsPanel from './CheckpointsPanel.jsx';
+import {
+  adapterFor,
+  editingOptions,
+  connections,
+  sourceNodes,
+  nodeKey,
+  edgeKey,
+} from "./adapters/index.mjs";
+import { messageRange } from "./adapters/sequence.mjs";
+import { automaticLabelPoint } from "./label-placement.mjs";
+import {
+  arrange,
+  arrangements,
+  snapPositions,
+  snapResize,
+} from "./arrangement.mjs";
+import { copySelection, pasteSelection } from "./clipboard.mjs";
+import {
+  commonValue,
+  bulkPatch,
+  deletionSummary,
+  removeSelection,
+  resetFields,
+} from "./selection.mjs";
+import StructurePanel from "./StructurePanel.jsx";
+import { createDiagram, authoringTypes } from "./topology.mjs";
+import SettingsPanel from "./SettingsPanel.jsx";
+import SearchPanel from "./SearchPanel.jsx";
+import ReviewPanel from "./ReviewPanel.jsx";
+import ConflictPanel from "./ConflictPanel.jsx";
+import CheckpointsPanel from "./CheckpointsPanel.jsx";
 
 const sides = {
   top: Position.Top,
@@ -63,16 +93,30 @@ const Editing = createContext(null);
 
 function ComponentNode({ data, selected }) {
   const editing = useContext(Editing);
-  const resize = (event, rect) => document => {
-    const result = editing.resize(data.id,rect,event.altKey);
-    return patchComponent(document,data.id,{pos:[result.x,result.y],size:[result.width,result.height]});
+  const resize = (event, rect) => (document) => {
+    const result = editing.resize(data.id, rect, event.altKey);
+    return patchComponent(document, data.id, {
+      pos: [result.x, result.y],
+      size: [result.width, result.height],
+    });
   };
   return (
-    <div className={`component kind-${data.type} ${selected ? "chosen" : ""} ${editing.connecting ? 'connecting' : ''}`}>
-      <NodeResizer isVisible={selected && !data.locked && editing?.enabled && editing.resizable !== false} minWidth={editing.minSize[0]} minHeight={editing.minSize[1]}
+    <div
+      className={`component kind-${data.type} ${selected ? "chosen" : ""} ${editing.connecting ? "connecting" : ""}`}
+    >
+      <NodeResizer
+        isVisible={
+          selected &&
+          !data.locked &&
+          editing?.enabled &&
+          editing.resizable !== false
+        }
+        minWidth={editing.minSize[0]}
+        minHeight={editing.minSize[1]}
         onResizeStart={() => editing.start()}
         onResize={(event, rect) => editing.update(resize(event, rect))}
-        onResizeEnd={(event, rect) => editing.end(resize(event, rect))}/>
+        onResizeEnd={(event, rect) => editing.end(resize(event, rect))}
+      />
       {Object.entries(sides).map(([side, position]) => (
         <React.Fragment key={side}>
           <Handle
@@ -80,14 +124,22 @@ function ComponentNode({ data, selected }) {
             type="source"
             position={position}
             isConnectable={editing.connecting && editing.enabled}
-            aria-label={`Connect from ${data.label} ${side}`}
+            aria-label={
+              editing.connecting
+                ? `Connect from ${data.label} ${side}`
+                : undefined
+            }
           />
           <Handle
             id={`target-${side}`}
             type="target"
             position={position}
             isConnectable={editing.connecting && editing.enabled}
-            aria-label={`Connect to ${data.label} ${side}`}
+            aria-label={
+              editing.connecting
+                ? `Connect to ${data.label} ${side}`
+                : undefined
+            }
           />
         </React.Fragment>
       ))}
@@ -109,32 +161,90 @@ function BoundaryNode({ data }) {
     </div>
   );
 }
-function LifelineNode() { return <div className="lifeline"/>; }
-function DragPoint({ point, label, edit, children, className = '', onRemove }) {
-  const editing = useContext(Editing), flow = useReactFlow(), drag = useRef(null);
-  return <button className={`canvas-drag-point nodrag nopan ${className}`} aria-label={label}
-    onClick={event => event.stopPropagation()}
-    disabled={!editing.enabled} style={{ transform: `translate(-50%, -50%) translate(${point[0]}px, ${point[1]}px)` }}
-    onPointerDown={event => {
-      if (event.button !== 0) return; event.stopPropagation();
-      const cursor = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
-      drag.current = { ...cursor, origin: point, moved: false }; editing.start(); event.currentTarget.setPointerCapture(event.pointerId);
-    }}
-    onPointerMove={event => {
-      if (!drag.current) return; event.stopPropagation();
-      const cursor = flow.screenToFlowPosition({ x: event.clientX, y: event.clientY });
-      const target = [drag.current.origin[0] + cursor.x - drag.current.x, drag.current.origin[1] + cursor.y - drag.current.y].map(n => Math.round(n * 100) / 100);
-      drag.current.moved = true; drag.current.target = target; editing.update(edit(target));
-    }}
-    onPointerUp={event => { if (!drag.current) return; event.stopPropagation(); editing.end(drag.current.moved ? edit(drag.current.target) : null); drag.current = null; }}
-    onPointerCancel={() => { drag.current = null; editing.end(null); }}
-    onContextMenu={event => { if (onRemove) { event.preventDefault(); onRemove(); } }}
-    onKeyDown={event => {
-      if (onRemove && ['Delete', 'Backspace'].includes(event.key)) { event.preventDefault(); event.stopPropagation(); onRemove(); return; }
-      const delta = { ArrowLeft: [-1,0], ArrowRight: [1,0], ArrowUp: [0,-1], ArrowDown: [0,1] }[event.key];
-      if (!delta) return; event.preventDefault(); event.stopPropagation();
-      const step = event.shiftKey ? 10 : 1; editing.start(); editing.end(edit([point[0] + delta[0] * step, point[1] + delta[1] * step]));
-    }}>{children}</button>;
+function LifelineNode() {
+  return <div className="lifeline" />;
+}
+function DragPoint({ point, label, edit, children, className = "", onRemove }) {
+  const editing = useContext(Editing),
+    flow = useReactFlow(),
+    drag = useRef(null);
+  return (
+    <button
+      className={`canvas-drag-point nodrag nopan ${className}`}
+      aria-label={label}
+      onClick={(event) => event.stopPropagation()}
+      disabled={!editing.enabled}
+      style={{
+        transform: `translate(-50%, -50%) translate(${point[0]}px, ${point[1]}px)`,
+      }}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        event.stopPropagation();
+        const cursor = flow.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        drag.current = { ...cursor, origin: point, moved: false };
+        editing.start();
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        if (!drag.current) return;
+        event.stopPropagation();
+        const cursor = flow.screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        const target = [
+          drag.current.origin[0] + cursor.x - drag.current.x,
+          drag.current.origin[1] + cursor.y - drag.current.y,
+        ].map((n) => Math.round(n * 100) / 100);
+        drag.current.moved = true;
+        drag.current.target = target;
+        editing.update(edit(target));
+      }}
+      onPointerUp={(event) => {
+        if (!drag.current) return;
+        event.stopPropagation();
+        editing.end(drag.current.moved ? edit(drag.current.target) : null);
+        drag.current = null;
+      }}
+      onPointerCancel={() => {
+        drag.current = null;
+        editing.end(null);
+      }}
+      onContextMenu={(event) => {
+        if (onRemove) {
+          event.preventDefault();
+          onRemove();
+        }
+      }}
+      onKeyDown={(event) => {
+        if (onRemove && ["Delete", "Backspace"].includes(event.key)) {
+          event.preventDefault();
+          event.stopPropagation();
+          onRemove();
+          return;
+        }
+        const delta = {
+          ArrowLeft: [-1, 0],
+          ArrowRight: [1, 0],
+          ArrowUp: [0, -1],
+          ArrowDown: [0, 1],
+        }[event.key];
+        if (!delta) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const step = event.shiftKey ? 10 : 1;
+        editing.start();
+        editing.end(
+          edit([point[0] + delta[0] * step, point[1] + delta[1] * step]),
+        );
+      }}
+    >
+      {children}
+    </button>
+  );
 }
 function ConnectionEdge(props) {
   const editing = useContext(Editing);
@@ -150,38 +260,87 @@ function ConnectionEdge(props) {
       ...points[Math.floor(points.length / 2)],
     ];
   }
-  if (data.sequenceLine) result = [data.sequenceLine.map((p,i)=>`${i?'L':'M'} ${p[0]} ${p[1]}`).join(' '), ...data.labelAt];
-  const point = data.labelAt || automaticLabelPoint([
-    result[1] + (data.labelDx || 0),
-    result[2] + (data.labelDy || 0),
-  ], data.label || '', data.editorBoxes || []);
+  if (data.sequenceLine)
+    result = [
+      data.sequenceLine
+        .map((p, i) => `${i ? "L" : "M"} ${p[0]} ${p[1]}`)
+        .join(" "),
+      ...data.labelAt,
+    ];
+  const point =
+    data.labelAt ||
+    automaticLabelPoint(
+      [result[1] + (data.labelDx || 0), result[2] + (data.labelDy || 0)],
+      data.label || "",
+      data.editorBoxes || [],
+    );
   return (
-    <><BaseEdge
-      id={props.id}
-      path={result[0]}
-      markerEnd={props.markerEnd}
-      style={{
-        stroke: props.selected ? "#087b72" : "#82929c",
-        strokeWidth: props.selected ? 2.5 : 1.5,
-        strokeDasharray: data.variant === "dashed" ? "5 4" : undefined,
-      }}
-      label={undefined}
-      labelX={point[0]}
-      labelY={point[1]}
-      labelStyle={{ fill: "#3d4d57", fontSize: 10 }}
-      labelBgStyle={{ fill: "#f8fafb", fillOpacity: 0.96 }}
-      labelBgPadding={[5, 3]}
-    />{data.label && <EdgeLabelRenderer><DragPoint point={point} label={`Move label: ${data.label}`}
-      edit={labelAt => document => patchConnection(document, Number(props.id.slice(2)), { labelAt })}
-      className="connection-label">{data.label}</DragPoint></EdgeLabelRenderer>}
-      {props.selected && <EdgeLabelRenderer>{(data.via || []).map((point, index) => <DragPoint key={index} point={point}
-        label={`Move waypoint ${index + 1}`} className="waypoint" edit={target => document => patchConnection(document, Number(props.id.slice(2)), { via: data.via.map((p, i) => i === index ? target : p) })}
-        onRemove={() => { editing.start(); editing.end(document => patchConnection(document, Number(props.id.slice(2)), { via: data.via.filter((_, i) => i !== index) })); }}>
-        {index + 1}
-      </DragPoint>)}</EdgeLabelRenderer>}</>
+    <>
+      <BaseEdge
+        id={props.id}
+        path={result[0]}
+        markerEnd={props.markerEnd}
+        style={{
+          stroke: props.selected ? "#087b72" : "#82929c",
+          strokeWidth: props.selected ? 2.5 : 1.5,
+          strokeDasharray: data.variant === "dashed" ? "5 4" : undefined,
+        }}
+        label={undefined}
+        labelX={point[0]}
+        labelY={point[1]}
+        labelStyle={{ fill: "#3d4d57", fontSize: 10 }}
+        labelBgStyle={{ fill: "#f8fafb", fillOpacity: 0.96 }}
+        labelBgPadding={[5, 3]}
+      />
+      {data.label && (
+        <EdgeLabelRenderer>
+          <DragPoint
+            point={point}
+            label={`Move label: ${data.label}`}
+            edit={(labelAt) => (document) =>
+              patchConnection(document, Number(props.id.slice(2)), { labelAt })
+            }
+            className="connection-label"
+          >
+            {data.label}
+          </DragPoint>
+        </EdgeLabelRenderer>
+      )}
+      {props.selected && (
+        <EdgeLabelRenderer>
+          {(data.via || []).map((point, index) => (
+            <DragPoint
+              key={index}
+              point={point}
+              label={`Move waypoint ${index + 1}`}
+              className="waypoint"
+              edit={(target) => (document) =>
+                patchConnection(document, Number(props.id.slice(2)), {
+                  via: data.via.map((p, i) => (i === index ? target : p)),
+                })
+              }
+              onRemove={() => {
+                editing.start();
+                editing.end((document) =>
+                  patchConnection(document, Number(props.id.slice(2)), {
+                    via: data.via.filter((_, i) => i !== index),
+                  }),
+                );
+              }}
+            >
+              {index + 1}
+            </DragPoint>
+          ))}
+        </EdgeLabelRenderer>
+      )}
+    </>
   );
 }
-const nodeTypes = { component: ComponentNode, boundary: BoundaryNode, lifeline: LifelineNode },
+const nodeTypes = {
+    component: ComponentNode,
+    boundary: BoundaryNode,
+    lifeline: LifelineNode,
+  },
   edgeTypes = { connection: ConnectionEdge };
 
 function Field({ label, value, onCommit, number = false, mixed = false }) {
@@ -201,7 +360,7 @@ function Field({ label, value, onCommit, number = false, mixed = false }) {
       <input
         type={number ? "number" : "text"}
         value={text}
-        placeholder={mixed ? 'Mixed values' : undefined}
+        placeholder={mixed ? "Mixed values" : undefined}
         onChange={(e) => setText(e.target.value)}
         onBlur={save}
         onKeyDown={(e) => {
@@ -237,13 +396,25 @@ function App() {
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [canvasVersion, setCanvasVersion] = useState(0);
-  const [sourceBase,setSourceBase]=useState(null),[conflict,setConflict]=useState(null);
-  const [clipboard,setClipboard] = useState(null);
-  const [drawConnections,setDrawConnections] = useState(false);
-  const [locked,setLocked] = useState([]);
-  const lockKey=data=>`archify-locks:${data.recoveryKey}:${data.name}`;
-  function updateLocks(next) { setLocked(next);try{localStorage.setItem(lockKey(session),JSON.stringify(next));}catch{setNotice('Locks apply for this session; browser storage is unavailable.');} }
-  const [gridSize,setGridSize] = useState(10), [smartSnap,setSmartSnap] = useState(false), [guides,setGuides] = useState([]);
+  const [sourceBase, setSourceBase] = useState(null),
+    [conflict, setConflict] = useState(null);
+  const [clipboard, setClipboard] = useState(null);
+  const [drawConnections, setDrawConnections] = useState(false);
+  const [locked, setLocked] = useState([]);
+  const lockKey = (data) => `archify-locks:${data.recoveryKey}:${data.name}`;
+  function updateLocks(next) {
+    setLocked(next);
+    try {
+      localStorage.setItem(lockKey(session), JSON.stringify(next));
+    } catch {
+      setNotice(
+        "Locks apply for this session; browser storage is unavailable.",
+      );
+    }
+  }
+  const [gridSize, setGridSize] = useState(10),
+    [smartSnap, setSmartSnap] = useState(false),
+    [guides, setGuides] = useState([]);
   const [selection, setSelection] = useState([]),
     [edgeIndex, setEdgeIndex] = useState(null);
   const [error, setError] = useState(""),
@@ -274,9 +445,17 @@ function App() {
         if (!response.ok) throw new Error(data.error);
         load(data);
         try {
-          const stored = localStorage.getItem(`archify-draft:${data.recoveryKey}`);
-          if (stored) { const candidate = JSON.parse(stored); if (candidate.version === 1 && candidate.document) setRecovery(candidate); }
-        } catch { setNotice('The saved recovery draft could not be read.'); }
+          const stored = localStorage.getItem(
+            `archify-draft:${data.recoveryKey}`,
+          );
+          if (stored) {
+            const candidate = JSON.parse(stored);
+            if (candidate.version === 1 && candidate.document)
+              setRecovery(candidate);
+          }
+        } catch {
+          setNotice("The saved recovery draft could not be read.");
+        }
       })
       .catch((e) => {
         setError(e.message);
@@ -294,7 +473,10 @@ function App() {
     return () => window.removeEventListener("beforeunload", before);
   }, [hasUnsaved]);
   useEffect(() => {
-    if (state) { setJsonText(recoveredText.current ?? serialize(state.present)); recoveredText.current = null; }
+    if (state) {
+      setJsonText(recoveredText.current ?? serialize(state.present));
+      recoveredText.current = null;
+    }
     setHtml(null);
     setDiagnostics([]);
   }, [state]);
@@ -302,9 +484,26 @@ function App() {
     if (!session?.recoveryKey || !state || recovery) return;
     const key = `archify-draft:${session.recoveryKey}`;
     try {
-      if (dirty || rawDirty) localStorage.setItem(key, JSON.stringify({ version: 1, document: state.present, rawText: rawDirty ? jsonText : null, saved, name: session.name, writable: session.writable, revision: session.revision, savedAt: new Date().toISOString() }));
+      if (dirty || rawDirty)
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            version: 1,
+            document: state.present,
+            rawText: rawDirty ? jsonText : null,
+            saved,
+            name: session.name,
+            writable: session.writable,
+            revision: session.revision,
+            savedAt: new Date().toISOString(),
+          }),
+        );
       else localStorage.removeItem(key);
-    } catch { setNotice('Draft recovery storage is unavailable. Save or download your JSON.'); }
+    } catch {
+      setNotice(
+        "Draft recovery storage is unavailable. Save or download your JSON.",
+      );
+    }
   }, [state, session, dirty, rawDirty, jsonText, saved, recovery]);
   useEffect(() => {
     if (html) dialog.current?.showModal();
@@ -331,8 +530,18 @@ function App() {
   });
 
   function load(data) {
-    setSourceBase(data.document);setConflict(null);
-    try{const value=JSON.parse(localStorage.getItem(lockKey(data))||'[]');setLocked(Array.isArray(value)?value.filter(id=>typeof id==='string'):[]);}catch{setLocked([]);}
+    setSourceBase(data.document);
+    setConflict(null);
+    try {
+      const value = JSON.parse(localStorage.getItem(lockKey(data)) || "[]");
+      setLocked(
+        Array.isArray(value)
+          ? value.filter((id) => typeof id === "string")
+          : [],
+      );
+    } catch {
+      setLocked([]);
+    }
     setMeasurements({});
     assertDocument(data.document);
     setState(history(data.document));
@@ -349,7 +558,7 @@ function App() {
     );
     // Fit once after React Flow measures a newly opened document. A delayed
     // second fit can move a resize handle out from under the user's pointer.
-    setCanvasVersion(version => version + 1);
+    setCanvasVersion((version) => version + 1);
   }
   function change(next) {
     if (rawDirty) {
@@ -374,7 +583,10 @@ function App() {
     });
     if (!response.ok) {
       const data = await response.json();
-      throw Object.assign(new Error(data.error), { diagnostics: data.diagnostics,status:response.status });
+      throw Object.assign(new Error(data.error), {
+        diagnostics: data.diagnostics,
+        status: response.status,
+      });
     }
     return response;
   }
@@ -398,7 +610,16 @@ function App() {
     await act(async () => {
       const snapshot = state.present;
       if (direct) {
-        let data;try{data = await (await request("document", snapshot, "PUT")).json();}catch(e){if(e.status===409){await compareSource(snapshot);return;}throw e;}
+        let data;
+        try {
+          data = await (await request("document", snapshot, "PUT")).json();
+        } catch (e) {
+          if (e.status === 409) {
+            await compareSource(snapshot);
+            return;
+          }
+          throw e;
+        }
         setSourceBase(snapshot);
         setSession((s) => ({ ...s, revision: data.revision }));
       } else {
@@ -429,8 +650,38 @@ function App() {
       setNotice("JSON imported. Changes can be downloaded.");
     });
   }
-  async function compareSource(local=state.present){const response=await fetch('/api/document');const data=await response.json();if(!response.ok)throw new Error(data.error);setConflict({base:sourceBase,local,remote:data.document,revision:data.revision});setPanel('conflict');setCreation(null);setNotice('Source changed. Compare and resolve changes before saving.');}
-  async function applyMerge(merged){await act(async()=>{if(serialize(state.present)!==serialize(conflict.local))throw new Error('Your draft changed during comparison. Refresh the comparison first.');await request('validate',merged);change(merged);setSourceBase(conflict.remote);setSaved(serialize(conflict.remote));setSession(s=>({...s,revision:conflict.revision}));setConflict(null);setPanel('review');setNotice('Merged draft validated. Review it and save to write the file.');});}
+  async function compareSource(local = state.present) {
+    const response = await fetch("/api/document");
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error);
+    setConflict({
+      base: sourceBase,
+      local,
+      remote: data.document,
+      revision: data.revision,
+    });
+    setPanel("conflict");
+    setCreation(null);
+    setNotice("Source changed. Compare and resolve changes before saving.");
+  }
+  async function applyMerge(merged) {
+    await act(async () => {
+      if (serialize(state.present) !== serialize(conflict.local))
+        throw new Error(
+          "Your draft changed during comparison. Refresh the comparison first.",
+        );
+      await request("validate", merged);
+      change(merged);
+      setSourceBase(conflict.remote);
+      setSaved(serialize(conflict.remote));
+      setSession((s) => ({ ...s, revision: conflict.revision }));
+      setConflict(null);
+      setPanel("review");
+      setNotice(
+        "Merged draft validated. Review it and save to write the file.",
+      );
+    });
+  }
   function applyPatch(patch) {
     try {
       change(patchComponent(state.present, selection[0], patch));
@@ -439,21 +690,63 @@ function App() {
     }
   }
   function paste(payload) {
-    try { const result=pasteSelection(state.present,payload); change(result.document);setSelection(result.ids);setEdgeIndex(null); }
-    catch(e){setError(e.message);}
+    try {
+      const result = pasteSelection(state.present, payload);
+      change(result.document);
+      setSelection(result.ids);
+      setEdgeIndex(null);
+    } catch (e) {
+      setError(e.message);
+    }
   }
-  useEffect(()=>{
-    const onCopy=event=>{
-      if(event.target.closest('input,textarea,select,[contenteditable]')||!selection.length||!state||busy||rawDirty||state.present.diagram_type!=='architecture')return;
-      try {const payload=copySelection(state.present,selection);event.clipboardData.setData('text/plain',JSON.stringify(payload));event.preventDefault();setClipboard(payload);setNotice('Selection copied.');}catch(e){setError(e.message);}
+  useEffect(() => {
+    const onCopy = (event) => {
+      if (
+        event.target.closest("input,textarea,select,[contenteditable]") ||
+        !selection.length ||
+        !state ||
+        busy ||
+        rawDirty ||
+        state.present.diagram_type !== "architecture"
+      )
+        return;
+      try {
+        const payload = copySelection(state.present, selection);
+        event.clipboardData.setData("text/plain", JSON.stringify(payload));
+        event.preventDefault();
+        setClipboard(payload);
+        setNotice("Selection copied.");
+      } catch (e) {
+        setError(e.message);
+      }
     };
-    const onPaste=event=>{
-      if(event.target.closest('input,textarea,select,[contenteditable]')||!state||busy||rawDirty)return;
-      const text=event.clipboardData.getData('text/plain');if(!text.includes('archify-selection'))return;
-      event.preventDefault(); void act(async()=>{if(text.length>5*1024*1024)throw new Error('Selection exceeds 5 MB.');const result=pasteSelection(state.present,JSON.parse(text));await request('validate',result.document);change(result.document);setSelection(result.ids);setEdgeIndex(null);});
+    const onPaste = (event) => {
+      if (
+        event.target.closest("input,textarea,select,[contenteditable]") ||
+        !state ||
+        busy ||
+        rawDirty
+      )
+        return;
+      const text = event.clipboardData.getData("text/plain");
+      if (!text.includes("archify-selection")) return;
+      event.preventDefault();
+      void act(async () => {
+        if (text.length > 5 * 1024 * 1024)
+          throw new Error("Selection exceeds 5 MB.");
+        const result = pasteSelection(state.present, JSON.parse(text));
+        await request("validate", result.document);
+        change(result.document);
+        setSelection(result.ids);
+        setEdgeIndex(null);
+      });
     };
-    window.addEventListener('copy',onCopy);window.addEventListener('paste',onPaste);
-    return()=>{window.removeEventListener('copy',onCopy);window.removeEventListener('paste',onPaste);};
+    window.addEventListener("copy", onCopy);
+    window.addEventListener("paste", onPaste);
+    return () => {
+      window.removeEventListener("copy", onCopy);
+      window.removeEventListener("paste", onPaste);
+    };
   });
   function edgePatch(patch) {
     try {
@@ -462,7 +755,25 @@ function App() {
       setError(e.message);
     }
   }
-  function reset(kind,index=null) {try{const result=resetFields(state.present,selection,kind,index);if(!result.removed.length){setNotice('No optional overrides to reset. Required placement fields are kept.');return;}if(window.confirm(`Remove these manual overrides?\n${result.removed.join('\n')}`))change(result.document);}catch(e){setError(e.message);}}
+  function reset(kind, index = null) {
+    try {
+      const result = resetFields(state.present, selection, kind, index);
+      if (!result.removed.length) {
+        setNotice(
+          "No optional overrides to reset. Required placement fields are kept.",
+        );
+        return;
+      }
+      if (
+        window.confirm(
+          `Remove these manual overrides?\n${result.removed.join("\n")}`,
+        )
+      )
+        change(result.document);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
   function pointField(key, text, multiple = false) {
     try {
       if (!text.trim()) return edgePatch({ [key]: undefined });
@@ -516,20 +827,40 @@ function App() {
     });
     return [
       ...boundaries,
-      ...(options.regions?.(documentModel) || []).map(region => ({ id: region.id, type: region.type || 'boundary', data: { label: region.label }, position: { x: region.pos[0], y: region.pos[1] }, style: { width: region.size[0], height: region.size[1] }, measured: measurements[region.id], draggable: false, selectable: false, focusable: false, zIndex: -1 })),
+      ...(options.regions?.(documentModel) || []).map((region) => ({
+        id: region.id,
+        type: region.type || "boundary",
+        data: { label: region.label },
+        position: { x: region.pos[0], y: region.pos[1] },
+        style: { width: region.size[0], height: region.size[1] },
+        measured: measurements[region.id],
+        draggable: false,
+        selectable: false,
+        focusable: false,
+        zIndex: -1,
+      })),
       ...cs.map((c) => ({
         id: `c:${c.id}`,
         measured: measurements[`c:${c.id}`],
         type: "component",
         position: { x: c.pos[0], y: c.pos[1] },
-        data: {...c,locked:locked.includes(c.id)},
-        draggable: !locked.includes(c.id) && !busy && !rawDirty && !drawConnections,
+        data: { ...c, locked: locked.includes(c.id) },
+        draggable:
+          !locked.includes(c.id) && !busy && !rawDirty && !drawConnections,
         selected: selection.includes(c.id),
         style: { width: c.size[0], height: c.size[1] },
         ariaLabel: `${c.label}, ${c.type}`,
       })),
     ];
-  }, [documentModel, selection, measurements, locked, busy, rawDirty, drawConnections]);
+  }, [
+    documentModel,
+    selection,
+    measurements,
+    locked,
+    busy,
+    rawDirty,
+    drawConnections,
+  ]);
   const edges = useMemo(
     () =>
       connections(documentModel).map((e, index) => ({
@@ -538,7 +869,10 @@ function App() {
         target: `c:${e.to}`,
         sourceHandle: `source-${e.fromSide || "right"}`,
         targetHandle: `target-${e.toSide || "left"}`,
-        data: { ...(options.edgeData?.(documentModel, e) || e), editorBoxes: components(documentModel) },
+        data: {
+          ...(options.edgeData?.(documentModel, e) || e),
+          editorBoxes: components(documentModel),
+        },
         type: "connection",
         selected: index === edgeIndex,
         markerEnd: { type: "arrowclosed", color: "#82929c" },
@@ -554,7 +888,10 @@ function App() {
     const editingText = event.target.closest(
       "input,textarea,select,[contenteditable]",
     );
-    if(event.key==='Escape'&&drawConnections){cancelled.current=true;setDrawConnections(false);}
+    if (event.key === "Escape" && drawConnections) {
+      cancelled.current = true;
+      setDrawConnections(false);
+    }
     if (event.key === "Escape" && dragBase.current) {
       setGuides([]);
       cancelled.current = true;
@@ -563,8 +900,25 @@ function App() {
       event.stopPropagation();
       return;
     }
-    if (editingText || event.target.closest('.canvas-drag-point') || busy || rawDirty || !state || dragBase.current) return;
-    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='d'&&selection.length&&state.present.diagram_type==='architecture') {event.preventDefault();paste(copySelection(state.present,selection));return;}
+    if (
+      editingText ||
+      event.target.closest(".canvas-drag-point") ||
+      busy ||
+      rawDirty ||
+      !state ||
+      dragBase.current
+    )
+      return;
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      event.key.toLowerCase() === "d" &&
+      selection.length &&
+      state.present.diagram_type === "architecture"
+    ) {
+      event.preventDefault();
+      paste(copySelection(state.present, selection));
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
       void saveJson(session.writable);
@@ -605,652 +959,1490 @@ function App() {
   }
 
   return (
-    <Editing.Provider value={{
-      enabled: !busy && !rawDirty,
-      connecting: drawConnections && documentModel?.diagram_type==='architecture',
-      minSize: options.minSize,
-      resizable: options.resizable,
-      resize: (id,rect,bypass) => { const result=snapResize(dragBase.current || state.present,id,rect,{grid:snap?gridSize:0,smart:smartSnap,bypass}); setGuides(result.guides); return result.rect; },
-      start: () => { dragBase.current = state.present; cancelled.current = false; },
-      update: edit => { if (dragBase.current && !cancelled.current) setDraft(previous => edit(previous || dragBase.current)); },
-      end: edit => { if (edit && dragBase.current && !cancelled.current) change(edit(dragBase.current)); dragBase.current = null; setDraft(null); setGuides([]); },
-    }}><div className="app">
-      <header className="toolbar">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            A
-          </span>
-          <strong>
-            Archify <span>Editor</span>
-          </strong>
-        </div>
-        <div className="file-name">
-          {session?.name || "No document"}
-          <span className={hasUnsaved ? "dirty" : "saved"}>
-            {hasUnsaved
-              ? "Unsaved changes"
-              : session
-                ? "Saved state"
-                : "Loading"}
-          </span>
-        </div>
-        <nav aria-label="Document actions">
-          <button disabled={!session || busy || rawDirty || !!draft} onClick={() => setCreation('diagram')}>New diagram</button>
-          <button disabled={!state || busy || rawDirty || !!draft || documentModel.diagram_type !== 'architecture'} onClick={() => setCreation('component')}>Add component</button>
-          <button disabled={!state || busy || rawDirty || !!draft || documentModel.diagram_type !== 'architecture'} onClick={() => setCreation('connection')}>Add connection</button>
-          <button
-            disabled={!session || busy}
-            onClick={() => picker.current.click()}
-          >
-            Open JSON
-          </button>
-          <button
-            disabled={!state?.past.length || busy || rawDirty || !!draft}
-            onClick={() => setState(undo)}
-          >
-            Undo
-          </button>
-          <button
-            disabled={!state?.future.length || busy || rawDirty || !!draft}
-            onClick={() => setState(redo)}
-          >
-            Redo
-          </button>
-          <button
-            disabled={!state || busy || rawDirty || !!draft}
-            onClick={() => saveJson(false)}
-          >
-            Download JSON
-          </button>
-          {session?.writable && (
-            <button
-              className="primary"
-              disabled={busy || rawDirty || !!draft || !dirty}
-              onClick={() => saveJson(true)}
-            >
-              Save file
-            </button>
-          )}
-          <button
-            className="render-button"
-            disabled={!state || busy || rawDirty || !!draft}
-            onClick={() =>
-              act(async () => {
-                const result = await request("render", state.present);
-                setHtml(await result.text());
-                setNotice("Archify rendered the current JSON.");
-              })
-            }
-          >
-            {busy ? "Working…" : "Render HTML"}
-          </button>
-          <button disabled={!state || busy || rawDirty || !!draft} onClick={() => act(async () => { await request('render', state.present); setDiagnostics([]); setNotice('Archify validation passed.'); })}>Check diagram</button>
-        </nav>
-        <input
-          ref={picker}
-          hidden
-          type="file"
-          accept=".json,application/json"
-          onChange={(e) => {
-            void importFile(e.target.files[0]);
-            e.target.value = "";
-          }}
-        />
-      </header>
-      {recovery && <div className="recovery-banner" role="status"><span>Unsaved draft available: {recovery.name}. {recovery.revision !== session.revision ? 'The source changed; recovery will open a separate draft.' : 'Restore it or keep the file currently open.'}</span>
-        <button onClick={() => act(async () => {
-          assertDocument(recovery.document); await request('validate', recovery.document);
-          const changedSource = recovery.revision !== session.revision;
-          setSession(current => ({ ...current, name: recovery.name, writable: Boolean(recovery.writable && !changedSource) }));
-          recoveredText.current = recovery.rawText; setState(history(recovery.document)); setSaved(recovery.saved);
-          setPanel(recovery.rawText ? 'json' : 'inspector'); setRecovery(null);
-          setNotice(changedSource ? 'Recovered separately. Download this draft to avoid overwriting the changed source.' : 'Unsaved draft restored.');
-        })}>Restore draft</button>
-        <button onClick={() => { localStorage.removeItem(`archify-draft:${session.recoveryKey}`); setRecovery(null); }}>Discard recovery</button>
-      </div>}
-      <div className="workspace">
-        <aside className="outline" aria-label="Components">
-          <div className="section-heading">
-            <h2>Components</h2>
-            <span>{items.length}</span>
+    <Editing.Provider
+      value={{
+        enabled: !busy && !rawDirty,
+        connecting:
+          drawConnections && documentModel?.diagram_type === "architecture",
+        minSize: options.minSize,
+        resizable: options.resizable,
+        resize: (id, rect, bypass) => {
+          const result = snapResize(
+            dragBase.current || state.present,
+            id,
+            rect,
+            { grid: snap ? gridSize : 0, smart: smartSnap, bypass },
+          );
+          setGuides(result.guides);
+          return result.rect;
+        },
+        start: () => {
+          dragBase.current = state.present;
+          cancelled.current = false;
+        },
+        update: (edit) => {
+          if (dragBase.current && !cancelled.current)
+            setDraft((previous) => edit(previous || dragBase.current));
+        },
+        end: (edit) => {
+          if (edit && dragBase.current && !cancelled.current)
+            change(edit(dragBase.current));
+          dragBase.current = null;
+          setDraft(null);
+          setGuides([]);
+        },
+      }}
+    >
+      <div className="app">
+        <header className="toolbar">
+          <div className="brand">
+            <span className="brand-mark" aria-hidden="true">
+              A
+            </span>
+            <strong>
+              Archify <span>Editor</span>
+            </strong>
           </div>
-          <input
-            className="search"
-            aria-label="Find component"
-            placeholder="Find a component…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <div className="component-list">
-            {items
-              .filter((c) =>
-                `${c.label} ${c.id}`
-                  .toLowerCase()
-                  .includes(query.toLowerCase()),
-              )
-              .map((c) => (
-                <button
-                  key={c.id}
-                  className={selection.includes(c.id) ? "active" : ""}
-                  onClick={() => {
-                    setSelection([c.id]);
-                    setEdgeIndex(null);
-                  }}
-                >
-                  <span className={`list-icon kind-${c.type}`}>
-                    {kinds[c.type]}
-                  </span>
-                  <span>
-                    <strong>{c.label}</strong>
-                    <small>{c.id}</small>
-                  </span>
-                </button>
-              ))}
-          </div>
-          <details className="connection-list"><summary>Connections</summary>{connections(documentModel).map((connection, index) =>
-            <button key={index} onClick={() => { setEdgeIndex(index); setSelection([]); }}>{connection.from} → {connection.to}</button>
-          )}</details>
-          <div className="outline-foot">
-            {documentModel?.diagram_type} diagram
-            <br />
-            <span>
-              {connections(documentModel).length} connections ·{" "}
-              {documentModel?.boundaries?.length || 0} boundaries
+          <div className="file-name">
+            {session?.name || "No document"}
+            <span className={hasUnsaved ? "dirty" : "saved"}>
+              {hasUnsaved
+                ? "Unsaved changes"
+                : session
+                  ? "Saved state"
+                  : "Loading"}
             </span>
           </div>
-        </aside>
-        <main className="canvas" aria-label="Diagram canvas">
-          <div className="canvas-heading">
-            <div>
-              <h1>{documentModel?.meta?.title || "Archify diagram"}</h1>
-              <p>Arrange the diagram. Save the JSON.</p>
-            </div>
-            <label className="snap">
-              <input
-                type="checkbox"
-                checked={snap}
-                onChange={(e) => setSnap(e.target.checked)}
-              />
-              Snap to grid
-            </label>
-          </div>
-          {state && (
-            <ReactFlow
-              key={canvasVersion}
-              nodes={nodes}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              onInit={(instance) => {
-                flow.current = instance;
-              }}
-              fitView
-              fitViewOptions={{ padding: 0.2 }}
-              minZoom={0.15}
-              maxZoom={3}
-              snapToGrid={documentModel.diagram_type !== 'architecture' && snap}
-              snapGrid={[gridSize,gridSize]}
-              nodesConnectable={drawConnections && !busy && !rawDirty}
-              edgesReconnectable={drawConnections && !busy && !rawDirty && documentModel.diagram_type==='architecture'}
-              onConnectStart={()=>{cancelled.current=false;}}
-              onReconnectStart={()=>{cancelled.current=false;}}
-              onConnect={connection=>{
-                if(cancelled.current||!drawConnections||documentModel.diagram_type!=='architecture')return;
-                try{let next=addConnection(state.present,{from:connection.source.slice(2),to:connection.target.slice(2)});next=reconnectConnection(next,next.connections.length-1,{from:connection.source.slice(2),to:connection.target.slice(2),fromSide:connection.sourceHandle?.replace('source-',''),toSide:connection.targetHandle?.replace('target-','')});change(next);setSelection([]);setEdgeIndex(next.connections.length-1);}catch(e){setError(e.message);}
-              }}
-              onReconnect={(edge,connection)=>{
-                if(cancelled.current||!drawConnections)return;
-                try{change(reconnectConnection(state.present,Number(edge.id.slice(2)),{from:connection.source.slice(2),to:connection.target.slice(2),fromSide:connection.sourceHandle?.replace('source-',''),toSide:connection.targetHandle?.replace('target-','')}));}catch(e){setError(e.message);}
-              }}
-              deleteKeyCode={null}
-              nodesDraggable={!busy && !rawDirty && !drawConnections}
-              elementsSelectable={!busy}
-              selectionOnDrag
-              panOnDrag={[1, 2]}
-              panActivationKeyCode="Space"
-              selectionKeyCode="Shift"
-              multiSelectionKeyCode="Shift"
-              onlyRenderVisibleElements={false}
-              onNodesChange={(changes) => {
-                const dimensions = changes.filter(c => c.type === "dimensions" && c.dimensions);
-                if (dimensions.length) setMeasurements(previous => {
-                  let next = previous;
-                  for (const { id, dimensions: measured } of dimensions) {
-                    if (previous[id]?.width === measured.width && previous[id]?.height === measured.height) continue;
-                    if (next === previous) next = { ...previous };
-                    next[id] = measured;
-                  }
-                  return next;
-                });
-                const selections = changes.filter(
-                  (c) => c.type === "select" && c.id.startsWith("c:"),
-                );
-                if (selections.length)
-                  setSelection((previous) => {
-                    const ids = new Set(previous);
-                    selections.forEach((c) =>
-                      c.selected
-                        ? ids.add(c.id.slice(2))
-                        : ids.delete(c.id.slice(2)),
-                    );
-                    return [...ids];
-                  });
-                const positions = changes.filter(
-                  (c) =>
-                    c.type === "position" &&
-                    c.position &&
-                    c.id.startsWith("c:") && !locked.includes(c.id.slice(2)),
-                );
-                if (positions.length && dragBase.current && !cancelled.current && documentModel.diagram_type !== 'architecture')
-                  setDraft((previous) =>
-                    moveComponents(
-                      previous || dragBase.current,
-                      new Map(
-                        positions.map((c) => [
-                          c.id.slice(2),
-                          [c.position.x, c.position.y],
-                        ]),
-                      ),
-                    ),
-                  );
-              }}
-              onNodeClick={(_, node) => {
-                if (node.id.startsWith("c:")) setEdgeIndex(null);
-              }}
-              onEdgeClick={(_, e) => {
-                setEdgeIndex(Number(e.id.slice(2)));
-                setSelection([]);
-              }}
-              onPaneClick={() => {
-                setSelection([]);
-                setEdgeIndex(null);
-              }}
-              onNodeDragStart={() => {
-                dragBase.current = state.present;
-                cancelled.current = false;
-              }}
-              onNodeDrag={(event,node,draggedNodes) => {
-                if (!dragBase.current || cancelled.current || documentModel.diagram_type !== 'architecture') return;
-                const result=snapPositions(dragBase.current,new Map((draggedNodes?.length?draggedNodes:[node]).filter(n=>n.id.startsWith('c:')&&!locked.includes(n.id.slice(2))).map(n=>[n.id.slice(2),[n.position.x,n.position.y]])),{grid:snap?gridSize:0,smart:smartSnap,bypass:event.altKey});
-                setGuides(result.guides); setDraft(moveComponents(dragBase.current,result.positions));
-              }}
-              onNodeDragStop={(event, node, draggedNodes) => {
-                if (!cancelled.current && dragBase.current)
-                  change(
-                    moveComponents(
-                      dragBase.current,
-                      snapPositions(dragBase.current,new Map(
-                        (draggedNodes?.length ? draggedNodes : [node])
-                          .filter((n) => n.id.startsWith("c:") && !locked.includes(n.id.slice(2)))
-                          .map((n) => [
-                            n.id.slice(2),
-                            [n.position.x, n.position.y],
-                          ]),
-                      ),{grid:snap?gridSize:0,smart:smartSnap,bypass:event.altKey}).positions,
-                    ),
-                  );
-                dragBase.current = null;
-                setDraft(null);
-                setGuides([]);
-              }}
-            >
-              <Background gap={20} size={1} color="#cdd7dc" />
-              <Controls showInteractive={false} />
-              <ViewportPortal><div className="snap-guides" aria-hidden="true">{guides.map((g,i)=><div key={i} className={`snap-guide ${g.axis?'horizontal':'vertical'}`} style={g.axis?{top:g.value}:{left:g.value}}><span>{g.kind}</span></div>)}</div></ViewportPortal>
-            </ReactFlow>
-          )}
-          <div className="canvas-help">
-            Drag to move · Shift to select several · Space + drag to pan · Arrow
-            keys to nudge
-          </div>
-        </main>
-        <aside className="inspector" aria-label="Document inspector">
-          {documentModel?.diagram_type==='architecture'&&<label className="connection-mode"><input type="checkbox" checked={drawConnections} disabled={busy||rawDirty} onChange={e=>setDrawConnections(e.target.checked)}/> Draw / reconnect connections</label>}
-          <div className="tabs">
-            <button disabled={!state||rawDirty||busy||!!draft} onClick={()=>{setCreation(null);setPanel('checkpoints');}}>Checkpoints</button>
-            <button disabled={!state||rawDirty||busy||!!draft} onClick={()=>{setCreation(null);setPanel('review');}}>Review</button>
-            <button disabled={!state||rawDirty||busy||!!draft} onClick={()=>{setCreation(null);setPanel('search');}}>Search</button>
-            <button disabled={!state||rawDirty||busy||!!draft} onClick={()=>{setCreation(null);setPanel('settings');}}>Settings</button>
-            {authoringTypes.includes(documentModel?.diagram_type)&&<button disabled={rawDirty||busy||!!draft} onClick={()=>{setCreation(null);setPanel('structure');}}>Structure</button>}
+          <nav aria-label="Document actions">
             <button
-              className={panel === "inspector" ? "active" : ""}
+              disabled={!session || busy || rawDirty || !!draft}
+              onClick={() => setCreation("diagram")}
+            >
+              New diagram
+            </button>
+            <button
+              disabled={
+                !state ||
+                busy ||
+                rawDirty ||
+                !!draft ||
+                documentModel.diagram_type !== "architecture"
+              }
+              onClick={() => setCreation("component")}
+            >
+              Add component
+            </button>
+            <button
+              disabled={
+                !state ||
+                busy ||
+                rawDirty ||
+                !!draft ||
+                documentModel.diagram_type !== "architecture"
+              }
+              onClick={() => setCreation("connection")}
+            >
+              Add connection
+            </button>
+            <button
+              disabled={!session || busy}
+              onClick={() => picker.current.click()}
+            >
+              Open JSON
+            </button>
+            <button
+              disabled={!state?.past.length || busy || rawDirty || !!draft}
+              onClick={() => setState(undo)}
+            >
+              Undo
+            </button>
+            <button
+              disabled={!state?.future.length || busy || rawDirty || !!draft}
+              onClick={() => setState(redo)}
+            >
+              Redo
+            </button>
+            <button
+              disabled={!state || busy || rawDirty || !!draft}
+              onClick={() => saveJson(false)}
+            >
+              Download JSON
+            </button>
+            {session?.writable && (
+              <button
+                className="primary"
+                disabled={busy || rawDirty || !!draft || !dirty}
+                onClick={() => saveJson(true)}
+              >
+                Save file
+              </button>
+            )}
+            <button
+              className="render-button"
+              disabled={!state || busy || rawDirty || !!draft}
+              onClick={() =>
+                act(async () => {
+                  const result = await request("render", state.present);
+                  setHtml(await result.text());
+                  setNotice("Archify rendered the current JSON.");
+                })
+              }
+            >
+              {busy ? "Working…" : "Render HTML"}
+            </button>
+            <button
+              disabled={!state || busy || rawDirty || !!draft}
+              onClick={() =>
+                act(async () => {
+                  await request("render", state.present);
+                  setDiagnostics([]);
+                  setNotice("Archify validation passed.");
+                })
+              }
+            >
+              Check diagram
+            </button>
+          </nav>
+          <input
+            ref={picker}
+            hidden
+            type="file"
+            accept=".json,application/json"
+            onChange={(e) => {
+              void importFile(e.target.files[0]);
+              e.target.value = "";
+            }}
+          />
+        </header>
+        {recovery && (
+          <div className="recovery-banner" role="status">
+            <span>
+              Unsaved draft available: {recovery.name}.{" "}
+              {recovery.revision !== session.revision
+                ? "The source changed; recovery will open a separate draft."
+                : "Restore it or keep the file currently open."}
+            </span>
+            <button
+              onClick={() =>
+                act(async () => {
+                  assertDocument(recovery.document);
+                  await request("validate", recovery.document);
+                  const changedSource = recovery.revision !== session.revision;
+                  setSession((current) => ({
+                    ...current,
+                    name: recovery.name,
+                    writable: Boolean(recovery.writable && !changedSource),
+                  }));
+                  recoveredText.current = recovery.rawText;
+                  setState(history(recovery.document));
+                  setSaved(recovery.saved);
+                  setPanel(recovery.rawText ? "json" : "inspector");
+                  setRecovery(null);
+                  setNotice(
+                    changedSource
+                      ? "Recovered separately. Download this draft to avoid overwriting the changed source."
+                      : "Unsaved draft restored.",
+                  );
+                })
+              }
+            >
+              Restore draft
+            </button>
+            <button
               onClick={() => {
-                if (
-                  !rawDirty ||
-                  window.confirm("Discard unapplied JSON text changes?")
-                ) {
-                  setJsonText(state ? serialize(state.present) : "");
-                  setPanel("inspector");
-                }
+                localStorage.removeItem(`archify-draft:${session.recoveryKey}`);
+                setRecovery(null);
               }}
             >
-              Properties
-            </button>
-            <button
-              className={panel === "json" ? "active" : ""}
-              onClick={() => setPanel("json")}
-            >
-              JSON
+              Discard recovery
             </button>
           </div>
-        {creation ? <form className="properties" onSubmit={event => {
-          event.preventDefault(); const fields = Object.fromEntries(new FormData(event.currentTarget));
-          try {
-            if (creation === 'diagram') {
-              if (hasUnsaved && !window.confirm('Discard unsaved changes and create a diagram?')) return;
-              load({ ...session, document: createDiagram(fields.diagramType,fields.label), name: `untitled.${fields.diagramType}.json`, writable: false });
-              setSaved('');
-            } else if (creation === 'component') { const next = addComponent(state.present, fields); change(next); setSelection([next.components.at(-1).id]); setEdgeIndex(null); }
-            else { const next = addConnection(state.present, fields); change(next); setEdgeIndex(next.connections.length - 1); setSelection([]); }
-            setCreation(null); setPanel('inspector');
-          } catch (e) { setError(e.message); }
-        }}><h2>{creation === 'diagram' ? 'New diagram' : creation === 'component' ? 'New component' : 'New connection'}</h2>
-          <label className="field">{creation === 'diagram' ? 'Diagram title' : 'New label'}<input name="label" required={creation !== 'connection'} autoFocus/></label>
-          {creation==='diagram'&&<label className="field">Diagram type<select name="diagramType">{authoringTypes.map(type=><option key={type}>{type}</option>)}</select></label>}
-          {creation === 'component' && <label className="field">Component type<select name="type">{Object.keys(kinds).map(kind => <option key={kind}>{kind}</option>)}</select></label>}
-          {creation === 'connection' && ['from', 'to'].map(key => <label className="field" key={key}>{key === 'from' ? 'From component' : 'To component'}<select name={key} required>{items.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>)}
-          <div className="button-row"><button type="button" onClick={() => setCreation(null)}>Cancel</button><button type="submit" className="primary">Create</button></div>
-        </form> : panel==='checkpoints' ? <fieldset disabled={busy||!!draft}><CheckpointsPanel key={`${session.recoveryKey}:${session.name}`} document={documentModel} storageKey={`${session.recoveryKey}:${session.name}`} onRestore={snapshot=>act(async()=>{await request('validate',snapshot);change(snapshot);setSelection([]);setEdgeIndex(null);setNotice('Checkpoint restored as an undoable draft.');})} onExport={(snapshot,name)=>download(serialize(snapshot),name,'application/json')}/></fieldset> : panel==='conflict'&&conflict ? <fieldset disabled={busy||!!draft}><ConflictPanel key={JSON.stringify(conflict)} conflict={conflict} onApply={applyMerge} onRefresh={()=>act(()=>compareSource())} onCancel={()=>{setConflict(null);setPanel('review');}}/></fieldset> : panel==='review' ? <fieldset disabled={busy||!!draft}><ReviewPanel baseline={saved?JSON.parse(saved):null} document={documentModel} writable={session.writable} onSave={saveJson}/></fieldset> : panel==='search' ? <SearchPanel document={documentModel} onFocus={result=>{setSelection(result.kind==='node'?result.ids:[]);setEdgeIndex(result.kind==='connection'?result.index:null);flow.current?.fitView({nodes:result.ids.map(id=>({id:`c:${id}`})),padding:0.5,maxZoom:1.5});}} onFit={()=>{const ids=selection.length?selection:edge?[edge.from,edge.to]:[];if(ids.length)flow.current?.fitView({nodes:ids.map(id=>({id:`c:${id}`})),padding:0.5,maxZoom:1.5});}}/> : panel==='settings' ? <fieldset disabled={busy||!!draft}><SettingsPanel document={documentModel} onChange={operation=>act(async()=>{const next=operation();await request('validate',next);change(next);})}/></fieldset> : panel==='structure' ? <fieldset disabled={busy||!!draft}><StructurePanel document={documentModel} onChange={operation=>act(async()=>{const next=operation();await request('validate',next);change(next);})} onSelect={ids=>{setSelection(ids);setEdgeIndex(null);setPanel('inspector');}}/></fieldset> : panel === "json" ? (
-            <div className="json-panel">
-              <p>Edit the source, then apply it to the canvas.</p>
-              <textarea
-                aria-label="Diagram JSON"
-                spellCheck="false"
-                value={jsonText}
-                onChange={(e) => setJsonText(e.target.value)}
-              />
-              <div className="button-row">
-                <button
-                  disabled={!rawDirty || busy}
-                  onClick={() => setJsonText(serialize(state.present))}
-                >
-                  Discard text
-                </button>
-                <button
-                  className="primary"
-                  disabled={!rawDirty || busy}
-                  onClick={() =>
-                    act(async () => {
-                      const next = JSON.parse(jsonText);
-                      assertDocument(next);
-                      await request("validate", next);
-                      setState((s) => commit(s, next));
-                      setJsonText(serialize(next));
-                      setSelection([]);
-                      setEdgeIndex(null);
-                      setNotice("JSON applied.");
-                    })
-                  }
-                >
-                  Apply JSON
-                </button>
-              </div>
+        )}
+        <div className="workspace">
+          <aside className="outline" aria-label="Components">
+            <div className="section-heading">
+              <h2>Components</h2>
+              <span>{items.length}</span>
             </div>
-          ) : (
-            <div className="properties">
-              {selected ? (
-                <>
-                  <div className="selected-heading">
-                    <span className="eyebrow">
-                      {selection.length > 1
-                        ? `${selection.length} selected`
-                        : selected.type}
+            <input
+              className="search"
+              aria-label="Find component"
+              placeholder="Find a component…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <div className="component-list">
+              {items
+                .filter((c) =>
+                  `${c.label} ${c.id}`
+                    .toLowerCase()
+                    .includes(query.toLowerCase()),
+                )
+                .map((c) => (
+                  <button
+                    key={c.id}
+                    className={selection.includes(c.id) ? "active" : ""}
+                    onClick={() => {
+                      setSelection([c.id]);
+                      setEdgeIndex(null);
+                    }}
+                  >
+                    <span className={`list-icon kind-${c.type}`}>
+                      {kinds[c.type]}
                     </span>
-                    <h2>{selected.label}</h2>
-                    <code>{selected.id}</code>
-                  </div>
-                  <fieldset disabled={busy || !!draft}>
-                    {documentModel.diagram_type === 'architecture' && selection.length > 1 && <details open><summary>Arrange selection</summary><div className="button-row">{Object.entries(arrangements).map(([action,label]) => <button key={action} disabled={action.startsWith('distribute') && selection.length < 3} onClick={() => { try { change(arrange(state.present,selection,action)); } catch(e) { setError(e.message); } }}>{label}</button>)}</div></details>}
-                    <legend>Component</legend>
-                    {documentModel.diagram_type!=='sequence'&&<details><summary>Reset manual layout</summary><div className="button-row"><button onClick={()=>reset('position')}>Reset position overrides</button><button onClick={()=>reset('size')}>Reset size overrides</button></div><p className="muted">Only optional fields are removed. Free architecture coordinates and logical columns, rows and lanes are kept.</p></details>}
-                    <button onClick={()=>updateLocks(selection.every(id=>locked.includes(id))?locked.filter(id=>!selection.includes(id)):[...new Set([...locked,...selection])])}>{selection.every(id=>locked.includes(id))?'Unlock selection':'Lock selection'}</button>
-                    {selection.some(id=>locked.includes(id))&&<p className="muted">Locked items cannot be dragged, resized or nudged. Inspector edits remain available.</p>}
-                    {selection.length>1&&<><p className="muted">Changes apply to every selected item. Blank mixed fields remain unchanged.</p>{['label','sublabel',...(options.resizable===false?[]:['width','height'])].map(field=>{const value=commonValue(documentModel,selection,field);return <Field key={field} label={`Selection ${field}`} value={value} mixed={value===undefined} number={['width','height'].includes(field)} onCommit={value=>{try{change(bulkPatch(state.present,selection,field,value));}catch(e){setError(e.message);}}}/>;})}</>}
-                    {documentModel.diagram_type==='architecture'&&<details><summary>Copy and duplicate</summary><div className="button-row"><button onClick={()=>paste(copySelection(state.present,selection))}>Duplicate selection</button><button onClick={()=>{setClipboard(copySelection(state.present,selection));setNotice('Selection copied inside the editor. Use Ctrl/Cmd+C on the canvas to copy to another window.');}}>Copy selection</button><button disabled={!clipboard} onClick={()=>paste(clipboard)}>Paste selection</button></div><p className="muted">Ctrl/Cmd+D duplicates. Ctrl/Cmd+C and V copy and paste on the canvas.</p></details>}
-                    {documentModel.diagram_type === 'architecture' && <details><summary>Snapping</summary><label className="field">Grid spacing<input type="number" min="1" max="200" value={gridSize} onChange={e=>{const n=Number(e.target.value);if(Number.isInteger(n)&&n>=1&&n<=200)setGridSize(n);}}/></label><label><input type="checkbox" checked={smartSnap} onChange={e=>setSmartSnap(e.target.checked)}/> Smart guides</label><p className="muted">Hold Alt while dragging or resizing to bypass snapping.</p></details>}
-                    {selection.length===1&&<>{adapterFor(documentModel) && <div className="logical-properties">
-                      <p className="muted">{options.hint || 'Dragging snaps horizontally to columns and adjusts the vertical offset within the same lane.'}</p>
-                      {options.fields.map(field => <Field key={field} label={{ col: 'Column', yOffset: 'Vertical offset', stage: 'Stage', row: 'Row', order:'Participant order' }[field] || field} value={selected[field] ?? 0} number onCommit={value => applyPatch({ [field]: value })}/>)}
-                      {selected.lane && <label className="field">Lane<select value={selected.lane} onChange={e => applyPatch({ lane: e.target.value })}>{documentModel.lanes.map(lane => <option key={lane.id} value={lane.id}>{lane.label}</option>)}</select></label>}
-                    </div>}
-                    <Field
-                      label="Label"
-                      value={selected.label}
-                      onCommit={(label) =>
-                        label.trim()
-                          ? applyPatch({ label })
-                          : setError("A label cannot be empty.")
+                    <span>
+                      <strong>{c.label}</strong>
+                      <small>{c.id}</small>
+                    </span>
+                  </button>
+                ))}
+            </div>
+            <details className="connection-list">
+              <summary>Connections</summary>
+              {connections(documentModel).map((connection, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    setEdgeIndex(index);
+                    setSelection([]);
+                  }}
+                >
+                  {connection.from} → {connection.to}
+                </button>
+              ))}
+            </details>
+            <div className="outline-foot">
+              {documentModel?.diagram_type} diagram
+              <br />
+              <span>
+                {connections(documentModel).length} connections ·{" "}
+                {documentModel?.boundaries?.length || 0} boundaries
+              </span>
+            </div>
+          </aside>
+          <main className="canvas" aria-label="Diagram canvas">
+            <div className="canvas-heading">
+              <div>
+                <h1>{documentModel?.meta?.title || "Archify diagram"}</h1>
+                <p>Arrange the diagram. Save the JSON.</p>
+              </div>
+              <label className="snap">
+                <input
+                  type="checkbox"
+                  checked={snap}
+                  onChange={(e) => setSnap(e.target.checked)}
+                />
+                Snap to grid
+              </label>
+            </div>
+            {state && (
+              <ReactFlow
+                key={canvasVersion}
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                onInit={(instance) => {
+                  flow.current = instance;
+                }}
+                fitView
+                fitViewOptions={{ padding: 0.2 }}
+                minZoom={0.15}
+                maxZoom={3}
+                snapToGrid={
+                  documentModel.diagram_type !== "architecture" && snap
+                }
+                snapGrid={[gridSize, gridSize]}
+                nodesConnectable={drawConnections && !busy && !rawDirty}
+                edgesReconnectable={
+                  drawConnections &&
+                  !busy &&
+                  !rawDirty &&
+                  documentModel.diagram_type === "architecture"
+                }
+                onConnectStart={() => {
+                  cancelled.current = false;
+                }}
+                onReconnectStart={() => {
+                  cancelled.current = false;
+                }}
+                onConnect={(connection) => {
+                  if (
+                    cancelled.current ||
+                    !drawConnections ||
+                    documentModel.diagram_type !== "architecture"
+                  )
+                    return;
+                  try {
+                    let next = addConnection(state.present, {
+                      from: connection.source.slice(2),
+                      to: connection.target.slice(2),
+                    });
+                    next = reconnectConnection(
+                      next,
+                      next.connections.length - 1,
+                      {
+                        from: connection.source.slice(2),
+                        to: connection.target.slice(2),
+                        fromSide: connection.sourceHandle?.replace(
+                          "source-",
+                          "",
+                        ),
+                        toSide: connection.targetHandle?.replace("target-", ""),
+                      },
+                    );
+                    change(next);
+                    setSelection([]);
+                    setEdgeIndex(next.connections.length - 1);
+                  } catch (e) {
+                    setError(e.message);
+                  }
+                }}
+                onReconnect={(edge, connection) => {
+                  if (cancelled.current || !drawConnections) return;
+                  try {
+                    change(
+                      reconnectConnection(
+                        state.present,
+                        Number(edge.id.slice(2)),
+                        {
+                          from: connection.source.slice(2),
+                          to: connection.target.slice(2),
+                          fromSide: connection.sourceHandle?.replace(
+                            "source-",
+                            "",
+                          ),
+                          toSide: connection.targetHandle?.replace(
+                            "target-",
+                            "",
+                          ),
+                        },
+                      ),
+                    );
+                  } catch (e) {
+                    setError(e.message);
+                  }
+                }}
+                deleteKeyCode={null}
+                nodesDraggable={!busy && !rawDirty && !drawConnections}
+                elementsSelectable={!busy}
+                selectionOnDrag
+                panOnDrag={[1, 2]}
+                panActivationKeyCode="Space"
+                selectionKeyCode="Shift"
+                multiSelectionKeyCode="Shift"
+                onlyRenderVisibleElements={false}
+                onNodesChange={(changes) => {
+                  const dimensions = changes.filter(
+                    (c) => c.type === "dimensions" && c.dimensions,
+                  );
+                  if (dimensions.length)
+                    setMeasurements((previous) => {
+                      let next = previous;
+                      for (const { id, dimensions: measured } of dimensions) {
+                        if (
+                          previous[id]?.width === measured.width &&
+                          previous[id]?.height === measured.height
+                        )
+                          continue;
+                        if (next === previous) next = { ...previous };
+                        next[id] = measured;
                       }
-                    />
-                    <Field
-                      label="Sublabel"
-                      value={selected.sublabel}
-                      onCommit={(sublabel) => applyPatch({ sublabel })}
-                    />
-                    {options.resizable !== false && <div className="field-grid">
-                      <Field
-                        label="X"
-                        value={selected.pos[0]}
-                        number
-                        onCommit={(x) =>
-                          applyPatch({ pos: [x, selected.pos[1]] })
-                        }
-                      />
-                      <Field
-                        label="Y"
-                        value={selected.pos[1]}
-                        number
-                        onCommit={(y) =>
-                          applyPatch({ pos: [selected.pos[0], y] })
-                        }
-                      />
-                      <Field
-                        label="Width"
-                        value={selected.size[0]}
-                        number
-                        onCommit={(w) =>
-                          applyPatch({ size: [w, selected.size[1]] })
-                        }
-                      />
-                      <Field
-                        label="Height"
-                        value={selected.size[1]}
-                        number
-                        onCommit={(h) =>
-                          applyPatch({ size: [selected.size[0], h] })
-                        }
-                      />
-                    </div>}
-                    {documentModel.layout &&
-                      Number.isInteger(selected.row) &&
-                      Number.isInteger(selected.col) && (
-                        <button onClick={() => applyPatch({ pos: undefined })}>
-                          Reset to grid position
-                        </button>
-                      )}
-                    </>}
-                  </fieldset>
-                  <p className="muted">
-                    Moving this component keeps its connections and boundary
-                    membership.
-                  </p>
-                  {documentModel.diagram_type === 'architecture' && <button disabled={busy} onClick={() => { if (!window.confirm(`Delete ${deletionSummary(state.present,selection)}? Undo restores the complete edit.`)) return; try { change(removeSelection(state.present, selection)); setSelection([]); } catch (e) { setError(e.message); } }}>{selection.length>1?'Delete selection':'Delete component'}</button>}
-                </>
-              ) : edge ? (
-                <>
-                  <div className="selected-heading">
-                    <span className="eyebrow">Connection</span>
-                    <h2>
-                      {edge.from} → {edge.to}
-                    </h2>
-                    <code>{edge.id || `Connection ${edgeIndex + 1}`}</code>
-                  </div>
-                  <fieldset disabled={busy}>
-                    <legend>Routing</legend>
-                    {documentModel.diagram_type!=='sequence'&&<details><summary>Reset manual routing</summary><div className="button-row"><button onClick={()=>reset('label',edgeIndex)}>Reset label placement</button><button onClick={()=>reset('route',edgeIndex)}>Reset waypoints</button></div><p className="muted">Label reset removes labelAt, labelDx and labelDy. Waypoint reset removes via. Route strategy and endpoint sides are kept.</p></details>}
-                    {documentModel.diagram_type==='architecture'&&<>{['from','to'].map(key=><label key={key} className="field">{key==='from'?'From component':'To component'}<select value={edge[key]} onChange={e=>{try{change(reconnectConnection(state.present,edgeIndex,{from:edge.from,to:edge.to,[key]:e.target.value}));}catch(error){setError(error.message);}}}>{items.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></label>)}<p className="muted">Enable connection mode to drag between handles or move either endpoint. Escape exits connection mode.</p></>}
-                    {documentModel.diagram_type === 'sequence' ? <>
-                      <Field label="Message label" value={edge.label} onCommit={label=>edgePatch({label})}/>
-                      <Field label="Message Y" value={edge.y} number onCommit={y=>edgePatch({y})}/>
-                      <Field label="Message note" value={edge.note} onCommit={note=>edgePatch({note})}/>
-                      <p className="muted">Drag a message label vertically to adjust spacing. Allowed Y: {messageRange(documentModel,edgeIndex).join('–')}. Messages cannot cross each other or activation/segment boundaries. Messages on a boundary stay pinned.</p>
-                    </> : <>
-                    {documentModel.diagram_type === 'architecture' && <button onClick={() => { change(removeConnection(state.present, edgeIndex)); setEdgeIndex(null); }}>Delete connection</button>}
-                    <button onClick={() => { const from = items.find(c => c.id === edge.from), to = items.find(c => c.id === edge.to); edgePatch({ via: [...(edge.via || []), [(from.pos[0] + to.pos[0]) / 2, (from.pos[1] + to.pos[1]) / 2]] }); }}>Add waypoint</button>
-                    <p className="muted">Drag numbered waypoints. Right-click a point, or focus it and press Delete, to remove it.</p>
-                    <Field
-                      label="Label"
-                      value={edge.label}
-                      onCommit={(label) => edgePatch({ label })}
-                    />
-                    {["fromSide", "toSide"].map((key) => (
-                      <label className="field" key={key}>
-                        {key === "fromSide" ? "Source side" : "Target side"}
-                        <select
-                          value={edge[key] || ""}
-                          onChange={(e) =>
-                            edgePatch({ [key]: e.target.value || undefined })
-                          }
-                        >
-                          <option value="">Automatic</option>
-                          {Object.keys(sides).map((s) => (
-                            <option key={s}>{s}</option>
-                          ))}
-                        </select>
-                      </label>
-                    ))}
-                    <label className="field">
-                      Route
-                      <select
-                        value={edge.route || "auto"}
-                        onChange={(e) => edgePatch({ route: e.target.value })}
+                      return next;
+                    });
+                  const selections = changes.filter(
+                    (c) => c.type === "select" && c.id.startsWith("c:"),
+                  );
+                  if (selections.length)
+                    setSelection((previous) => {
+                      const ids = new Set(previous);
+                      selections.forEach((c) =>
+                        c.selected
+                          ? ids.add(c.id.slice(2))
+                          : ids.delete(c.id.slice(2)),
+                      );
+                      return [...ids];
+                    });
+                  const positions = changes.filter(
+                    (c) =>
+                      c.type === "position" &&
+                      c.position &&
+                      c.id.startsWith("c:") &&
+                      !locked.includes(c.id.slice(2)),
+                  );
+                  if (
+                    positions.length &&
+                    dragBase.current &&
+                    !cancelled.current &&
+                    documentModel.diagram_type !== "architecture"
+                  )
+                    setDraft((previous) =>
+                      moveComponents(
+                        previous || dragBase.current,
+                        new Map(
+                          positions.map((c) => [
+                            c.id.slice(2),
+                            [c.position.x, c.position.y],
+                          ]),
+                        ),
+                      ),
+                    );
+                }}
+                onNodeClick={(_, node) => {
+                  if (node.id.startsWith("c:")) setEdgeIndex(null);
+                }}
+                onEdgeClick={(_, e) => {
+                  setEdgeIndex(Number(e.id.slice(2)));
+                  setSelection([]);
+                }}
+                onPaneClick={() => {
+                  setSelection([]);
+                  setEdgeIndex(null);
+                }}
+                onNodeDragStart={() => {
+                  dragBase.current = state.present;
+                  cancelled.current = false;
+                }}
+                onNodeDrag={(event, node, draggedNodes) => {
+                  if (
+                    !dragBase.current ||
+                    cancelled.current ||
+                    documentModel.diagram_type !== "architecture"
+                  )
+                    return;
+                  const result = snapPositions(
+                    dragBase.current,
+                    new Map(
+                      (draggedNodes?.length ? draggedNodes : [node])
+                        .filter(
+                          (n) =>
+                            n.id.startsWith("c:") &&
+                            !locked.includes(n.id.slice(2)),
+                        )
+                        .map((n) => [
+                          n.id.slice(2),
+                          [n.position.x, n.position.y],
+                        ]),
+                    ),
+                    {
+                      grid: snap ? gridSize : 0,
+                      smart: smartSnap,
+                      bypass: event.altKey,
+                    },
+                  );
+                  setGuides(result.guides);
+                  setDraft(moveComponents(dragBase.current, result.positions));
+                }}
+                onNodeDragStop={(event, node, draggedNodes) => {
+                  if (!cancelled.current && dragBase.current)
+                    change(
+                      moveComponents(
+                        dragBase.current,
+                        snapPositions(
+                          dragBase.current,
+                          new Map(
+                            (draggedNodes?.length ? draggedNodes : [node])
+                              .filter(
+                                (n) =>
+                                  n.id.startsWith("c:") &&
+                                  !locked.includes(n.id.slice(2)),
+                              )
+                              .map((n) => [
+                                n.id.slice(2),
+                                [n.position.x, n.position.y],
+                              ]),
+                          ),
+                          {
+                            grid: snap ? gridSize : 0,
+                            smart: smartSnap,
+                            bypass: event.altKey,
+                          },
+                        ).positions,
+                      ),
+                    );
+                  dragBase.current = null;
+                  setDraft(null);
+                  setGuides([]);
+                }}
+              >
+                <Background gap={20} size={1} color="#cdd7dc" />
+                <Controls showInteractive={false} />
+                <ViewportPortal>
+                  <div className="snap-guides" aria-hidden="true">
+                    {guides.map((g, i) => (
+                      <div
+                        key={i}
+                        className={`snap-guide ${g.axis ? "horizontal" : "vertical"}`}
+                        style={g.axis ? { top: g.value } : { left: g.value }}
                       >
-                        {options.routes.map((r) => (
-                          <option key={r}>{r}</option>
+                        <span>{g.kind}</span>
+                      </div>
+                    ))}
+                  </div>
+                </ViewportPortal>
+              </ReactFlow>
+            )}
+            <div className="canvas-help">
+              Drag to move · Shift to select several · Space + drag to pan ·
+              Arrow keys to nudge
+            </div>
+          </main>
+          <aside className="inspector" aria-label="Document inspector">
+            {documentModel?.diagram_type === "architecture" && (
+              <label className="connection-mode">
+                <input
+                  type="checkbox"
+                  checked={drawConnections}
+                  disabled={busy || rawDirty}
+                  onChange={(e) => setDrawConnections(e.target.checked)}
+                />{" "}
+                Draw / reconnect connections
+              </label>
+            )}
+            <div className="tabs" aria-label="Inspector sections">
+              {Object.entries({
+                inspector: "Properties",
+                json: "JSON",
+                structure: "Structure",
+                settings: "Settings",
+                search: "Search",
+                review: "Review",
+                checkpoints: "Checkpoints",
+              }).map(([key, label]) => (
+                <button
+                  key={key}
+                  className={panel === key ? "active" : ""}
+                  aria-pressed={panel === key}
+                  disabled={
+                    !state ||
+                    busy ||
+                    !!draft ||
+                    (rawDirty && !["json", "inspector"].includes(key))
+                  }
+                  onClick={() => {
+                    if (
+                      rawDirty &&
+                      key === "inspector" &&
+                      !window.confirm("Discard unapplied JSON text changes?")
+                    )
+                      return;
+                    if (key === "inspector")
+                      setJsonText(serialize(state.present));
+                    setCreation(null);
+                    setPanel(key);
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {creation ? (
+              <form
+                className="properties"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const fields = Object.fromEntries(
+                    new FormData(event.currentTarget),
+                  );
+                  try {
+                    if (creation === "diagram") {
+                      if (
+                        hasUnsaved &&
+                        !window.confirm(
+                          "Discard unsaved changes and create a diagram?",
+                        )
+                      )
+                        return;
+                      load({
+                        ...session,
+                        document: createDiagram(
+                          fields.diagramType,
+                          fields.label,
+                        ),
+                        name: `untitled.${fields.diagramType}.json`,
+                        writable: false,
+                      });
+                      setSaved("");
+                    } else if (creation === "component") {
+                      const next = addComponent(state.present, fields);
+                      change(next);
+                      setSelection([next.components.at(-1).id]);
+                      setEdgeIndex(null);
+                    } else {
+                      const next = addConnection(state.present, fields);
+                      change(next);
+                      setEdgeIndex(next.connections.length - 1);
+                      setSelection([]);
+                    }
+                    setCreation(null);
+                    setPanel("inspector");
+                  } catch (e) {
+                    setError(e.message);
+                  }
+                }}
+              >
+                <h2>
+                  {creation === "diagram"
+                    ? "New diagram"
+                    : creation === "component"
+                      ? "New component"
+                      : "New connection"}
+                </h2>
+                <label className="field">
+                  {creation === "diagram" ? "Diagram title" : "New label"}
+                  <input
+                    name="label"
+                    required={creation !== "connection"}
+                    autoFocus
+                  />
+                </label>
+                {creation === "diagram" && (
+                  <label className="field">
+                    Diagram type
+                    <select name="diagramType">
+                      {authoringTypes.map((type) => (
+                        <option key={type}>{type}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {creation === "component" && (
+                  <label className="field">
+                    Component type
+                    <select name="type">
+                      {Object.keys(kinds).map((kind) => (
+                        <option key={kind}>{kind}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {creation === "connection" &&
+                  ["from", "to"].map((key) => (
+                    <label className="field" key={key}>
+                      {key === "from" ? "From component" : "To component"}
+                      <select name={key} required>
+                        {items.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.label}
+                          </option>
                         ))}
                       </select>
                     </label>
-                    <Field
-                      label="Waypoints · [[x, y], …]"
-                      value={edge.via ? JSON.stringify(edge.via) : ""}
-                      onCommit={(value) => pointField("via", value, true)}
-                    />
-                    <Field
-                      label="Label position · [x, y]"
-                      value={edge.labelAt ? JSON.stringify(edge.labelAt) : ""}
-                      onCommit={(value) => pointField("labelAt", value)}
-                    />
-                    <p className="muted">
-                      Blank coordinates restore automatic placement. Archify
-                      computes the final route when rendering.
-                    </p>
-                    </>}
-                  </fieldset>
-                </>
-              ) : (
-                <div className="empty-selection">
-                  <span className="selection-symbol" aria-hidden="true">
-                    ↖
-                  </span>
-                  <h2>Select an item</h2>
-                  <p>
-                    Choose a component to adjust its position and size, or a
-                    connection to refine its route.
-                  </p>
-                  <dl>
-                    <dt>Move precisely</dt>
-                    <dd>Arrow keys · Shift for 10 units</dd>
-                    <dt>Final appearance</dt>
-                    <dd>Use Render HTML to see Archify’s output.</dd>
-                  </dl>
+                  ))}
+                <div className="button-row">
+                  <button type="button" onClick={() => setCreation(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="primary">
+                    Create
+                  </button>
                 </div>
-              )}
-              <div className="diagnostics">
-                <h3>
-                  Layout notes {warnings.length ? `(${warnings.length})` : ""}
-                </h3>
-                {warnings.length ? (
-                  <ul>
-                    {warnings.slice(0, 20).map((warning, index) => (
-                      <li key={index}>{warning}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No component overlaps detected.</p>
-                )}
-                <p className="muted">
-                  Draft checks only. Archify validates routes and labels when
-                  rendering.
-                </p>
+              </form>
+            ) : panel === "checkpoints" ? (
+              <fieldset disabled={busy || !!draft}>
+                <CheckpointsPanel
+                  key={`${session.recoveryKey}:${session.name}`}
+                  document={documentModel}
+                  storageKey={`${session.recoveryKey}:${session.name}`}
+                  onRestore={(snapshot) =>
+                    act(async () => {
+                      await request("validate", snapshot);
+                      change(snapshot);
+                      setSelection([]);
+                      setEdgeIndex(null);
+                      setNotice("Checkpoint restored as an undoable draft.");
+                    })
+                  }
+                  onExport={(snapshot, name) =>
+                    download(serialize(snapshot), name, "application/json")
+                  }
+                />
+              </fieldset>
+            ) : panel === "conflict" && conflict ? (
+              <fieldset disabled={busy || !!draft}>
+                <ConflictPanel
+                  key={JSON.stringify(conflict)}
+                  conflict={conflict}
+                  onApply={applyMerge}
+                  onRefresh={() => act(() => compareSource())}
+                  onCancel={() => {
+                    setConflict(null);
+                    setPanel("review");
+                  }}
+                />
+              </fieldset>
+            ) : panel === "review" ? (
+              <fieldset disabled={busy || !!draft}>
+                <ReviewPanel
+                  baseline={saved ? JSON.parse(saved) : null}
+                  document={documentModel}
+                  writable={session.writable}
+                  onSave={saveJson}
+                />
+              </fieldset>
+            ) : panel === "search" ? (
+              <SearchPanel
+                document={documentModel}
+                onFocus={(result) => {
+                  setSelection(result.kind === "node" ? result.ids : []);
+                  setEdgeIndex(
+                    result.kind === "connection" ? result.index : null,
+                  );
+                  flow.current?.fitView({
+                    nodes: result.ids.map((id) => ({ id: `c:${id}` })),
+                    padding: 0.5,
+                    maxZoom: 1.5,
+                  });
+                }}
+                onFit={() => {
+                  const ids = selection.length
+                    ? selection
+                    : edge
+                      ? [edge.from, edge.to]
+                      : [];
+                  if (ids.length)
+                    flow.current?.fitView({
+                      nodes: ids.map((id) => ({ id: `c:${id}` })),
+                      padding: 0.5,
+                      maxZoom: 1.5,
+                    });
+                }}
+              />
+            ) : panel === "settings" ? (
+              <fieldset disabled={busy || !!draft}>
+                <SettingsPanel
+                  document={documentModel}
+                  onChange={(operation) =>
+                    act(async () => {
+                      const next = operation();
+                      await request("validate", next);
+                      change(next);
+                    })
+                  }
+                />
+              </fieldset>
+            ) : panel === "structure" ? (
+              <fieldset disabled={busy || !!draft}>
+                <StructurePanel
+                  document={documentModel}
+                  onChange={(operation) =>
+                    act(async () => {
+                      const next = operation();
+                      await request("validate", next);
+                      change(next);
+                    })
+                  }
+                  onSelect={(ids) => {
+                    setSelection(ids);
+                    setEdgeIndex(null);
+                    setPanel("inspector");
+                  }}
+                />
+              </fieldset>
+            ) : panel === "json" ? (
+              <div className="json-panel">
+                <p>Edit the source, then apply it to the canvas.</p>
+                <textarea
+                  aria-label="Diagram JSON"
+                  spellCheck="false"
+                  value={jsonText}
+                  onChange={(e) => setJsonText(e.target.value)}
+                />
+                <div className="button-row">
+                  <button
+                    disabled={!rawDirty || busy}
+                    onClick={() => setJsonText(serialize(state.present))}
+                  >
+                    Discard text
+                  </button>
+                  <button
+                    className="primary"
+                    disabled={!rawDirty || busy}
+                    onClick={() =>
+                      act(async () => {
+                        const next = JSON.parse(jsonText);
+                        assertDocument(next);
+                        await request("validate", next);
+                        setState((s) => commit(s, next));
+                        setJsonText(serialize(next));
+                        setSelection([]);
+                        setEdgeIndex(null);
+                        setNotice("JSON applied.");
+                      })
+                    }
+                  >
+                    Apply JSON
+                  </button>
+                </div>
               </div>
+            ) : (
+              <div className="properties">
+                {selected ? (
+                  <>
+                    <div className="selected-heading">
+                      <span className="eyebrow">
+                        {selection.length > 1
+                          ? `${selection.length} selected`
+                          : selected.type}
+                      </span>
+                      <h2>{selected.label}</h2>
+                      <code>{selected.id}</code>
+                    </div>
+                    <fieldset disabled={busy || !!draft}>
+                      {documentModel.diagram_type === "architecture" &&
+                        selection.length > 1 && (
+                          <details open>
+                            <summary>Arrange selection</summary>
+                            <div className="button-row">
+                              {Object.entries(arrangements).map(
+                                ([action, label]) => (
+                                  <button
+                                    key={action}
+                                    disabled={
+                                      action.startsWith("distribute") &&
+                                      selection.length < 3
+                                    }
+                                    onClick={() => {
+                                      try {
+                                        change(
+                                          arrange(
+                                            state.present,
+                                            selection,
+                                            action,
+                                          ),
+                                        );
+                                      } catch (e) {
+                                        setError(e.message);
+                                      }
+                                    }}
+                                  >
+                                    {label}
+                                  </button>
+                                ),
+                              )}
+                            </div>
+                          </details>
+                        )}
+                      <legend>Component</legend>
+                      {documentModel.diagram_type !== "sequence" && (
+                        <details>
+                          <summary>Reset manual layout</summary>
+                          <div className="button-row">
+                            <button onClick={() => reset("position")}>
+                              Reset position overrides
+                            </button>
+                            <button onClick={() => reset("size")}>
+                              Reset size overrides
+                            </button>
+                          </div>
+                          <p className="muted">
+                            Only optional fields are removed. Free architecture
+                            coordinates and logical columns, rows and lanes are
+                            kept.
+                          </p>
+                        </details>
+                      )}
+                      <button
+                        onClick={() =>
+                          updateLocks(
+                            selection.every((id) => locked.includes(id))
+                              ? locked.filter((id) => !selection.includes(id))
+                              : [...new Set([...locked, ...selection])],
+                          )
+                        }
+                      >
+                        {selection.every((id) => locked.includes(id))
+                          ? "Unlock selection"
+                          : "Lock selection"}
+                      </button>
+                      {selection.some((id) => locked.includes(id)) && (
+                        <p className="muted">
+                          Locked items cannot be dragged, resized or nudged.
+                          Inspector edits remain available.
+                        </p>
+                      )}
+                      {selection.length > 1 && (
+                        <>
+                          <p className="muted">
+                            Changes apply to every selected item. Blank mixed
+                            fields remain unchanged.
+                          </p>
+                          {[
+                            "label",
+                            "sublabel",
+                            ...(options.resizable === false
+                              ? []
+                              : ["width", "height"]),
+                          ].map((field) => {
+                            const value = commonValue(
+                              documentModel,
+                              selection,
+                              field,
+                            );
+                            return (
+                              <Field
+                                key={field}
+                                label={`Selection ${field}`}
+                                value={value}
+                                mixed={value === undefined}
+                                number={["width", "height"].includes(field)}
+                                onCommit={(value) => {
+                                  try {
+                                    change(
+                                      bulkPatch(
+                                        state.present,
+                                        selection,
+                                        field,
+                                        value,
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    setError(e.message);
+                                  }
+                                }}
+                              />
+                            );
+                          })}
+                        </>
+                      )}
+                      {documentModel.diagram_type === "architecture" && (
+                        <details>
+                          <summary>Copy and duplicate</summary>
+                          <div className="button-row">
+                            <button
+                              onClick={() =>
+                                paste(copySelection(state.present, selection))
+                              }
+                            >
+                              Duplicate selection
+                            </button>
+                            <button
+                              onClick={() => {
+                                setClipboard(
+                                  copySelection(state.present, selection),
+                                );
+                                setNotice(
+                                  "Selection copied inside the editor. Use Ctrl/Cmd+C on the canvas to copy to another window.",
+                                );
+                              }}
+                            >
+                              Copy selection
+                            </button>
+                            <button
+                              disabled={!clipboard}
+                              onClick={() => paste(clipboard)}
+                            >
+                              Paste selection
+                            </button>
+                          </div>
+                          <p className="muted">
+                            Ctrl/Cmd+D duplicates. Ctrl/Cmd+C and V copy and
+                            paste on the canvas.
+                          </p>
+                        </details>
+                      )}
+                      {documentModel.diagram_type === "architecture" && (
+                        <details>
+                          <summary>Snapping</summary>
+                          <label className="field">
+                            Grid spacing
+                            <input
+                              type="number"
+                              min="1"
+                              max="200"
+                              value={gridSize}
+                              onChange={(e) => {
+                                const n = Number(e.target.value);
+                                if (Number.isInteger(n) && n >= 1 && n <= 200)
+                                  setGridSize(n);
+                              }}
+                            />
+                          </label>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={smartSnap}
+                              onChange={(e) => setSmartSnap(e.target.checked)}
+                            />{" "}
+                            Smart guides
+                          </label>
+                          <p className="muted">
+                            Hold Alt while dragging or resizing to bypass
+                            snapping.
+                          </p>
+                        </details>
+                      )}
+                      {selection.length === 1 && (
+                        <>
+                          {adapterFor(documentModel) && (
+                            <div className="logical-properties">
+                              <p className="muted">
+                                {options.hint ||
+                                  "Dragging snaps horizontally to columns and adjusts the vertical offset within the same lane."}
+                              </p>
+                              {options.fields.map((field) => (
+                                <Field
+                                  key={field}
+                                  label={
+                                    {
+                                      col: "Column",
+                                      yOffset: "Vertical offset",
+                                      stage: "Stage",
+                                      row: "Row",
+                                      order: "Participant order",
+                                    }[field] || field
+                                  }
+                                  value={selected[field] ?? 0}
+                                  number
+                                  onCommit={(value) =>
+                                    applyPatch({ [field]: value })
+                                  }
+                                />
+                              ))}
+                              {selected.lane && (
+                                <label className="field">
+                                  Lane
+                                  <select
+                                    value={selected.lane}
+                                    onChange={(e) =>
+                                      applyPatch({ lane: e.target.value })
+                                    }
+                                  >
+                                    {documentModel.lanes.map((lane) => (
+                                      <option key={lane.id} value={lane.id}>
+                                        {lane.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              )}
+                            </div>
+                          )}
+                          <Field
+                            label="Label"
+                            value={selected.label}
+                            onCommit={(label) =>
+                              label.trim()
+                                ? applyPatch({ label })
+                                : setError("A label cannot be empty.")
+                            }
+                          />
+                          <Field
+                            label="Sublabel"
+                            value={selected.sublabel}
+                            onCommit={(sublabel) => applyPatch({ sublabel })}
+                          />
+                          {options.resizable !== false && (
+                            <div className="field-grid">
+                              <Field
+                                label="X"
+                                value={selected.pos[0]}
+                                number
+                                onCommit={(x) =>
+                                  applyPatch({ pos: [x, selected.pos[1]] })
+                                }
+                              />
+                              <Field
+                                label="Y"
+                                value={selected.pos[1]}
+                                number
+                                onCommit={(y) =>
+                                  applyPatch({ pos: [selected.pos[0], y] })
+                                }
+                              />
+                              <Field
+                                label="Width"
+                                value={selected.size[0]}
+                                number
+                                onCommit={(w) =>
+                                  applyPatch({ size: [w, selected.size[1]] })
+                                }
+                              />
+                              <Field
+                                label="Height"
+                                value={selected.size[1]}
+                                number
+                                onCommit={(h) =>
+                                  applyPatch({ size: [selected.size[0], h] })
+                                }
+                              />
+                            </div>
+                          )}
+                          {documentModel.layout &&
+                            Number.isInteger(selected.row) &&
+                            Number.isInteger(selected.col) && (
+                              <button
+                                onClick={() => applyPatch({ pos: undefined })}
+                              >
+                                Reset to grid position
+                              </button>
+                            )}
+                        </>
+                      )}
+                    </fieldset>
+                    <p className="muted">
+                      Moving this component keeps its connections and boundary
+                      membership.
+                    </p>
+                    {documentModel.diagram_type === "architecture" && (
+                      <button
+                        disabled={busy}
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              `Delete ${deletionSummary(state.present, selection)}? Undo restores the complete edit.`,
+                            )
+                          )
+                            return;
+                          try {
+                            change(removeSelection(state.present, selection));
+                            setSelection([]);
+                          } catch (e) {
+                            setError(e.message);
+                          }
+                        }}
+                      >
+                        {selection.length > 1
+                          ? "Delete selection"
+                          : "Delete component"}
+                      </button>
+                    )}
+                  </>
+                ) : edge ? (
+                  <>
+                    <div className="selected-heading">
+                      <span className="eyebrow">Connection</span>
+                      <h2>
+                        {edge.from} → {edge.to}
+                      </h2>
+                      <code>{edge.id || `Connection ${edgeIndex + 1}`}</code>
+                    </div>
+                    <fieldset disabled={busy}>
+                      <legend>Routing</legend>
+                      {documentModel.diagram_type !== "sequence" && (
+                        <details>
+                          <summary>Reset manual routing</summary>
+                          <div className="button-row">
+                            <button onClick={() => reset("label", edgeIndex)}>
+                              Reset label placement
+                            </button>
+                            <button onClick={() => reset("route", edgeIndex)}>
+                              Reset waypoints
+                            </button>
+                          </div>
+                          <p className="muted">
+                            Label reset removes labelAt, labelDx and labelDy.
+                            Waypoint reset removes via. Route strategy and
+                            endpoint sides are kept.
+                          </p>
+                        </details>
+                      )}
+                      {documentModel.diagram_type === "architecture" && (
+                        <>
+                          {["from", "to"].map((key) => (
+                            <label key={key} className="field">
+                              {key === "from"
+                                ? "From component"
+                                : "To component"}
+                              <select
+                                value={edge[key]}
+                                onChange={(e) => {
+                                  try {
+                                    change(
+                                      reconnectConnection(
+                                        state.present,
+                                        edgeIndex,
+                                        {
+                                          from: edge.from,
+                                          to: edge.to,
+                                          [key]: e.target.value,
+                                        },
+                                      ),
+                                    );
+                                  } catch (error) {
+                                    setError(error.message);
+                                  }
+                                }}
+                              >
+                                {items.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          ))}
+                          <p className="muted">
+                            Enable connection mode to drag between handles or
+                            move either endpoint. Escape exits connection mode.
+                          </p>
+                        </>
+                      )}
+                      {documentModel.diagram_type === "sequence" ? (
+                        <>
+                          <Field
+                            label="Message label"
+                            value={edge.label}
+                            onCommit={(label) => edgePatch({ label })}
+                          />
+                          <Field
+                            label="Message Y"
+                            value={edge.y}
+                            number
+                            onCommit={(y) => edgePatch({ y })}
+                          />
+                          <Field
+                            label="Message note"
+                            value={edge.note}
+                            onCommit={(note) => edgePatch({ note })}
+                          />
+                          <p className="muted">
+                            Drag a message label vertically to adjust spacing.
+                            Allowed Y:{" "}
+                            {messageRange(documentModel, edgeIndex).join("–")}.
+                            Messages cannot cross each other or
+                            activation/segment boundaries. Messages on a
+                            boundary stay pinned.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          {documentModel.diagram_type === "architecture" && (
+                            <button
+                              onClick={() => {
+                                change(
+                                  removeConnection(state.present, edgeIndex),
+                                );
+                                setEdgeIndex(null);
+                              }}
+                            >
+                              Delete connection
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              const from = items.find(
+                                  (c) => c.id === edge.from,
+                                ),
+                                to = items.find((c) => c.id === edge.to);
+                              edgePatch({
+                                via: [
+                                  ...(edge.via || []),
+                                  [
+                                    (from.pos[0] + to.pos[0]) / 2,
+                                    (from.pos[1] + to.pos[1]) / 2,
+                                  ],
+                                ],
+                              });
+                            }}
+                          >
+                            Add waypoint
+                          </button>
+                          <p className="muted">
+                            Drag numbered waypoints. Right-click a point, or
+                            focus it and press Delete, to remove it.
+                          </p>
+                          <Field
+                            label="Label"
+                            value={edge.label}
+                            onCommit={(label) => edgePatch({ label })}
+                          />
+                          {["fromSide", "toSide"].map((key) => (
+                            <label className="field" key={key}>
+                              {key === "fromSide"
+                                ? "Source side"
+                                : "Target side"}
+                              <select
+                                value={edge[key] || ""}
+                                onChange={(e) =>
+                                  edgePatch({
+                                    [key]: e.target.value || undefined,
+                                  })
+                                }
+                              >
+                                <option value="">Automatic</option>
+                                {Object.keys(sides).map((s) => (
+                                  <option key={s}>{s}</option>
+                                ))}
+                              </select>
+                            </label>
+                          ))}
+                          <label className="field">
+                            Route
+                            <select
+                              value={edge.route || "auto"}
+                              onChange={(e) =>
+                                edgePatch({ route: e.target.value })
+                              }
+                            >
+                              {options.routes.map((r) => (
+                                <option key={r}>{r}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <Field
+                            label="Waypoints · [[x, y], …]"
+                            value={edge.via ? JSON.stringify(edge.via) : ""}
+                            onCommit={(value) => pointField("via", value, true)}
+                          />
+                          <Field
+                            label="Label position · [x, y]"
+                            value={
+                              edge.labelAt ? JSON.stringify(edge.labelAt) : ""
+                            }
+                            onCommit={(value) => pointField("labelAt", value)}
+                          />
+                          <p className="muted">
+                            Blank coordinates restore automatic placement.
+                            Archify computes the final route when rendering.
+                          </p>
+                        </>
+                      )}
+                    </fieldset>
+                  </>
+                ) : (
+                  <div className="empty-selection">
+                    <span className="selection-symbol" aria-hidden="true">
+                      ↖
+                    </span>
+                    <h2>Select an item</h2>
+                    <p>
+                      Choose a component to adjust its position and size, or a
+                      connection to refine its route.
+                    </p>
+                    <dl>
+                      <dt>Move precisely</dt>
+                      <dd>Arrow keys · Shift for 10 units</dd>
+                      <dt>Final appearance</dt>
+                      <dd>Use Render HTML to see Archify’s output.</dd>
+                    </dl>
+                  </div>
+                )}
+                <div className="diagnostics">
+                  <h3>
+                    Layout notes {warnings.length ? `(${warnings.length})` : ""}
+                  </h3>
+                  {warnings.length ? (
+                    <ul>
+                      {warnings.slice(0, 20).map((warning, index) => (
+                        <li key={index}>{warning}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>No component overlaps detected.</p>
+                  )}
+                  <p className="muted">
+                    Draft checks only. Archify validates routes and labels when
+                    rendering.
+                  </p>
+                </div>
+              </div>
+            )}
+          </aside>
+        </div>
+        {error && (
+          <div className="error-banner" role="alert">
+            <div className="diagnostic-report">
+              <pre>{error}</pre>
+              {diagnostics.map((issue, index) => (
+                <div key={index} className="diagnostic-item">
+                  <strong>{issue.code}</strong>
+                  <p>{issue.message}</p>
+                  <button
+                    onClick={() => {
+                      const subject = issue.subject || {},
+                        pathMatch = subject.path?.match(
+                          /^\/(components|connections|nodes|edges|flows|states|transitions|participants|messages)\/(\d+)/,
+                        );
+                      const collection = subject.collection || pathMatch?.[1],
+                        itemIndex =
+                          subject.index ??
+                          (pathMatch ? Number(pathMatch[2]) : undefined);
+                      if (
+                        collection === edgeKey(state.present) &&
+                        Number.isInteger(itemIndex)
+                      ) {
+                        setEdgeIndex(itemIndex);
+                        setSelection([]);
+                        setPanel("inspector");
+                      } else if (
+                        collection === nodeKey(state.present) &&
+                        Number.isInteger(itemIndex)
+                      ) {
+                        setSelection([
+                          sourceNodes(state.present)[itemIndex].id,
+                        ]);
+                        setEdgeIndex(null);
+                        setPanel("inspector");
+                      } else {
+                        setPanel("json");
+                      }
+                    }}
+                  >
+                    Inspect issue {index + 1}
+                  </button>
+                  {issue.supportedFixes?.length > 0 && (
+                    <ul>
+                      {issue.supportedFixes.map((fix, i) => (
+                        <li key={i}>{fix}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
             </div>
-          )}
-        </aside>
-      </div>
-      {error && (
-        <div className="error-banner" role="alert">
-          <div className="diagnostic-report"><pre>{error}</pre>{diagnostics.map((issue, index) => <div key={index} className="diagnostic-item">
-            <strong>{issue.code}</strong><p>{issue.message}</p>
-            <button onClick={() => {
-              const subject = issue.subject || {}, pathMatch = subject.path?.match(/^\/(components|connections|nodes|edges|flows|states|transitions|participants|messages)\/(\d+)/);
-              const collection = subject.collection || pathMatch?.[1], itemIndex = subject.index ?? (pathMatch ? Number(pathMatch[2]) : undefined);
-              if (collection === edgeKey(state.present) && Number.isInteger(itemIndex)) { setEdgeIndex(itemIndex); setSelection([]); setPanel('inspector'); }
-              else if (collection === nodeKey(state.present) && Number.isInteger(itemIndex)) { setSelection([sourceNodes(state.present)[itemIndex].id]); setEdgeIndex(null); setPanel('inspector'); }
-              else { setPanel('json'); }
-            }}>Inspect issue {index + 1}</button>
-            {issue.supportedFixes?.length > 0 && <ul>{issue.supportedFixes.map((fix, i) => <li key={i}>{fix}</li>)}</ul>}
-          </div>)}</div>
-          <button aria-label="Dismiss error" onClick={() => setError("")}>
-            Dismiss
-          </button>
-        </div>
-      )}
-      <footer className="status" role="status">
-        <span>{notice}</span>
-        <span>
-          {session?.writable
-            ? "Direct file saving enabled"
-            : "Local editor · JSON downloads"}{" "}
-          · {hasUnsaved ? "Unsaved" : "Ready"}
-        </span>
-      </footer>
-      <dialog
-        ref={dialog}
-        className="preview"
-        onCancel={() => setHtml(null)}
-        onClose={() => setHtml(null)}
-      >
-        <div className="preview-toolbar">
-          <h2>Archify output</h2>
-          <button
-            onClick={() =>
-              download(
-                html,
-                session.name.replace(/\.json$/i, "") + ".html",
-                "text/html",
-              )
-            }
-          >
-            Download HTML
-          </button>
-          <button
-            onClick={() => {
-              dialog.current.close();
-              setHtml(null);
-            }}
-          >
-            Close preview
-          </button>
-        </div>
-        {html && (
-          <iframe
-            title="Archify rendered diagram"
-            sandbox="allow-scripts"
-            srcDoc={html}
-          />
+            <button aria-label="Dismiss error" onClick={() => setError("")}>
+              Dismiss
+            </button>
+          </div>
         )}
-      </dialog>
-    </div></Editing.Provider>
+        <footer className="status" role="status">
+          <span>{notice}</span>
+          <span>
+            {session?.writable
+              ? "Direct file saving enabled"
+              : "Local editor · JSON downloads"}{" "}
+            · {hasUnsaved ? "Unsaved" : "Ready"}
+          </span>
+        </footer>
+        <dialog
+          ref={dialog}
+          className="preview"
+          onCancel={() => setHtml(null)}
+          onClose={() => setHtml(null)}
+        >
+          <div className="preview-toolbar">
+            <h2>Archify output</h2>
+            <button
+              onClick={() =>
+                download(
+                  html,
+                  session.name.replace(/\.json$/i, "") + ".html",
+                  "text/html",
+                )
+              }
+            >
+              Download HTML
+            </button>
+            <button
+              onClick={() => {
+                dialog.current.close();
+                setHtml(null);
+              }}
+            >
+              Close preview
+            </button>
+          </div>
+          {html && (
+            <iframe
+              title="Archify rendered diagram"
+              sandbox="allow-scripts"
+              srcDoc={html}
+            />
+          )}
+        </dialog>
+      </div>
+    </Editing.Provider>
   );
 }
 
