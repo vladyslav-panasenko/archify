@@ -5,6 +5,10 @@ import { snapBox, snapPositions, snapResize } from '../src/arrangement.mjs';
 import { validate } from '../server.mjs';
 import {createDiagram,addNode,saveEdge,saveLane,deleteLane,deleteNode} from '../src/topology.mjs';
 import {saveStage,deleteStage} from '../src/topology.mjs';
+test('lifecycle authoring creates state types and reassigns terminal membership',()=>{
+ let doc=createDiagram('lifecycle','Lifecycle');doc=addNode(doc,{label:'Done',type:'success',lane:'terminal',col:0});doc=saveEdge(doc,null,{from:'node-2',to:'node-3',label:'Complete'});validate(doc);
+ const reassigned=deleteLane(doc,2,'main');assert.equal(reassigned.states[2].lane,'main');assert.deepEqual(reassigned.transitions,doc.transitions);validate(reassigned);assert.throws(()=>deleteNode(createDiagram('lifecycle','X'),'node-1'));
+});
 test('dataflow stage deletion remaps indices and retains flow endpoints',()=>{
  let doc=createDiagram('dataflow','Data');doc=saveStage(doc,null,'Third');doc=addNode(doc,{label:'Extra',type:'backend',stage:2,row:1});doc=saveEdge(doc,null,{from:'node-1',to:'node-3',label:'Data'});
  const next=deleteStage(doc,1,0);assert.equal(next.nodes[1].stage,0);assert.equal(next.nodes[2].stage,1);assert.deepEqual(next.flows,doc.flows);validate(next);assert.throws(()=>deleteStage(next,0,1));assert.throws(()=>deleteNode(createDiagram('dataflow','Data'),'node-1'));

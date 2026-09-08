@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+test('new lifecycle creates a transition and renders',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'New diagram',exact:true}).click();await page.getByLabel('Diagram title').fill('Lifecycle');await page.getByRole('combobox',{name:'Diagram type',exact:true}).selectOption('lifecycle');await page.getByRole('button',{name:'Create',exact:true}).click();
+ await page.getByRole('button',{name:'Structure',exact:true}).click();await page.locator('.properties summary').filter({hasText:/^Connections$/}).click();await page.getByRole('button',{name:'Create connection',exact:true}).click();await page.getByRole('button',{name:'Render HTML',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
+});
+
 test('new dataflow creates a flow and renders',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'New diagram',exact:true}).click();await page.getByLabel('Diagram title').fill('Dataflow');await page.getByRole('combobox',{name:'Diagram type',exact:true}).selectOption('dataflow');await page.getByRole('button',{name:'Create',exact:true}).click();
  await page.getByRole('button',{name:'Structure',exact:true}).click();await page.locator('.properties summary').filter({hasText:/^Connections$/}).click();await page.getByLabel('Connection label',{exact:true}).fill('Data');await page.getByRole('button',{name:'Create connection',exact:true}).click();
