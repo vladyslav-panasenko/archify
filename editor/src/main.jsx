@@ -35,7 +35,7 @@ import { messageRange } from './adapters/sequence.mjs';
 import { automaticLabelPoint } from './label-placement.mjs';
 import { arrange, arrangements, snapPositions, snapResize } from './arrangement.mjs';
 import { copySelection, pasteSelection } from './clipboard.mjs';
-import { commonValue, bulkPatch, deletionSummary, removeSelection } from './selection.mjs';
+import { commonValue, bulkPatch, deletionSummary, removeSelection, resetFields } from './selection.mjs';
 
 const sides = {
   top: Position.Top,
@@ -450,6 +450,7 @@ function App() {
       setError(e.message);
     }
   }
+  function reset(kind,index=null) {try{const result=resetFields(state.present,selection,kind,index);if(!result.removed.length){setNotice('No optional overrides to reset. Required placement fields are kept.');return;}if(window.confirm(`Remove these manual overrides?\n${result.removed.join('\n')}`))change(result.document);}catch(e){setError(e.message);}}
   function pointField(key, text, multiple = false) {
     try {
       if (!text.trim()) return edgePatch({ [key]: undefined });
@@ -983,6 +984,7 @@ function App() {
                   <fieldset disabled={busy || !!draft}>
                     {documentModel.diagram_type === 'architecture' && selection.length > 1 && <details open><summary>Arrange selection</summary><div className="button-row">{Object.entries(arrangements).map(([action,label]) => <button key={action} disabled={action.startsWith('distribute') && selection.length < 3} onClick={() => { try { change(arrange(state.present,selection,action)); } catch(e) { setError(e.message); } }}>{label}</button>)}</div></details>}
                     <legend>Component</legend>
+                    {documentModel.diagram_type!=='sequence'&&<details><summary>Reset manual layout</summary><div className="button-row"><button onClick={()=>reset('position')}>Reset position overrides</button><button onClick={()=>reset('size')}>Reset size overrides</button></div><p className="muted">Only optional fields are removed. Free architecture coordinates and logical columns, rows and lanes are kept.</p></details>}
                     <button onClick={()=>updateLocks(selection.every(id=>locked.includes(id))?locked.filter(id=>!selection.includes(id)):[...new Set([...locked,...selection])])}>{selection.every(id=>locked.includes(id))?'Unlock selection':'Lock selection'}</button>
                     {selection.some(id=>locked.includes(id))&&<p className="muted">Locked items cannot be dragged, resized or nudged. Inspector edits remain available.</p>}
                     {selection.length>1&&<><p className="muted">Changes apply to every selected item. Blank mixed fields remain unchanged.</p>{['label','sublabel',...(options.resizable===false?[]:['width','height'])].map(field=>{const value=commonValue(documentModel,selection,field);return <Field key={field} label={`Selection ${field}`} value={value} mixed={value===undefined} number={['width','height'].includes(field)} onCommit={value=>{try{change(bulkPatch(state.present,selection,field,value));}catch(e){setError(e.message);}}}/>;})}</>}
@@ -1067,6 +1069,7 @@ function App() {
                   </div>
                   <fieldset disabled={busy}>
                     <legend>Routing</legend>
+                    {documentModel.diagram_type!=='sequence'&&<details><summary>Reset manual routing</summary><div className="button-row"><button onClick={()=>reset('label',edgeIndex)}>Reset label placement</button><button onClick={()=>reset('route',edgeIndex)}>Reset waypoints</button></div><p className="muted">Label reset removes labelAt, labelDx and labelDy. Waypoint reset removes via. Route strategy and endpoint sides are kept.</p></details>}
                     {documentModel.diagram_type==='architecture'&&<>{['from','to'].map(key=><label key={key} className="field">{key==='from'?'From component':'To component'}<select value={edge[key]} onChange={e=>{try{change(reconnectConnection(state.present,edgeIndex,{from:edge.from,to:edge.to,[key]:e.target.value}));}catch(error){setError(error.message);}}}>{items.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></label>)}<p className="muted">Enable connection mode to drag between handles or move either endpoint. Escape exits connection mode.</p></>}
                     {documentModel.diagram_type === 'sequence' ? <>
                       <Field label="Message label" value={edge.label} onCommit={label=>edgePatch({label})}/>

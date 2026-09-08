@@ -5,7 +5,14 @@ import { snapBox, snapPositions, snapResize } from '../src/arrangement.mjs';
 import { validate } from '../server.mjs';
 import { copySelection, pasteSelection } from '../src/clipboard.mjs';
 import { reconnectConnection } from '../src/document.mjs';
-import { commonValue, bulkPatch, removeSelection } from '../src/selection.mjs';
+import { commonValue, bulkPatch, removeSelection, resetFields } from '../src/selection.mjs';
+test('reset removes only optional overrides and preserves required coordinates',()=>{
+ const doc=sample();doc.connections[0].labelAt=[40,50];doc.connections[0].labelDx=8;
+ assert.deepEqual(resetFields(doc,['a'],'position').document.components[0].pos,[20,20]);
+ assert.equal(resetFields(doc,['a'],'size').document.components[0].size,undefined);
+ const label=resetFields(doc,[],'label',0).document;assert.deepEqual(label.connections[0].via,[[150,30]]);assert.equal(label.connections[0].labelAt,undefined);
+ assert.equal(resetFields(doc,[],'route',0).document.connections[0].labelDx,8);
+});
 test('bulk editing preserves individual geometry and deletion cleans references atomically',()=>{
  const doc=sample();doc.boundaries=[{kind:'region',label:'Group',wraps:['a','b']}];doc.meta.views=[{id:'v',label:'View',focus:['a','c']}];
  assert.equal(commonValue(doc,['a','b'],'width'),undefined); const next=bulkPatch(doc,['a','b'],'width',150);

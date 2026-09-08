@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+test('manual size reset explains removed fields and undo restores them',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Users users'}).click();await page.getByLabel('Width',{exact:true}).fill('180');await page.getByLabel('Width',{exact:true}).press('Tab');
+ await page.getByText('Reset manual layout',{exact:true}).click();page.on('dialog',d=>{expect(d.message()).toContain('users.size');d.accept();});
+ await page.getByRole('button',{name:'Reset size overrides',exact:true}).click();await expect(page.getByLabel('Width',{exact:true})).toHaveValue('120');
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(page.getByLabel('Width',{exact:true})).toHaveValue('180');
+});
+
 test('local locks prevent canvas changes and survive reload without entering JSON',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Users users'}).click();await page.getByRole('button',{name:'Lock selection',exact:true}).click();
  await expect(page.locator('[data-id="c:users"] .react-flow__resize-control')).toHaveCount(0);
