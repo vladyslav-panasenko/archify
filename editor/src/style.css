@@ -13,6 +13,9 @@
 .connection-list { max-height: 190px; overflow: auto; padding: 10px; border-top: 1px solid #dce4e8; }
 .connection-list summary { cursor: pointer; padding: 5px; }
 .connection-list button { display: block; width: 100%; margin-top: 3px; font-size: 11px; text-align: left; }
+.diagnostic-report { flex: 1; min-width: 0; }
+.diagnostic-item { border-top: 1px solid #e6bcab; margin-top: 12px; padding-top: 10px; font-size: 12px; }
+.diagnostic-item p { white-space: pre-wrap; margin: 6px 0; }
 * {
   box-sizing: border-box;
 }

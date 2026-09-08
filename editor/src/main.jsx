@@ -208,6 +208,7 @@ function App() {
   // React Flow measurements are presentation state, never diagram JSON. Keep
   // them across coordinate updates or React Flow hides and remeasures each node.
   const [measurements, setMeasurements] = useState({});
+  const [diagnostics, setDiagnostics] = useState([]);
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [selection, setSelection] = useState([]),
@@ -257,6 +258,7 @@ function App() {
   useEffect(() => {
     if (state) setJsonText(serialize(state.present));
     setHtml(null);
+    setDiagnostics([]);
   }, [state]);
   useEffect(() => {
     if (html) dialog.current?.showModal();
@@ -321,7 +323,7 @@ function App() {
     });
     if (!response.ok) {
       const data = await response.json();
-      throw new Error(data.error);
+      throw Object.assign(new Error(data.error), { diagnostics: data.diagnostics });
     }
     return response;
   }
@@ -332,6 +334,7 @@ function App() {
       await action();
     } catch (e) {
       setError(e.message);
+      setDiagnostics(e.diagnostics || []);
     } finally {
       setBusy(false);
     }
@@ -597,6 +600,7 @@ function App() {
           >
             {busy ? "Working…" : "Render HTML"}
           </button>
+          <button disabled={!state || busy || rawDirty || !!draft} onClick={() => act(async () => { await request('render', state.present); setDiagnostics([]); setNotice('Archify validation passed.'); })}>Check diagram</button>
         </nav>
         <input
           ref={picker}
@@ -1029,7 +1033,17 @@ function App() {
       </div>
       {error && (
         <div className="error-banner" role="alert">
-          <pre>{error}</pre>
+          <div className="diagnostic-report"><pre>{error}</pre>{diagnostics.map((issue, index) => <div key={index} className="diagnostic-item">
+            <strong>{issue.code}</strong><p>{issue.message}</p>
+            <button onClick={() => {
+              const subject = issue.subject || {}, pathMatch = subject.path?.match(/^\/(components|connections)\/(\d+)/);
+              const collection = subject.collection || pathMatch?.[1], itemIndex = subject.index ?? (pathMatch ? Number(pathMatch[2]) : undefined);
+              if (collection === 'connections' && Number.isInteger(itemIndex)) { setEdgeIndex(itemIndex); setSelection([]); setPanel('inspector'); }
+              else if (collection === 'components' && Number.isInteger(itemIndex)) { setSelection([state.present.components[itemIndex].id]); setEdgeIndex(null); setPanel('inspector'); }
+              else { setPanel('json'); }
+            }}>Inspect issue {index + 1}</button>
+            {issue.supportedFixes?.length > 0 && <ul>{issue.supportedFixes.map((fix, i) => <li key={i}>{fix}</li>)}</ul>}
+          </div>)}</div>
           <button aria-label="Dismiss error" onClick={() => setError("")}>
             Dismiss
           </button>

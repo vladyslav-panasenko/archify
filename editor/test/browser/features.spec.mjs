@@ -1,5 +1,15 @@
 import { test, expect } from '@playwright/test';
 
+test('renderer diagnostics navigate to the affected connection', async ({ page }) => {
+  await page.goto('/'); await page.getByRole('button', { name: 'API Server api' }).click();
+  await page.getByLabel('X', { exact: true }).fill('672'); await page.getByLabel('X', { exact: true }).press('Tab');
+  await page.getByRole('button', { name: 'Check diagram' }).click();
+  await expect(page.getByRole('alert')).toContainText('endpoint-side-direction');
+  await page.getByRole('button', { name: 'Inspect issue 1', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'auth → api' })).toBeVisible();
+  await expect(page.getByLabel('Source side')).toBeVisible();
+});
+
 test('waypoints can be added, dragged, deleted and undone', async ({ page }) => {
   await page.goto('/'); await page.locator('.connection-list summary').click();
   await page.getByRole('button', { name: 'users → cdn', exact: true }).click();

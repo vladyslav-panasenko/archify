@@ -68,12 +68,16 @@ export async function render(document) {
             ...process.env,
             ARCHIFY_UPDATE_CHECK_DISABLED: "1",
             ARCHIFY_REPO_ROOT: "",
+            ARCHIFY_DIAGNOSTIC_FORMAT: "json",
           },
           windowsHide: true,
         },
       );
     } catch (error) {
       const stderr = error.stderr?.trim() || error.message;
+      let report;
+      try { report = JSON.parse(stderr); } catch { /* non-renderer process failure */ }
+      if (report?.diagnostics) throw Object.assign(new Error(report.error), { archifyDiagnostics: report.diagnostics });
       // Present compiler diagnostics without Node stack frames or local source paths.
       const message =
         stderr.match(/Error: ([\s\S]*?)(?:\n\s+at |\nNode\.js|$)/)?.[1] ||
@@ -230,7 +234,7 @@ export async function createEditorServer({ file, dev = false } = {}) {
         send(404, "Not found. Run npm run build first.", "text/plain");
       }
     } catch (error) {
-      send(error.status || 400, { error: error.message });
+      send(error.status || 400, { error: error.message, diagnostics: error.archifyDiagnostics || [] });
     }
   });
   server.on("close", () => {
