@@ -9,6 +9,8 @@ import {saveMessage,removeMessage,saveRange} from '../src/sequence-structure.mjs
 import {patchSettings,settingFields} from '../src/settings.mjs';
 import {searchDiagram} from '../src/search.mjs';
 import {documentChanges,mergeDocuments} from '../src/review.mjs';
+import {addCheckpoint,readCheckpoints} from '../src/checkpoints.mjs';
+test('checkpoint limits never evict existing snapshots or alias the live document',()=>{const doc=sample();let entries=addCheckpoint([],'First',doc);doc.meta.title='Changed';assert.equal(entries[0].document.meta.title,'Arrange');for(let i=1;i<10;i++)entries=addCheckpoint(entries,`Copy ${i}`,doc);assert.throws(()=>addCheckpoint(entries,'Eleventh',doc));assert.equal(entries.length,10);assert.throws(()=>addCheckpoint([],'Large',{data:'x'.repeat(1024*1024)}));assert.throws(()=>readCheckpoints({getItem:()=>'{broken'},'key'));});
 test('three-way merge preserves independent changes and requires explicit delete/edit resolution',()=>{
  const base=sample(),local=structuredClone(base),remote=structuredClone(base);local.components[0].pos=[99,20];remote.components[1].label='Remote';let result=mergeDocuments(base,local,remote);assert.equal(result.conflicts.length,0);assert.equal(result.document.components[1].label,'Remote');assert.equal(result.document.components[0].pos[0],99);
  remote.components.shift();result=mergeDocuments(base,local,remote);assert.ok(result.conflicts.some(c=>c.path.at(-1)==='a'));const choices=Object.fromEntries(result.conflicts.map(c=>[c.key,'remote']));assert.ok(!mergeDocuments(base,local,remote,choices).document.components.some(c=>c.id==='a'));

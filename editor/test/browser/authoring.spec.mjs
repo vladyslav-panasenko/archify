@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+test('checkpoint restore is undoable and can be exported',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Checkpoints',exact:true}).click();await page.getByLabel('Checkpoint name').fill('Before');await page.getByRole('button',{name:'Create checkpoint',exact:true}).click();await page.getByRole('button',{name:'Properties',exact:true}).click();await page.getByRole('button',{name:'Users users'}).click();await page.getByLabel('X',{exact:true}).fill('90');await page.getByLabel('X',{exact:true}).press('Tab');await page.getByRole('button',{name:'Checkpoints',exact:true}).click();page.on('dialog',d=>d.accept());await page.getByRole('button',{name:'Restore Before',exact:true}).click();await page.getByRole('button',{name:'Undo',exact:true}).click();await page.getByRole('button',{name:'Properties',exact:true}).click();await page.getByRole('button',{name:'Users users'}).click();await expect(page.getByLabel('X',{exact:true})).toHaveValue('90');await page.getByRole('button',{name:'Checkpoints',exact:true}).click();const download=page.waitForEvent('download');await page.getByRole('button',{name:'Export Before',exact:true}).click();await download;
+});
+
 test('review shows layout diff and can download reviewed JSON',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Users users'}).click();await page.getByLabel('X',{exact:true}).fill('55');await page.getByLabel('X',{exact:true}).press('Tab');await page.getByRole('button',{name:'Review',exact:true}).click();await expect(page.locator('.change-entry')).toContainText('pos · layout');
  const download=page.waitForEvent('download');await page.getByRole('button',{name:'Download reviewed JSON',exact:true}).click();await download;await expect(page.getByText('No changes since the baseline.',{exact:true})).toBeVisible();
