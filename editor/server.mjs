@@ -8,13 +8,15 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { validateSchema } from "../archify/renderers/shared/validator.mjs";
 import { assertDocument, serialize } from "./src/document.mjs";
+import { supportedTypes, sourceNodes } from './src/adapters/index.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const execute = promisify(execFile);
 const hash = (text) => createHash("sha256").update(text).digest("hex");
 const MAX_BYTES = 5 * 1024 * 1024;
 export function validate(document) {
-  validateSchema("architecture", document);
+  if (!supportedTypes.includes(document?.diagram_type)) throw new Error('Unsupported diagram type.');
+  validateSchema(document.diagram_type, document);
   return assertDocument(document);
 }
 
@@ -35,7 +37,7 @@ async function readBody(req) {
 export async function render(document) {
   validate(document);
   if (
-    document.components.some(
+    sourceNodes(document).some(
       (c) =>
         c.brand && (typeof c.brand === "object" || /^https?:/i.test(c.brand)),
     )
@@ -55,7 +57,7 @@ export async function render(document) {
         [
           path.join(
             root,
-            "../archify/renderers/architecture/render-architecture.mjs",
+            `../archify/renderers/${document.diagram_type}/render-${document.diagram_type}.mjs`,
           ),
           input,
           output,

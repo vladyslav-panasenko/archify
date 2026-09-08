@@ -2,6 +2,7 @@ import {
   gridLayout,
   resolveComponentPos,
 } from "../../archify/renderers/architecture/grid.mjs";
+import { adapterFor, supportedTypes, sourceNodes, connections, nodeKey, edgeKey } from './adapters/index.mjs';
 
 export const serialize = (document) => JSON.stringify(document, null, 2) + "\n";
 export const clone = (document) => structuredClone(document);
@@ -33,24 +34,26 @@ export function removeComponent(document, id) {
 export function removeConnection(document, index) { const next = clone(document); next.connections.splice(index, 1); return next; }
 
 export function assertDocument(document) {
-  if (document?.diagram_type !== "architecture")
+  if (!supportedTypes.includes(document?.diagram_type))
     throw new Error(
-      "This editor supports architecture diagrams. Open an architecture JSON file.",
+      `Unsupported diagram type. Supported: ${supportedTypes.join(', ')}.`,
     );
-  if (!Array.isArray(document.components) || !document.components.length)
-    throw new Error("The diagram needs at least one component.");
+  if (!Array.isArray(document[nodeKey(document)]) || !sourceNodes(document).length)
+    throw new Error(`The diagram needs at least one item in ${nodeKey(document)}.`);
+  const adapter = adapterFor(document);
+  adapter?.validate(document);
   const ids = new Set();
-  for (const component of document.components) {
+  for (const component of sourceNodes(document)) {
     if (ids.has(component.id))
       throw new Error(`Duplicate component ID: ${component.id}`);
     ids.add(component.id);
-    const pos = resolveComponentPos(component, gridLayout(document));
+    const pos = adapter ? adapter.project(document, component).pos : resolveComponentPos(component, gridLayout(document));
     if (!pos.every(Number.isFinite))
       throw new Error(
         `Component ${component.id} needs pos or valid grid row/col.`,
       );
   }
-  for (const edge of document.connections || []) {
+  for (const edge of connections(document)) {
     if (!ids.has(edge.from) || !ids.has(edge.to))
       throw new Error(
         `Connection ${edge.from} → ${edge.to} references a missing component.`,
@@ -66,6 +69,8 @@ export function assertDocument(document) {
 }
 
 export function components(document) {
+  const adapter = adapterFor(document);
+  if (adapter) return sourceNodes(document).map(node => adapter.project(document, node));
   const grid = gridLayout(document);
   return document.components.map((c) => ({
     ...c,
@@ -76,9 +81,20 @@ export function components(document) {
 
 export function patchComponent(document, id, patch) {
   const next = clone(document);
-  const item = next.components.find((c) => c.id === id);
+  const adapter = adapterFor(document);
+  const item = sourceNodes(next).find((c) => c.id === id);
   if (!item) throw new Error(`Unknown component: ${id}`);
   for (const key of Object.keys(patch)) {
+    if (adapter && key === 'pos') { adapter.move(next, item, patch.pos); continue; }
+    if (adapter && key === 'size') {
+      if (!patch.size.every((n, i) => Number.isFinite(n) && n >= adapter.minSize[i])) throw new Error(`Minimum size: ${adapter.minSize.join(' × ')}.`);
+      [item.width, item.height] = patch.size; continue;
+    }
+    if (adapter && (adapter.fields.includes(key) || key === 'lane')) {
+      if (key === 'col' && (!Number.isInteger(patch[key]) || patch[key] < 0 || patch[key] >= adapter.columns)) throw new Error('Column is outside the supported range.');
+      if (key === 'lane' && !next.lanes.some(l => l.id === patch[key])) throw new Error('Unknown lane.');
+      item[key] = patch[key]; continue;
+    }
     if (!["pos", "size", "label", "sublabel", "tag"].includes(key))
       throw new Error(`Unsupported component edit: ${key}`);
     if (patch[key] === undefined) delete item[key];
@@ -93,7 +109,7 @@ export function patchComponent(document, id, patch) {
 
 export function patchConnection(document, index, patch) {
   const next = clone(document);
-  const item = next.connections?.[index];
+  const item = connections(next)[index];
   if (!item) throw new Error("Unknown connection.");
   for (const key of Object.keys(patch)) {
     if (
@@ -117,12 +133,14 @@ export function patchConnection(document, index, patch) {
 
 export function moveComponents(document, positions) {
   const next = clone(document);
-  for (const c of next.components) {
+  const adapter = adapterFor(document);
+  for (const c of sourceNodes(next)) {
     const pos = positions.get(c.id);
     if (pos) {
       if (!pos.every(Number.isFinite))
         throw new Error("Coordinates must be finite numbers.");
-      c.pos = pos.map((n) => Math.round(n * 100) / 100);
+      if (adapter) adapter.move(next, c, pos);
+      else c.pos = pos.map((n) => Math.round(n * 100) / 100);
     }
   }
   return next;

@@ -153,7 +153,7 @@ test("invalid JSON stays available and unsupported files do not replace the diag
     .setInputFiles({
       name: "workflow.json",
       mimeType: "application/json",
-      buffer: Buffer.from('{"diagram_type":"workflow"}'),
+      buffer: Buffer.from('{"diagram_type":"unsupported"}'),
     });
   await expect(page.getByRole("alert")).toContainText("architecture");
   await expect(

@@ -95,7 +95,7 @@ test("reject ambiguous documents and nonfinite positions", () => {
     /Duplicate/,
   );
   assert.throws(
-    () => assertDocument({ ...example, diagram_type: "workflow" }),
+    () => assertDocument({ ...example, diagram_type: "unsupported" }),
     /architecture/,
   );
   assert.throws(

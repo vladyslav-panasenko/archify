@@ -29,6 +29,7 @@ import {
   newDocument, addComponent, addConnection, removeComponent, removeConnection,
 } from "./document.mjs";
 import "./style.css";
+import { adapterFor, editingOptions, connections, sourceNodes, nodeKey, edgeKey } from './adapters/index.mjs';
 
 const sides = {
   top: Position.Top,
@@ -54,7 +55,7 @@ function ComponentNode({ data, selected }) {
   });
   return (
     <div className={`component kind-${data.type} ${selected ? "chosen" : ""}`}>
-      <NodeResizer isVisible={selected && editing?.enabled} minWidth={40} minHeight={24}
+      <NodeResizer isVisible={selected && editing?.enabled} minWidth={editing.minSize[0]} minHeight={editing.minSize[1]}
         onResizeStart={() => editing.start()}
         onResize={(event, rect) => editing.update(resize(event, rect))}
         onResizeEnd={(event, rect) => editing.end(resize(event, rect))}/>
@@ -231,6 +232,7 @@ function App() {
     cancelled = useRef(false),
     dialog = useRef();
   const documentModel = draft || state?.present;
+  const options = editingOptions(documentModel);
   const dirty = Boolean(state && serialize(state.present) !== saved);
   const rawDirty = Boolean(
     state && panel === "json" && jsonText !== serialize(state.present),
@@ -460,6 +462,7 @@ function App() {
     });
     return [
       ...boundaries,
+      ...(options.regions?.(documentModel) || []).map(region => ({ id: region.id, type: 'boundary', data: { label: region.label }, position: { x: region.pos[0], y: region.pos[1] }, style: { width: region.size[0], height: region.size[1] }, measured: measurements[region.id], draggable: false, selectable: false, focusable: false, zIndex: -1 })),
       ...cs.map((c) => ({
         id: `c:${c.id}`,
         measured: measurements[`c:${c.id}`],
@@ -474,7 +477,7 @@ function App() {
   }, [documentModel, selection, measurements]);
   const edges = useMemo(
     () =>
-      (documentModel?.connections || []).map((e, index) => ({
+      connections(documentModel).map((e, index) => ({
         id: `e:${index}`,
         source: `c:${e.from}`,
         target: `c:${e.to}`,
@@ -489,7 +492,7 @@ function App() {
   );
   const warnings = documentModel ? layoutWarnings(documentModel) : [];
   const selected = items.find((c) => c.id === selection[0]),
-    edge = documentModel?.connections?.[edgeIndex];
+    edge = connections(documentModel)[edgeIndex];
 
   function onKeys(event) {
     if (dialog.current?.open) return;
@@ -546,6 +549,7 @@ function App() {
   return (
     <Editing.Provider value={{
       enabled: !busy && !rawDirty,
+      minSize: options.minSize,
       start: () => { dragBase.current = state.present; cancelled.current = false; },
       update: edit => { if (dragBase.current && !cancelled.current) setDraft(previous => edit(previous || dragBase.current)); },
       end: edit => { if (edit && dragBase.current && !cancelled.current) change(edit(dragBase.current)); dragBase.current = null; setDraft(null); },
@@ -571,8 +575,8 @@ function App() {
         </div>
         <nav aria-label="Document actions">
           <button disabled={!session || busy || rawDirty || !!draft} onClick={() => setCreation('diagram')}>New diagram</button>
-          <button disabled={!state || busy || rawDirty || !!draft} onClick={() => setCreation('component')}>Add component</button>
-          <button disabled={!state || busy || rawDirty || !!draft} onClick={() => setCreation('connection')}>Add connection</button>
+          <button disabled={!state || busy || rawDirty || !!draft || documentModel.diagram_type !== 'architecture'} onClick={() => setCreation('component')}>Add component</button>
+          <button disabled={!state || busy || rawDirty || !!draft || documentModel.diagram_type !== 'architecture'} onClick={() => setCreation('connection')}>Add connection</button>
           <button
             disabled={!session || busy}
             onClick={() => picker.current.click()}
@@ -682,14 +686,14 @@ function App() {
                 </button>
               ))}
           </div>
-          <details className="connection-list"><summary>Connections</summary>{(documentModel?.connections || []).map((connection, index) =>
+          <details className="connection-list"><summary>Connections</summary>{connections(documentModel).map((connection, index) =>
             <button key={index} onClick={() => { setEdgeIndex(index); setSelection([]); }}>{connection.from} → {connection.to}</button>
           )}</details>
           <div className="outline-foot">
-            Architecture diagram
+            {documentModel?.diagram_type} diagram
             <br />
             <span>
-              {documentModel?.connections?.length || 0} connections ·{" "}
+              {connections(documentModel).length} connections ·{" "}
               {documentModel?.boundaries?.length || 0} boundaries
             </span>
           </div>
@@ -910,6 +914,11 @@ function App() {
                   </div>
                   <fieldset disabled={busy || !!draft}>
                     <legend>Component</legend>
+                    {adapterFor(documentModel) && <div className="logical-properties">
+                      <p className="muted">Dragging snaps horizontally to columns and adjusts the vertical offset within the same lane.</p>
+                      {options.fields.map(field => <Field key={field} label={field === 'col' ? 'Column' : field === 'yOffset' ? 'Vertical offset' : field} value={selected[field] ?? 0} number onCommit={value => applyPatch({ [field]: value })}/>)}
+                      {selected.lane && <label className="field">Lane<select value={selected.lane} onChange={e => applyPatch({ lane: e.target.value })}>{documentModel.lanes.map(lane => <option key={lane.id} value={lane.id}>{lane.label}</option>)}</select></label>}
+                    </div>}
                     <Field
                       label="Label"
                       value={selected.label}
@@ -970,7 +979,7 @@ function App() {
                     Moving this component keeps its connections and boundary
                     membership.
                   </p>
-                  <button disabled={busy} onClick={() => { if (!window.confirm('Delete this component and remove its connected edges and references?')) return; try { change(removeComponent(state.present, selected.id)); setSelection([]); } catch (e) { setError(e.message); } }}>Delete component</button>
+                  {documentModel.diagram_type === 'architecture' && <button disabled={busy} onClick={() => { if (!window.confirm('Delete this component and remove its connected edges and references?')) return; try { change(removeComponent(state.present, selected.id)); setSelection([]); } catch (e) { setError(e.message); } }}>Delete component</button>}
                 </>
               ) : edge ? (
                 <>
@@ -983,7 +992,7 @@ function App() {
                   </div>
                   <fieldset disabled={busy}>
                     <legend>Routing</legend>
-                    <button onClick={() => { change(removeConnection(state.present, edgeIndex)); setEdgeIndex(null); }}>Delete connection</button>
+                    {documentModel.diagram_type === 'architecture' && <button onClick={() => { change(removeConnection(state.present, edgeIndex)); setEdgeIndex(null); }}>Delete connection</button>}
                     <button onClick={() => { const from = items.find(c => c.id === edge.from), to = items.find(c => c.id === edge.to); edgePatch({ via: [...(edge.via || []), [(from.pos[0] + to.pos[0]) / 2, (from.pos[1] + to.pos[1]) / 2]] }); }}>Add waypoint</button>
                     <p className="muted">Drag numbered waypoints. Right-click a point, or focus it and press Delete, to remove it.</p>
                     <Field
@@ -1013,12 +1022,7 @@ function App() {
                         value={edge.route || "auto"}
                         onChange={(e) => edgePatch({ route: e.target.value })}
                       >
-                        {[
-                          "auto",
-                          "straight",
-                          "orthogonal-h",
-                          "orthogonal-v",
-                        ].map((r) => (
+                        {options.routes.map((r) => (
                           <option key={r}>{r}</option>
                         ))}
                       </select>
@@ -1084,10 +1088,10 @@ function App() {
           <div className="diagnostic-report"><pre>{error}</pre>{diagnostics.map((issue, index) => <div key={index} className="diagnostic-item">
             <strong>{issue.code}</strong><p>{issue.message}</p>
             <button onClick={() => {
-              const subject = issue.subject || {}, pathMatch = subject.path?.match(/^\/(components|connections)\/(\d+)/);
+              const subject = issue.subject || {}, pathMatch = subject.path?.match(/^\/(components|connections|nodes|edges|flows|states|transitions|participants|messages)\/(\d+)/);
               const collection = subject.collection || pathMatch?.[1], itemIndex = subject.index ?? (pathMatch ? Number(pathMatch[2]) : undefined);
-              if (collection === 'connections' && Number.isInteger(itemIndex)) { setEdgeIndex(itemIndex); setSelection([]); setPanel('inspector'); }
-              else if (collection === 'components' && Number.isInteger(itemIndex)) { setSelection([state.present.components[itemIndex].id]); setEdgeIndex(null); setPanel('inspector'); }
+              if (collection === edgeKey(state.present) && Number.isInteger(itemIndex)) { setEdgeIndex(itemIndex); setSelection([]); setPanel('inspector'); }
+              else if (collection === nodeKey(state.present) && Number.isInteger(itemIndex)) { setSelection([sourceNodes(state.present)[itemIndex].id]); setEdgeIndex(null); setPanel('inspector'); }
               else { setPanel('json'); }
             }}>Inspect issue {index + 1}</button>
             {issue.supportedFixes?.length > 0 && <ul>{issue.supportedFixes.map((fix, i) => <li key={i}>{fix}</li>)}</ul>}
