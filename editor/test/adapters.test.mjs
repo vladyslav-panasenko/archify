@@ -4,6 +4,15 @@ import fs from 'node:fs/promises';
 import { moveComponents, components, patchComponent } from '../src/document.mjs';
 import { validate, render } from '../server.mjs';
 
+test('dataflow movement updates stage/row and retains flows and metadata', async () => {
+  const doc = JSON.parse(await fs.readFile(new URL('../../archify/examples/event-stream.dataflow.json', import.meta.url)));
+  const node = components(doc)[0]; const moved = moveComponents(doc, new Map([[node.id, [node.pos[0] + 215, node.pos[1] + 114]]]));
+  validate(moved); assert.equal(moved.nodes[0].stage, 1); assert.equal(moved.nodes[0].row, 1);
+  assert.deepEqual(moved.flows, doc.flows); assert.deepEqual(moved.meta, doc.meta); assert.equal(moved.nodes[0].pos, undefined);
+  assert.throws(() => patchComponent(doc, node.id, { stage: 99 }), /stage/);
+  assert.match(await render(doc), /<svg/);
+});
+
 test('workflow adapter changes logical layout and preserves its source contract', async () => {
   const doc = JSON.parse(await fs.readFile(new URL('../../archify/examples/agent-tool-call.workflow.json', import.meta.url)));
   validate(doc); const node = components(doc)[0];

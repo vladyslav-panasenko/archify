@@ -1,5 +1,6 @@
 import { workflow } from './workflow.mjs';
-const adapters = { workflow };
+import { dataflow } from './dataflow.mjs';
+const adapters = { workflow, dataflow };
 export const adapterFor = document => adapters[document?.diagram_type];
 export const supportedTypes = ['architecture', ...Object.keys(adapters)];
 export const nodeKey = document => adapterFor(document)?.nodesKey || 'components';

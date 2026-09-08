@@ -104,6 +104,7 @@ export function patchComponent(document, id, patch) {
     throw new Error("Coordinates must be finite numbers.");
   if (item.size && !item.size.every((n) => Number.isFinite(n) && n > 0))
     throw new Error("Size must contain positive numbers.");
+  adapter?.validate(next);
   return next;
 }
 

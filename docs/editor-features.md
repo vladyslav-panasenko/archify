@@ -11,7 +11,7 @@ The editor edits Archify JSON. Archify owns final HTML rendering. Each feature b
 | F05 | Diagram creation | Start an architecture document, add/remove components and connections, and undo topology edits without dangling references. | Implemented |
 | F06 | Draft recovery | Recover unsaved local drafts after refresh; keep recovery separate from the source file and detect a changed source. | Implemented |
 | F07 | Workflow support | Open/edit/save/render workflow JSON using its lane/column constraints. | Implemented |
-| F08 | Dataflow support | Open/edit/save/render dataflow JSON using its supported placement fields. | Pending |
+| F08 | Dataflow support | Open/edit/save/render dataflow JSON using its supported placement fields. | Implemented |
 | F09 | Lifecycle support | Open/edit/save/render lifecycle JSON using its supported placement fields. | Pending |
 | F10 | Sequence support | Open/edit/save/render sequence JSON with participant ordering and message semantics preserved. | Pending |
 

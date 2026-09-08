@@ -915,8 +915,8 @@ function App() {
                   <fieldset disabled={busy || !!draft}>
                     <legend>Component</legend>
                     {adapterFor(documentModel) && <div className="logical-properties">
-                      <p className="muted">Dragging snaps horizontally to columns and adjusts the vertical offset within the same lane.</p>
-                      {options.fields.map(field => <Field key={field} label={field === 'col' ? 'Column' : field === 'yOffset' ? 'Vertical offset' : field} value={selected[field] ?? 0} number onCommit={value => applyPatch({ [field]: value })}/>)}
+                      <p className="muted">{options.hint || 'Dragging snaps horizontally to columns and adjusts the vertical offset within the same lane.'}</p>
+                      {options.fields.map(field => <Field key={field} label={{ col: 'Column', yOffset: 'Vertical offset', stage: 'Stage', row: 'Row' }[field] || field} value={selected[field] ?? 0} number onCommit={value => applyPatch({ [field]: value })}/>)}
                       {selected.lane && <label className="field">Lane<select value={selected.lane} onChange={e => applyPatch({ lane: e.target.value })}>{documentModel.lanes.map(lane => <option key={lane.id} value={lane.id}>{lane.label}</option>)}</select></label>}
                     </div>}
                     <Field
