@@ -42,6 +42,7 @@ import {
   reconnectConnection,
 } from "./document.mjs";
 import "./style.css";
+import AutoLayoutPanel from "./AutoLayoutPanel.jsx";
 import {
   adapterFor,
   editingOptions,
@@ -1511,6 +1512,7 @@ function App() {
                 search: "Search",
                 review: "Review",
                 checkpoints: "Checkpoints",
+                layout: "Auto-arrange",
               }).map(([key, label]) => (
                 <button
                   key={key}
@@ -1641,6 +1643,8 @@ function App() {
                   </button>
                 </div>
               </form>
+            ) : panel === "layout" ? (
+              <fieldset disabled={busy || !!draft}><AutoLayoutPanel key={`${presentText}:${selection.join(',')}:${locked.join(',')}`} document={state.present} selection={selection} locked={locked} onApply={change}/></fieldset>
             ) : panel === "checkpoints" ? (
               <fieldset disabled={busy || !!draft}>
                 <CheckpointsPanel
