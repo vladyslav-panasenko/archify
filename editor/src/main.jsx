@@ -62,7 +62,7 @@ function ComponentNode({ data, selected }) {
   };
   return (
     <div className={`component kind-${data.type} ${selected ? "chosen" : ""} ${editing.connecting ? 'connecting' : ''}`}>
-      <NodeResizer isVisible={selected && editing?.enabled && editing.resizable !== false} minWidth={editing.minSize[0]} minHeight={editing.minSize[1]}
+      <NodeResizer isVisible={selected && !data.locked && editing?.enabled && editing.resizable !== false} minWidth={editing.minSize[0]} minHeight={editing.minSize[1]}
         onResizeStart={() => editing.start()}
         onResize={(event, rect) => editing.update(resize(event, rect))}
         onResizeEnd={(event, rect) => editing.end(resize(event, rect))}/>
@@ -89,6 +89,7 @@ function ComponentNode({ data, selected }) {
       </span>
       <div className="node-copy">
         <strong>{data.label}</strong>
+        {data.locked && <span aria-label="Locked">Locked</span>}
         {data.sublabel && <span>{data.sublabel}</span>}
       </div>
     </div>
@@ -231,6 +232,9 @@ function App() {
   const [canvasVersion, setCanvasVersion] = useState(0);
   const [clipboard,setClipboard] = useState(null);
   const [drawConnections,setDrawConnections] = useState(false);
+  const [locked,setLocked] = useState([]);
+  const lockKey=data=>`archify-locks:${data.recoveryKey}:${data.name}`;
+  function updateLocks(next) { setLocked(next);try{localStorage.setItem(lockKey(session),JSON.stringify(next));}catch{setNotice('Locks apply for this session; browser storage is unavailable.');} }
   const [gridSize,setGridSize] = useState(10), [smartSnap,setSmartSnap] = useState(false), [guides,setGuides] = useState([]);
   const [selection, setSelection] = useState([]),
     [edgeIndex, setEdgeIndex] = useState(null);
@@ -319,6 +323,7 @@ function App() {
   });
 
   function load(data) {
+    try{const value=JSON.parse(localStorage.getItem(lockKey(data))||'[]');setLocked(Array.isArray(value)?value.filter(id=>typeof id==='string'):[]);}catch{setLocked([]);}
     setMeasurements({});
     assertDocument(data.document);
     setState(history(data.document));
@@ -504,13 +509,14 @@ function App() {
         measured: measurements[`c:${c.id}`],
         type: "component",
         position: { x: c.pos[0], y: c.pos[1] },
-        data: c,
+        data: {...c,locked:locked.includes(c.id)},
+        draggable: !locked.includes(c.id) && !busy && !rawDirty && !drawConnections,
         selected: selection.includes(c.id),
         style: { width: c.size[0], height: c.size[1] },
         ariaLabel: `${c.label}, ${c.type}`,
       })),
     ];
-  }, [documentModel, selection, measurements]);
+  }, [documentModel, selection, measurements, locked, busy, rawDirty, drawConnections]);
   const edges = useMemo(
     () =>
       connections(documentModel).map((e, index) => ({
@@ -574,7 +580,7 @@ function App() {
           state.present,
           new Map(
             items
-              .filter((c) => selection.includes(c.id))
+              .filter((c) => selection.includes(c.id) && !locked.includes(c.id))
               .map((c) => [
                 c.id,
                 [c.pos[0] + delta[0] * step, c.pos[1] + delta[1] * step],
@@ -820,7 +826,7 @@ function App() {
                   (c) =>
                     c.type === "position" &&
                     c.position &&
-                    c.id.startsWith("c:"),
+                    c.id.startsWith("c:") && !locked.includes(c.id.slice(2)),
                 );
                 if (positions.length && dragBase.current && !cancelled.current && documentModel.diagram_type !== 'architecture')
                   setDraft((previous) =>
@@ -852,7 +858,7 @@ function App() {
               }}
               onNodeDrag={(event,node,draggedNodes) => {
                 if (!dragBase.current || cancelled.current || documentModel.diagram_type !== 'architecture') return;
-                const result=snapPositions(dragBase.current,new Map((draggedNodes?.length?draggedNodes:[node]).filter(n=>n.id.startsWith('c:')).map(n=>[n.id.slice(2),[n.position.x,n.position.y]])),{grid:snap?gridSize:0,smart:smartSnap,bypass:event.altKey});
+                const result=snapPositions(dragBase.current,new Map((draggedNodes?.length?draggedNodes:[node]).filter(n=>n.id.startsWith('c:')&&!locked.includes(n.id.slice(2))).map(n=>[n.id.slice(2),[n.position.x,n.position.y]])),{grid:snap?gridSize:0,smart:smartSnap,bypass:event.altKey});
                 setGuides(result.guides); setDraft(moveComponents(dragBase.current,result.positions));
               }}
               onNodeDragStop={(event, node, draggedNodes) => {
@@ -862,7 +868,7 @@ function App() {
                       dragBase.current,
                       snapPositions(dragBase.current,new Map(
                         (draggedNodes?.length ? draggedNodes : [node])
-                          .filter((n) => n.id.startsWith("c:"))
+                          .filter((n) => n.id.startsWith("c:") && !locked.includes(n.id.slice(2)))
                           .map((n) => [
                             n.id.slice(2),
                             [n.position.x, n.position.y],
@@ -977,6 +983,8 @@ function App() {
                   <fieldset disabled={busy || !!draft}>
                     {documentModel.diagram_type === 'architecture' && selection.length > 1 && <details open><summary>Arrange selection</summary><div className="button-row">{Object.entries(arrangements).map(([action,label]) => <button key={action} disabled={action.startsWith('distribute') && selection.length < 3} onClick={() => { try { change(arrange(state.present,selection,action)); } catch(e) { setError(e.message); } }}>{label}</button>)}</div></details>}
                     <legend>Component</legend>
+                    <button onClick={()=>updateLocks(selection.every(id=>locked.includes(id))?locked.filter(id=>!selection.includes(id)):[...new Set([...locked,...selection])])}>{selection.every(id=>locked.includes(id))?'Unlock selection':'Lock selection'}</button>
+                    {selection.some(id=>locked.includes(id))&&<p className="muted">Locked items cannot be dragged, resized or nudged. Inspector edits remain available.</p>}
                     {selection.length>1&&<><p className="muted">Changes apply to every selected item. Blank mixed fields remain unchanged.</p>{['label','sublabel',...(options.resizable===false?[]:['width','height'])].map(field=>{const value=commonValue(documentModel,selection,field);return <Field key={field} label={`Selection ${field}`} value={value} mixed={value===undefined} number={['width','height'].includes(field)} onCommit={value=>{try{change(bulkPatch(state.present,selection,field,value));}catch(e){setError(e.message);}}}/>;})}</>}
                     {documentModel.diagram_type==='architecture'&&<details><summary>Copy and duplicate</summary><div className="button-row"><button onClick={()=>paste(copySelection(state.present,selection))}>Duplicate selection</button><button onClick={()=>{setClipboard(copySelection(state.present,selection));setNotice('Selection copied inside the editor. Use Ctrl/Cmd+C on the canvas to copy to another window.');}}>Copy selection</button><button disabled={!clipboard} onClick={()=>paste(clipboard)}>Paste selection</button></div><p className="muted">Ctrl/Cmd+D duplicates. Ctrl/Cmd+C and V copy and paste on the canvas.</p></details>}
                     {documentModel.diagram_type === 'architecture' && <details><summary>Snapping</summary><label className="field">Grid spacing<input type="number" min="1" max="200" value={gridSize} onChange={e=>{const n=Number(e.target.value);if(Number.isInteger(n)&&n>=1&&n<=200)setGridSize(n);}}/></label><label><input type="checkbox" checked={smartSnap} onChange={e=>setSmartSnap(e.target.checked)}/> Smart guides</label><p className="muted">Hold Alt while dragging or resizing to bypass snapping.</p></details>}

@@ -1,5 +1,14 @@
 import { test, expect } from '@playwright/test';
 
+test('local locks prevent canvas changes and survive reload without entering JSON',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Users users'}).click();await page.getByRole('button',{name:'Lock selection',exact:true}).click();
+ await expect(page.locator('[data-id="c:users"] .react-flow__resize-control')).toHaveCount(0);
+ const before=await page.getByLabel('X',{exact:true}).inputValue();await page.locator('[data-id="c:users"]').focus();await page.keyboard.press('ArrowRight');await expect(page.getByLabel('X',{exact:true})).toHaveValue(before);
+ await page.reload();await page.getByRole('button',{name:'Users users'}).click();await expect(page.getByRole('button',{name:'Unlock selection',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'JSON',exact:true}).click();expect(await page.getByLabel('Diagram JSON').inputValue()).not.toContain('locked');
+ await page.getByRole('button',{name:'Properties',exact:true}).click();await page.getByRole('button',{name:'Unlock selection',exact:true}).click();await expect(page.locator('[data-id="c:users"] .react-flow__resize-control').first()).toBeVisible();
+});
+
 test('mixed bulk values apply together and deletion is undoable',async({page})=>{
  await page.goto('/');await page.locator('[data-id="c:users"]').click();await page.locator('[data-id="c:api"]').click({modifiers:['Shift']});
  await expect(page.getByLabel('Selection width')).toHaveAttribute('placeholder','Mixed values');
