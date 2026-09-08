@@ -3,6 +3,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { newDocument, addComponent, addConnection, removeComponent } from '../src/document.mjs';
 import { validate } from '../server.mjs';
+import { automaticLabelPoint } from '../src/label-placement.mjs';
+
+test('automatic canvas labels avoid component hit targets without editing the document', () => {
+  const boxes = [{ pos: [100, 100], size: [120, 60] }];
+  const point = automaticLabelPoint([160, 130], 'read-through', boxes);
+  assert.ok(point[1] < 90 || point[1] > 170 || point[0] < 60 || point[0] > 260);
+  assert.deepEqual(boxes, [{ pos: [100, 100], size: [120, 60] }]);
+});
 
 test('topology creation and deletion preserve schema and remove dangling references', () => {
   let doc = newDocument('Created'); doc = addComponent(doc, { label: 'Database', type: 'database' });

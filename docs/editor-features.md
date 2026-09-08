@@ -16,3 +16,20 @@ The editor edits Archify JSON. Archify owns final HTML rendering. Each feature b
 | F10 | Sequence support | Open/edit/save/render sequence JSON with participant ordering and message semantics preserved. | Implemented |
 
 The existing editor already has component dragging, multi-selection, numeric properties, JSON import/export, direct saving, undo/redo and HTML generation. Later diagram types expose only edits their schemas can represent; they do not acquire invented free-position fields. Tests must cover JSON round trips and the type's renderer as well as browser interaction.
+
+## Delivery commits
+
+All features are pushed to `main` in the private repository.
+
+| Feature | Commit |
+| --- | --- |
+| F01 | `91f0cf9` |
+| F02 | `746601c` |
+| F03 | `b488400` |
+| F04 | `bdbfa03` |
+| F05 | `76e46f7` |
+| F06 | `bfac33e` |
+| F07 | `a290626` |
+| F08 | `19ba15c` |
+| F09 | `92ffc52` |
+| F10 | `e119f22` |

@@ -10,7 +10,7 @@
 
 # Archify
 
-This private copy includes a **[visual JSON editor](editor/README.md)**. Open an architecture diagram, move components, save the updated JSON, and render it through Archify. Start with `cd editor`, `npm ci`, `npm run build`, then `npm start`.
+This private copy includes a **[visual JSON editor](editor/README.md)** for all five diagram types, with mouse layout editing, local draft recovery, and Archify HTML generation. See the [feature list](docs/editor-features.md). Start with `cd editor`, `npm ci`, `npm run build`, then `npm start`.
 
 **Turn a codebase or system description into a polished, interactive system map — directly in chat.**
 

@@ -6,7 +6,7 @@ The editor has its own working representation. It does not need to reproduce Arc
 
 ## Implemented scope
 
-The first release lives in `editor/` and supports architecture diagrams:
+The editor lives in `editor/` and supports architecture, workflow, dataflow, lifecycle and sequence diagrams:
 
 - Open JSON or launch against a file for direct saving.
 - Drag and multi-select components, snap to a grid, pan/zoom, and nudge with the keyboard.
@@ -16,6 +16,9 @@ The first release lives in `editor/` and supports architecture diagrams:
 - Apply schema-validated JSON text edits and download the result.
 - Save directly to the launched file with external-change detection and atomic replacement.
 - Render applied JSON using Archify and preview/download the generated HTML.
+- Resize boxes and drag labels/waypoints with undo and cancellation.
+- Create architecture documents and edit their topology.
+- Recover local drafts and navigate compiler diagnostics to affected items.
 
 ## Document contract
 
@@ -32,10 +35,10 @@ Schema-valid drafts remain editable and saveable despite layout conflicts. Full 
 - `editor/server.mjs`: loopback HTTP server, schema validation, scoped saving and isolated CLI invocation.
 - `editor/test/`: adapter, server, renderer integration and browser checks.
 
-No renderer extraction or shared SVG implementation is required. React Flow replaces handwritten canvas interaction code; the adapter preserves Archify semantics.
+No renderer extraction or shared SVG implementation is required. React Flow replaces handwritten canvas interaction code; the adapters in `editor/src/adapters/` preserve each type's supported fields and semantics.
 
-## Remaining extensions
+## Feature delivery
 
-Direct dragging of labels/waypoints, alignment/distribution, node/edge creation, group movement rules beyond multi-selection, and support for workflow/dataflow/lifecycle/sequence diagrams need separate increments. The first release uses numeric fields for route and size refinement. Other diagram types need adapters that respect their specific semantics.
+The [feature list](editor-features.md) records all ten delivered additions. Diagram creation controls target architecture. Other types edit existing JSON with their own placement constraints; sequence exposes participant ordering and bounded message spacing instead of unsupported free coordinates. Alignment/distribution and automatic route repair are outside this batch.
 
 See the [usage guide](../editor/README.md) and [implementation tasks](plans/2026-09-07-json-editor.md).

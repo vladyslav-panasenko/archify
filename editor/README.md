@@ -1,6 +1,6 @@
 # Archify Editor
 
-A local visual editor for Archify architecture JSON. React Flow provides the editing canvas; Archify generates the final HTML. The canvas is a working representation, not an exact preview of the compiler's routing, typography, or themes.
+A local visual editor for all five Archify JSON diagram types. React Flow provides the editing canvas; Archify generates the final HTML. The canvas is a working representation, not an exact preview of the compiler's routing, typography, or themes.
 
 ## Start
 
@@ -28,15 +28,35 @@ For development, use `npm run dev` (also accepts `-- --file ...` and `-- --port 
 
 - Drag components; Shift-click to select several. Drag a selection to move it together.
 - Use the Properties panel for exact X/Y coordinates, width, height, labels and sublabels.
-- Resize selected components with the corner/edge handles. Each resize is one undoable edit; Escape cancels it.
+- Resize selected components with the corner/edge handles. Each resize is one undoable edit; Escape cancels it. Sequence participant sizes are defined by Archify and cannot be resized individually.
 - Arrow keys move selected components by one diagram unit; Shift+Arrow moves by ten.
 - Use the zoom buttons or mouse wheel. Hold Space while dragging to pan; middle/right mouse dragging also pans.
 - Enable **Snap to grid** for 10-unit drag increments. Escape cancels an active drag.
 - Undo/redo records a whole drag as one edit. Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z and Ctrl/Cmd+Y are supported outside text fields.
-- Select a connection to edit its label, endpoint sides, routing mode, waypoints and label position. Coordinates are edited through fields; direct waypoint and label dragging are not included yet.
+- Drag connection labels to position them. Select a connection on the canvas or in the Connections list to edit routing and endpoint sides. **Add waypoint** creates a numbered handle; drag it to refine the route, or right-click / press Delete on the focused handle to remove it. Arrow keys also move focused labels and waypoints. Each gesture is one undoable edit.
 - Open the JSON panel to edit other supported fields. **Apply JSON** validates and updates the canvas. Unapplied text blocks canvas edits and saving until applied or discarded.
 
 Layout edits patch the original document. Existing metadata, sources, views, component IDs, connection IDs, array ordering and authored routes remain intact. Saving normalizes whitespace to two-space indentation and a trailing newline. Pointer coordinates are rounded to two decimals. Grid items gain `pos` overrides and keep their original row/column hints; **Reset to grid position** removes the override.
+
+## Creating diagrams
+
+**New diagram** creates an architecture document with one initial component. **Add component** chooses a label and type; **Add connection** chooses its endpoints and optional label. IDs are generated without collisions. Delete a component from its inspector to remove it, its incident connections, and its references in boundaries and guided views. Undo restores the complete edit. A diagram must retain at least one component.
+
+Creation and deletion controls currently target architecture diagrams. Other types support editing existing documents and validated source changes through the JSON panel.
+
+## Diagram types
+
+| Type | Canvas edits saved to JSON |
+| --- | --- |
+| Architecture | Free component `pos` and `size`, connection `via` and `labelAt`. |
+| Workflow | Logical `col`, `yOffset`, `width`, `height`; lane membership changes explicitly in the inspector. Both schema versions remain unchanged. |
+| Dataflow | `stage`, `row`, `yOffset`, `width`, `height`. Stages and rows constrain horizontal/vertical placement. |
+| Lifecycle | `col`, `yOffset`, `width`, `height`; lane membership changes explicitly. Main, event and terminal bands follow the renderer's rules. |
+| Sequence | Horizontal participant reordering changes only the participants array order. Dragging message labels vertically changes `y`; endpoints and relative message ordering stay intact. |
+
+Sequence messages cannot cross adjacent messages or activation/segment boundaries during spacing edits. Messages exactly on a boundary remain pinned. Use **Participant order** or **Message Y** for keyboard editing. Sequence JSON has no per-participant free positions/sizes or message waypoints, so those controls are absent. Raw JSON changes can explicitly revise the wider model and are validated before application.
+
+Automatic labels avoid component hit targets in the editor. This display adjustment is not saved to JSON; dragging a label creates authored placement. Pinned label positions remain unchanged.
 
 ## Render
 
@@ -44,11 +64,15 @@ Layout edits patch the original document. Existing metadata, sources, views, com
 
 Schema-valid drafts can be saved with overlapping components. The canvas reports basic overlap/bounds notes; Archify performs its full route, label and layout validation at render time. Errors leave the draft intact. A changed document invalidates the prior preview.
 
+**Check diagram** runs the same compiler validation without opening the output. Structured errors include **Inspect issue** links to the affected item and the compiler's suggested corrections. Errors without an item reference open the JSON panel. Corrections are always explicit edits.
+
 Remote brand images are preserved in JSON but are not fetched by this local render endpoint. Use built-in brands or the existing Archify CLI for those documents. Source verification requiring a repository root also belongs in the CLI workflow. Editor exports do not change upstream rendering behavior.
 
-## Scope
+## Draft recovery
 
-Architecture diagrams are supported first. Other diagram types are rejected with a message, without replacing the current document. Node/connection creation and deletion, group resizing, alignment tools, automatic route repair, and other diagram-type adapters are future work. Zoom, selection and undo history are never written into Archify JSON. Working drafts are held in memory; save or download them before closing the editor.
+Unsaved documents and unapplied JSON text are stored in this browser's local storage. After a refresh, choose **Restore draft** or **Discard recovery**. Recovery is local to the browser/profile and server origin; it does not write the source file. If the source revision changed, recovery opens a separate downloadable draft and disables direct saving to that source. Clearing browser storage removes recovery data. Save or download important work; recovery is not a backup service.
+
+Zoom, selection, measurements, recovery metadata and undo history are never written into Archify JSON. See the [completed feature list](../docs/editor-features.md) for the implementation scope and commits.
 
 ## Checks
 
@@ -59,4 +83,4 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Tests cover JSON preservation, grid overrides, history, scoped saving, conflicts, strict renderer validation, actual browser dragging, download/reopen, keyboard movement and invalid input. React Flow's MIT core is used; no Pro example code is included.
+Tests cover all five adapters and renderers, JSON preservation, grid overrides, history, scoped saving, conflicts, recovery, compiler diagnostics, actual browser dragging/resizing, label/waypoint edits, download/reopen, keyboard movement and invalid input. React Flow's MIT core is used; no Pro example code is included.

@@ -31,6 +31,7 @@ import {
 import "./style.css";
 import { adapterFor, editingOptions, connections, sourceNodes, nodeKey, edgeKey } from './adapters/index.mjs';
 import { messageRange } from './adapters/sequence.mjs';
+import { automaticLabelPoint } from './label-placement.mjs';
 
 const sides = {
   top: Position.Top,
@@ -135,10 +136,10 @@ function ConnectionEdge(props) {
     ];
   }
   if (data.sequenceLine) result = [data.sequenceLine.map((p,i)=>`${i?'L':'M'} ${p[0]} ${p[1]}`).join(' '), ...data.labelAt];
-  const point = data.labelAt || [
+  const point = data.labelAt || automaticLabelPoint([
     result[1] + (data.labelDx || 0),
     result[2] + (data.labelDy || 0),
-  ];
+  ], data.label || '', data.editorBoxes || []);
   return (
     <><BaseEdge
       id={props.id}
@@ -486,7 +487,7 @@ function App() {
         target: `c:${e.to}`,
         sourceHandle: `source-${e.fromSide || "right"}`,
         targetHandle: `target-${e.toSide || "left"}`,
-        data: options.edgeData?.(documentModel, e) || e,
+        data: { ...(options.edgeData?.(documentModel, e) || e), editorBoxes: components(documentModel) },
         type: "connection",
         selected: index === edgeIndex,
         markerEnd: { type: "arrowclosed", color: "#82929c" },
