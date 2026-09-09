@@ -71,51 +71,58 @@ For every feature:
 
 ## Third batch — reliability and larger workflows
 
-F29–F36 are approved for implementation. Each item is delivered as a tested commit and push. F29 and F30 establish the baseline before adding new authoring workflows.
+**Implemented: F29–F36.** Each feature was tested, committed and pushed. F29 and F30 establish the hardening and performance baseline for the new authoring workflows. See [quality checks](editor-quality.md) for evidence and practical limits.
 
-| ID | Feature | Done when | Status |
-| --- | --- | --- | --- |
-| F29 | Editor hardening | Audit all five adapters, reject malformed references and geometry without losing the draft, and verify long undo/redo sessions and cancellation. Record findings and fixes. | Implemented |
-| F30 | Large-diagram performance | Record repeatable measurements for selection, dragging and rendering hundreds of nodes; fix measured bottlenecks and document practical limits. | Implemented |
-| F31 | Auto-arrange selection | Preview a deterministic architecture layout, preserve locked/unselected items and authored routes, then apply as one undoable JSON edit or cancel. | Implemented |
-| F32 | Reusable templates | Save, rename, export/import and insert architecture fragments with fresh IDs and remapped internal connections; preserve unrelated JSON and bound local storage. | Implemented |
-| F33 | Schema-aware JSON editing | Offer schema-based field/value suggestions, inline validation with locations, and navigation between source fields and canvas items while preserving unapplied text. | Implemented |
-| F34 | Local project workspace | Browse diagrams under an explicitly opened local directory, switch documents while retaining separate drafts/history, and save with per-file revision and path checks. | Implemented |
-| F35 | Layout comparison | Compare two compatible JSON versions on the canvas and selectively accept supported placement changes by stable item ID, with undo and topology preserved. | Implemented |
-| F36 | Accessibility pass | Audit keyboard workflows, focus/selection announcements, labels, contrast and hit targets; fix barriers and verify desktop/narrow layouts. | Implemented |
+| ID  | Feature                   | Done when                                                                                                                                                                   | Status      |
+| --- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| F29 | Editor hardening          | Audit all five adapters, reject malformed references and geometry without losing the draft, and verify long undo/redo sessions and cancellation. Record findings and fixes. | Implemented |
+| F30 | Large-diagram performance | Record repeatable measurements for selection, dragging and rendering hundreds of nodes; fix measured bottlenecks and document practical limits.                             | Implemented |
+| F31 | Auto-arrange selection    | Preview a deterministic architecture layout, preserve locked/unselected items and authored routes, then apply as one undoable JSON edit or cancel.                          | Implemented |
+| F32 | Reusable templates        | Save, rename, export/import and insert architecture fragments with fresh IDs and remapped internal connections; preserve unrelated JSON and bound local storage.            | Implemented |
+| F33 | Schema-aware JSON editing | Offer schema-based field/value suggestions, inline validation with locations, and navigation between source fields and canvas items while preserving unapplied text.        | Implemented |
+| F34 | Local project workspace   | Browse diagrams under an explicitly opened local directory, switch documents while retaining separate drafts/history, and save with per-file revision and path checks.      | Implemented |
+| F35 | Layout comparison         | Compare two compatible JSON versions on the canvas and selectively accept supported placement changes by stable item ID, with undo and topology preserved.                  | Implemented |
+| F36 | Accessibility pass        | Audit keyboard workflows, focus/selection announcements, labels, contrast and hit targets; fix barriers and verify desktop/narrow layouts.                                  | Implemented |
 
 ## Delivery commits
 
 Completed features are pushed to `main` in the private repository.
 
-| Feature | Commit    |
-| ------- | --------- |
-| F01     | `91f0cf9` |
-| F02     | `746601c` |
-| F03     | `b488400` |
-| F04     | `bdbfa03` |
-| F05     | `76e46f7` |
-| F06     | `bfac33e` |
-| F07     | `a290626` |
-| F08     | `19ba15c` |
-| F09     | `92ffc52` |
-| F10     | `e119f22` |
-| F11     | `fdbc7c3` |
-| F12     | `69c2d6e` |
-| F13     | `55d637e` |
-| F14     | `4fb7bef` |
-| F15     | `e919880` |
-| F16     | `3c7dcb8` |
-| F17     | `f5b821a` |
-| F18     | `c185bfe` |
-| F19     | `abe694b` |
-| F20     | `c8fcb6c` |
-| F21     | `369820d` |
-| F22     | `1c84203` |
-| F23     | `18f9814` |
-| F24     | `7027400` |
-| F25     | `16d438d` |
-| F26     | `794e1a6` |
-| F27     | `34e55d9` |
-| F28     | `ce11d1b` |
-
+| Feature | Commit                |
+| ------- | --------------------- |
+| F01     | `91f0cf9`             |
+| F02     | `746601c`             |
+| F03     | `b488400`             |
+| F04     | `bdbfa03`             |
+| F05     | `76e46f7`             |
+| F06     | `bfac33e`             |
+| F07     | `a290626`             |
+| F08     | `19ba15c`             |
+| F09     | `92ffc52`             |
+| F10     | `e119f22`             |
+| F11     | `fdbc7c3`             |
+| F12     | `69c2d6e`             |
+| F13     | `55d637e`             |
+| F14     | `4fb7bef`             |
+| F15     | `e919880`             |
+| F16     | `3c7dcb8`             |
+| F17     | `f5b821a`             |
+| F18     | `c185bfe`             |
+| F19     | `abe694b`             |
+| F20     | `c8fcb6c`             |
+| F21     | `369820d`             |
+| F22     | `1c84203`             |
+| F23     | `18f9814`             |
+| F24     | `7027400`             |
+| F25     | `16d438d`             |
+| F26     | `794e1a6`             |
+| F27     | `34e55d9`             |
+| F28     | `ce11d1b`             |
+| F29     | `9889995`             |
+| F30     | `0156204`             |
+| F31     | `56818c3` + `5db1d9b` |
+| F32     | `dbb8eba`             |
+| F33     | `099d09d`             |
+| F34     | `f310025`             |
+| F35     | `674557f`             |
+| F36     | `713d22d`             |

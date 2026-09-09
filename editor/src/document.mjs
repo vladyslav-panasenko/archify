@@ -13,7 +13,8 @@ import {
 
 export const serialize = (document) => JSON.stringify(document, null, 2) + "\n";
 export const clone = (document) => structuredClone(document);
-const point = value => Array.isArray(value) && value.length === 2 && value.every(Number.isFinite);
+const point = (value) =>
+  Array.isArray(value) && value.length === 2 && value.every(Number.isFinite);
 
 export function newDocument(title = "Untitled diagram") {
   return {
@@ -128,19 +129,45 @@ export function assertDocument(document) {
     throw new Error(
       `The diagram needs at least one item in ${nodeKey(document)}.`,
     );
-  if (!document.meta || typeof document.meta.title !== 'string' || !document.meta.title.trim()) throw new Error('The diagram needs a title.');
-  for (const key of [nodeKey(document),edgeKey(document),'lanes','boundaries']) {
-    if(document[key]!==undefined&&(!Array.isArray(document[key])||document[key].some(item=>!item||typeof item!=='object'||Array.isArray(item))))throw new Error(`${key} must contain objects.`);
+  if (
+    !document.meta ||
+    typeof document.meta.title !== "string" ||
+    !document.meta.title.trim()
+  )
+    throw new Error("The diagram needs a title.");
+  for (const key of [
+    nodeKey(document),
+    edgeKey(document),
+    "lanes",
+    "boundaries",
+  ]) {
+    if (
+      document[key] !== undefined &&
+      (!Array.isArray(document[key]) ||
+        document[key].some(
+          (item) => !item || typeof item !== "object" || Array.isArray(item),
+        ))
+    )
+      throw new Error(`${key} must contain objects.`);
   }
-  for(const lane of document.lanes||[])if(!lane.id||document.lanes.filter(l=>l.id===lane.id).length>1)throw new Error('Lane IDs must be present and unique.');
+  for (const lane of document.lanes || [])
+    if (!lane.id || document.lanes.filter((l) => l.id === lane.id).length > 1)
+      throw new Error("Lane IDs must be present and unique.");
   const adapter = adapterFor(document);
   adapter?.validate(document);
   const ids = new Set();
   for (const component of sourceNodes(document)) {
-    if(typeof component.id!=='string'||!component.id)throw new Error('Every component needs an ID.');
-    if(component.pos!==undefined&&!point(component.pos))throw new Error(`Invalid coordinates for ${component.id}.`);
-    if(component.size!==undefined&&(!point(component.size)||component.size.some(n=>n<=0)))throw new Error(`Invalid size for ${component.id}.`);
-    if(component.yOffset!==undefined&&!Number.isFinite(component.yOffset))throw new Error(`Invalid offset for ${component.id}.`);
+    if (typeof component.id !== "string" || !component.id)
+      throw new Error("Every component needs an ID.");
+    if (component.pos !== undefined && !point(component.pos))
+      throw new Error(`Invalid coordinates for ${component.id}.`);
+    if (
+      component.size !== undefined &&
+      (!point(component.size) || component.size.some((n) => n <= 0))
+    )
+      throw new Error(`Invalid size for ${component.id}.`);
+    if (component.yOffset !== undefined && !Number.isFinite(component.yOffset))
+      throw new Error(`Invalid offset for ${component.id}.`);
     if (ids.has(component.id))
       throw new Error(`Duplicate component ID: ${component.id}`);
     ids.add(component.id);
@@ -152,18 +179,28 @@ export function assertDocument(document) {
         `Component ${component.id} needs pos or valid grid row/col.`,
       );
   }
-  const edgeIds=new Set();
+  const edgeIds = new Set();
   for (const edge of connections(document)) {
-    if(edge.id!==undefined){if(edgeIds.has(edge.id))throw new Error(`Duplicate connection ID: ${edge.id}`);edgeIds.add(edge.id);}
-    if(edge.labelAt!==undefined&&!point(edge.labelAt))throw new Error('Label placement needs two finite coordinates.');
-    if(edge.via!==undefined&&(!Array.isArray(edge.via)||!edge.via.every(point)))throw new Error('Waypoints need pairs of finite coordinates.');
+    if (edge.id !== undefined) {
+      if (edgeIds.has(edge.id))
+        throw new Error(`Duplicate connection ID: ${edge.id}`);
+      edgeIds.add(edge.id);
+    }
+    if (edge.labelAt !== undefined && !point(edge.labelAt))
+      throw new Error("Label placement needs two finite coordinates.");
+    if (
+      edge.via !== undefined &&
+      (!Array.isArray(edge.via) || !edge.via.every(point))
+    )
+      throw new Error("Waypoints need pairs of finite coordinates.");
     if (!ids.has(edge.from) || !ids.has(edge.to))
       throw new Error(
         `Connection ${edge.from} → ${edge.to} references a missing component.`,
       );
   }
   for (const boundary of document.boundaries || []) {
-    if(!Array.isArray(boundary.wraps)||!boundary.wraps.length)throw new Error('A boundary needs members.');
+    if (!Array.isArray(boundary.wraps) || !boundary.wraps.length)
+      throw new Error("A boundary needs members.");
     if (boundary.wraps.some((id) => !ids.has(id)))
       throw new Error(
         `Boundary ${boundary.label} references a missing component.`,
@@ -201,7 +238,8 @@ export function patchComponent(document, id, patch) {
   for (const key of Object.keys(patch)) {
     if (adapter?.patchNode?.(next, item, key, patch[key])) continue;
     if (adapter && key === "pos") {
-      if(!point(patch.pos))throw new Error('Coordinates must contain two finite numbers.');
+      if (!point(patch.pos))
+        throw new Error("Coordinates must contain two finite numbers.");
       adapter.move(next, item, patch.pos);
       continue;
     }
@@ -209,7 +247,8 @@ export function patchComponent(document, id, patch) {
       if (adapter.resizable === false)
         throw new Error("This diagram type does not support individual sizes.");
       if (
-        !point(patch.size) || !patch.size.every(
+        !point(patch.size) ||
+        !patch.size.every(
           (n, i) => Number.isFinite(n) && n >= adapter.minSize[i],
         )
       )
@@ -237,17 +276,25 @@ export function patchComponent(document, id, patch) {
   }
   if (item.pos && !point(item.pos))
     throw new Error("Coordinates must be finite numbers.");
-  if (item.size && (!point(item.size)||!item.size.every((n) => n > 0)))
+  if (item.size && (!point(item.size) || !item.size.every((n) => n > 0)))
     throw new Error("Size must contain positive numbers.");
   adapter?.validate(next);
-  if(item.yOffset!==undefined&&!Number.isFinite(item.yOffset))throw new Error('Offset must be finite.');
+  if (item.yOffset !== undefined && !Number.isFinite(item.yOffset))
+    throw new Error("Offset must be finite.");
   return next;
 }
 
 export function patchConnection(document, index, patch) {
-  if(patch.via!==undefined&&(!Array.isArray(patch.via)||!patch.via.every(point)))throw new Error('Waypoints need pairs of finite coordinates.');
-  if(patch.labelAt!==undefined&&!point(patch.labelAt))throw new Error('Label placement needs two finite coordinates.');
-  for(const key of ['labelDx','labelDy'])if(patch[key]!==undefined&&!Number.isFinite(patch[key]))throw new Error('Label offset must be finite.');
+  if (
+    patch.via !== undefined &&
+    (!Array.isArray(patch.via) || !patch.via.every(point))
+  )
+    throw new Error("Waypoints need pairs of finite coordinates.");
+  if (patch.labelAt !== undefined && !point(patch.labelAt))
+    throw new Error("Label placement needs two finite coordinates.");
+  for (const key of ["labelDx", "labelDy"])
+    if (patch[key] !== undefined && !Number.isFinite(patch[key]))
+      throw new Error("Label offset must be finite.");
   const next = clone(document);
   const item = connections(next)[index];
   if (!item) throw new Error("Unknown connection.");
@@ -277,20 +324,22 @@ export function patchConnection(document, index, patch) {
 
 export function moveComponents(document, positions) {
   if (document.diagram_type === "architecture") {
-    return {...document, components: document.components.map(c => {
-      const pos = positions.get(c.id);
-      if (!pos) return c;
-      if (!point(pos)) throw new Error("Coordinates must be finite numbers.");
-      return {...c, pos: pos.map(n => Math.round(n * 100) / 100)};
-    })};
+    return {
+      ...document,
+      components: document.components.map((c) => {
+        const pos = positions.get(c.id);
+        if (!pos) return c;
+        if (!point(pos)) throw new Error("Coordinates must be finite numbers.");
+        return { ...c, pos: pos.map((n) => Math.round(n * 100) / 100) };
+      }),
+    };
   }
   const next = clone(document);
   const adapter = adapterFor(document);
   for (const c of [...sourceNodes(next)]) {
     const pos = positions.get(c.id);
     if (pos) {
-      if (!point(pos))
-        throw new Error("Coordinates must be finite numbers.");
+      if (!point(pos)) throw new Error("Coordinates must be finite numbers.");
       if (adapter) adapter.move(next, c, pos);
       else c.pos = pos.map((n) => Math.round(n * 100) / 100);
     }

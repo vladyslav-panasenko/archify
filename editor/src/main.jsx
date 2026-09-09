@@ -46,7 +46,7 @@ import AutoLayoutPanel from "./AutoLayoutPanel.jsx";
 import TemplatesPanel from "./TemplatesPanel.jsx";
 import WorkspacePanel from "./WorkspacePanel.jsx";
 import ComparePanel from "./ComparePanel.jsx";
-import {layoutGhosts} from './layout-comparison.mjs';
+import { layoutGhosts } from "./layout-comparison.mjs";
 const JsonEditor = React.lazy(() => import("./JsonEditor.jsx"));
 import {
   adapterFor,
@@ -402,9 +402,9 @@ function App() {
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [canvasVersion, setCanvasVersion] = useState(0);
-  const [outlineOpen,setOutlineOpen]=useState(false);
-  const outlineToggle=useRef();
-  const [comparisonPreview,setComparisonPreview]=useState(null);
+  const [outlineOpen, setOutlineOpen] = useState(false);
+  const outlineToggle = useRef();
+  const [comparisonPreview, setComparisonPreview] = useState(null);
   const workspaceDrafts = useRef(new Map());
   const [sourceBase, setSourceBase] = useState(null),
     [conflict, setConflict] = useState(null);
@@ -442,7 +442,10 @@ function App() {
     dialog = useRef();
   const documentModel = draft || state?.present;
   const options = editingOptions(documentModel);
-  const presentText = useMemo(() => state ? serialize(state.present) : "", [state?.present]);
+  const presentText = useMemo(
+    () => (state ? serialize(state.present) : ""),
+    [state?.present],
+  );
   const dirty = Boolean(state && presentText !== saved);
   const rawDirty = Boolean(
     state && panel === "json" && jsonText !== presentText,
@@ -475,7 +478,12 @@ function App() {
   }, []);
   useEffect(() => {
     const before = (e) => {
-      if (hasUnsaved || [...workspaceDrafts.current.values()].some(c=>c.saved!==serialize(c.state.present)||c.rawText!==null)) {
+      if (
+        hasUnsaved ||
+        [...workspaceDrafts.current.values()].some(
+          (c) => c.saved !== serialize(c.state.present) || c.rawText !== null,
+        )
+      ) {
         e.preventDefault();
         e.returnValue = "";
       }
@@ -572,20 +580,64 @@ function App() {
     setCanvasVersion((version) => version + 1);
   }
   async function switchWorkspace(id) {
-    if(!id||id===session.workspaceId&&session.writable)return;
-    if(!session.writable&&hasUnsaved&&!window.confirm('Discard this imported draft and open a project diagram?'))return;
-    await act(async()=>{
-      if(session.workspaceId&&session.writable)workspaceDrafts.current.set(session.workspaceId,{session,state,saved,sourceBase,selection,edgeIndex,locked,panel,rawText:rawDirty?jsonText:null,recovery});
-      const cached=workspaceDrafts.current.get(id);
-      if(cached) {
-        load(cached.session);setState(cached.state);setSaved(cached.saved);setSourceBase(cached.sourceBase);setSelection(cached.selection);setEdgeIndex(cached.edgeIndex);setLocked(cached.locked);setPanel(cached.panel);setRecovery(cached.recovery);recoveredText.current=cached.rawText;setJsonText(cached.rawText??serialize(cached.state.present));
+    if (!id || (id === session.workspaceId && session.writable)) return;
+    if (
+      !session.writable &&
+      hasUnsaved &&
+      !window.confirm("Discard this imported draft and open a project diagram?")
+    )
+      return;
+    await act(async () => {
+      if (session.workspaceId && session.writable)
+        workspaceDrafts.current.set(session.workspaceId, {
+          session,
+          state,
+          saved,
+          sourceBase,
+          selection,
+          edgeIndex,
+          locked,
+          panel,
+          rawText: rawDirty ? jsonText : null,
+          recovery,
+        });
+      const cached = workspaceDrafts.current.get(id);
+      if (cached) {
+        load(cached.session);
+        setState(cached.state);
+        setSaved(cached.saved);
+        setSourceBase(cached.sourceBase);
+        setSelection(cached.selection);
+        setEdgeIndex(cached.edgeIndex);
+        setLocked(cached.locked);
+        setPanel(cached.panel);
+        setRecovery(cached.recovery);
+        recoveredText.current = cached.rawText;
+        setJsonText(cached.rawText ?? serialize(cached.state.present));
         workspaceDrafts.current.delete(id);
       } else {
-        const response=await fetch(`/api/document?id=${encodeURIComponent(id)}`);const data=await response.json();if(!response.ok)throw new Error(data.error);
-        load(data);setPanel('inspector');setRecovery(null);
-        try{const stored=JSON.parse(localStorage.getItem(`archify-draft:${data.recoveryKey}`)||'null');if(stored?.version===1&&stored.document)setRecovery(stored);}catch{setNotice('Recovery data could not be read.');}
+        const response = await fetch(
+          `/api/document?id=${encodeURIComponent(id)}`,
+        );
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error);
+        load(data);
+        setPanel("inspector");
+        setRecovery(null);
+        try {
+          const stored = JSON.parse(
+            localStorage.getItem(`archify-draft:${data.recoveryKey}`) || "null",
+          );
+          if (stored?.version === 1 && stored.document) setRecovery(stored);
+        } catch {
+          setNotice("Recovery data could not be read.");
+        }
       }
-      setCreation(null);setDrawConnections(false);setNotice('Project diagram opened. Other file drafts remain in this session.');
+      setCreation(null);
+      setDrawConnections(false);
+      setNotice(
+        "Project diagram opened. Other file drafts remain in this session.",
+      );
     });
   }
   function change(next) {
@@ -601,14 +653,17 @@ function App() {
     setNotice("Layout updated.");
   }
   async function request(endpoint, document, method = "POST") {
-    const response = await fetch(`/api/${endpoint}${session.workspaceId?`?id=${encodeURIComponent(session.workspaceId)}`:''}`, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        "X-Editor-Token": session.token,
+    const response = await fetch(
+      `/api/${endpoint}${session.workspaceId ? `?id=${encodeURIComponent(session.workspaceId)}` : ""}`,
+      {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Editor-Token": session.token,
+        },
+        body: JSON.stringify({ document, revision: session.revision }),
       },
-      body: JSON.stringify({ document, revision: session.revision }),
-    });
+    );
     if (!response.ok) {
       const data = await response.json();
       throw Object.assign(new Error(data.error), {
@@ -632,8 +687,11 @@ function App() {
   }
   async function validateCandidate(next) {
     setBusy(true);
-    try { return await request('validate',next); }
-    finally { setBusy(false); }
+    try {
+      return await request("validate", next);
+    } finally {
+      setBusy(false);
+    }
   }
   async function saveJson(direct = false) {
     if (rawDirty) {
@@ -684,7 +742,9 @@ function App() {
     });
   }
   async function compareSource(local = state.present) {
-    const response = await fetch(`/api/document${session.workspaceId?`?id=${encodeURIComponent(session.workspaceId)}`:''}`);
+    const response = await fetch(
+      `/api/document${session.workspaceId ? `?id=${encodeURIComponent(session.workspaceId)}` : ""}`,
+    );
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
     setConflict({
@@ -909,24 +969,39 @@ function App() {
         type: "connection",
         selected: index === edgeIndex,
         markerEnd: { type: "arrowclosed", color: "#82929c" },
-        ariaLabel: `Connection ${e.from} to ${e.to}${e.label?`, ${e.label}`:''}`,
+        ariaLabel: `Connection ${e.from} to ${e.to}${e.label ? `, ${e.label}` : ""}`,
       })),
     [documentModel, edgeIndex],
   );
   // Overlap diagnostics describe committed edits; dragging must not run the
   // quadratic all-pairs check on every pointer event.
-  const warnings = useMemo(() => state ? layoutWarnings(state.present) : [], [state?.present]);
+  const warnings = useMemo(
+    () => (state ? layoutWarnings(state.present) : []),
+    [state?.present],
+  );
   const selected = items.find((c) => c.id === selection[0]),
     edge = connections(documentModel)[edgeIndex];
 
   function onKeys(event) {
     if (dialog.current?.open) return;
-    if(event.key==='Escape'&&outlineOpen){setOutlineOpen(false);outlineToggle.current?.focus();return;}
+    if (event.key === "Escape" && outlineOpen) {
+      setOutlineOpen(false);
+      outlineToggle.current?.focus();
+      return;
+    }
     const editingText = event.target.closest(
       "input,textarea,select,[contenteditable]",
     );
-    const focusedEdge=event.target.closest('.react-flow__edge');
-    if(!editingText&&focusedEdge&&['Enter',' '].includes(event.key)&&!busy){setEdgeIndex(Number(focusedEdge.getAttribute('data-id')?.slice(2)));setSelection([]);}
+    const focusedEdge = event.target.closest(".react-flow__edge");
+    if (
+      !editingText &&
+      focusedEdge &&
+      ["Enter", " "].includes(event.key) &&
+      !busy
+    ) {
+      setEdgeIndex(Number(focusedEdge.getAttribute("data-id")?.slice(2)));
+      setSelection([]);
+    }
     if (event.key === "Escape" && drawConnections) {
       cancelled.current = true;
       setDrawConnections(false);
@@ -939,10 +1014,10 @@ function App() {
       event.stopPropagation();
       return;
     }
-    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s') {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
       event.preventDefault();
-      if(rawDirty)setError('Apply or discard the JSON text before saving.');
-      else if(state&&!busy&&!draft)void saveJson(session.writable);
+      if (rawDirty) setError("Apply or discard the JSON text before saving.");
+      else if (state && !busy && !draft) void saveJson(session.writable);
       return;
     }
     if (
@@ -1035,9 +1110,35 @@ function App() {
       }}
     >
       <div className="app">
-        <a className="skip-link" href="#diagram-canvas">Skip to diagram canvas</a>
-        <a className="skip-link" href="#document-inspector">Skip to document inspector</a>
-        <div className="sr-only" aria-live="polite" aria-atomic="true" aria-label="Canvas selection">{selection.length>1?`${selection.length} components selected.`:selection.length?(()=>{const c=state?components(state.present).find(c=>c.id===selection[0]):null;return c?`${c.label} selected, position ${c.pos.join(', ')}${locked.includes(c.id)?', locked':''}.`:'';})():edge?`Connection ${edge.from} to ${edge.to} selected.`:'No items selected.'}</div>
+        <a className="skip-link" href="#diagram-canvas">
+          Skip to diagram canvas
+        </a>
+        <a className="skip-link" href="#document-inspector">
+          Skip to document inspector
+        </a>
+        <div
+          className="sr-only"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-label="Canvas selection"
+        >
+          {selection.length > 1
+            ? `${selection.length} components selected.`
+            : selection.length
+              ? (() => {
+                  const c = state
+                    ? components(state.present).find(
+                        (c) => c.id === selection[0],
+                      )
+                    : null;
+                  return c
+                    ? `${c.label} selected, position ${c.pos.join(", ")}${locked.includes(c.id) ? ", locked" : ""}.`
+                    : "";
+                })()
+              : edge
+                ? `Connection ${edge.from} to ${edge.to} selected.`
+                : "No items selected."}
+        </div>
         <header className="toolbar">
           <div className="brand">
             <span className="brand-mark" aria-hidden="true">
@@ -1058,7 +1159,15 @@ function App() {
             </span>
           </div>
           <nav aria-label="Document actions">
-            <button ref={outlineToggle} className="outline-toggle" aria-expanded={outlineOpen} aria-controls="component-outline" onClick={()=>setOutlineOpen(!outlineOpen)}>Components and files</button>
+            <button
+              ref={outlineToggle}
+              className="outline-toggle"
+              aria-expanded={outlineOpen}
+              aria-controls="component-outline"
+              onClick={() => setOutlineOpen(!outlineOpen)}
+            >
+              Components and files
+            </button>
             <button
               disabled={!session || busy || rawDirty || !!draft}
               onClick={() => setCreation("diagram")}
@@ -1204,8 +1313,25 @@ function App() {
           </div>
         )}
         <div className="workspace">
-          <aside id="component-outline" className={`outline ${outlineOpen?'open':''}`} aria-label="Components">
-            {session?.workspace&&<WorkspacePanel pendingCount={[...workspaceDrafts.current.values()].filter(c=>c.saved!==serialize(c.state.present)||c.rawText!==null).length} id={session.writable?session.workspaceId:null} disabled={busy||!!draft||!!conflict} onSwitch={switchWorkspace}/>}
+          <aside
+            id="component-outline"
+            className={`outline ${outlineOpen ? "open" : ""}`}
+            aria-label="Components"
+          >
+            {session?.workspace && (
+              <WorkspacePanel
+                pendingCount={
+                  [...workspaceDrafts.current.values()].filter(
+                    (c) =>
+                      c.saved !== serialize(c.state.present) ||
+                      c.rawText !== null,
+                  ).length
+                }
+                id={session.writable ? session.workspaceId : null}
+                disabled={busy || !!draft || !!conflict}
+                onSwitch={switchWorkspace}
+              />
+            )}
             <div className="section-heading">
               <h2>Components</h2>
               <span>{items.length}</span>
@@ -1232,11 +1358,20 @@ function App() {
                     aria-keyshortcuts="Shift+Enter"
                     title="Select component. Shift+Enter or Shift+click adds or removes it."
                     onClick={(event) => {
-                      setSelection(previous=>event.shiftKey?(previous.includes(c.id)?previous.filter(id=>id!==c.id):[...previous,c.id]):[c.id]);
+                      setSelection((previous) =>
+                        event.shiftKey
+                          ? previous.includes(c.id)
+                            ? previous.filter((id) => id !== c.id)
+                            : [...previous, c.id]
+                          : [c.id],
+                      );
                       setEdgeIndex(null);
                     }}
                   >
-                    <span className={`list-icon kind-${c.type}`} aria-hidden="true">
+                    <span
+                      className={`list-icon kind-${c.type}`}
+                      aria-hidden="true"
+                    >
                       {kinds[c.type]}
                     </span>
                     <span>
@@ -1251,7 +1386,7 @@ function App() {
               {connections(documentModel).map((connection, index) => (
                 <button
                   key={index}
-                  aria-pressed={edgeIndex===index}
+                  aria-pressed={edgeIndex === index}
                   onClick={() => {
                     setEdgeIndex(index);
                     setSelection([]);
@@ -1270,7 +1405,12 @@ function App() {
               </span>
             </div>
           </aside>
-          <main id="diagram-canvas" tabIndex={-1} className="canvas" aria-label="Diagram canvas">
+          <main
+            id="diagram-canvas"
+            tabIndex={-1}
+            className="canvas"
+            aria-label="Diagram canvas"
+          >
             <div className="canvas-heading">
               <div>
                 <h1>{documentModel?.meta?.title || "Archify diagram"}</h1>
@@ -1403,7 +1543,7 @@ function App() {
                   const selections = changes.filter(
                     (c) => c.type === "select" && c.id.startsWith("c:"),
                   );
-                  if(selections.some(c=>c.selected))setEdgeIndex(null);
+                  if (selections.some((c) => c.selected)) setEdgeIndex(null);
                   if (selections.length)
                     setSelection((previous) => {
                       const ids = new Set(previous);
@@ -1519,7 +1659,24 @@ function App() {
                 <Background gap={20} size={1} color="#cdd7dc" />
                 <Controls showInteractive={false} />
                 <ViewportPortal>
-                  {comparisonPreview?.base===state.present&&layoutGhosts(state.present,comparisonPreview.document).map(c=><div aria-hidden="true" key={`ghost:${c.id}`} className="comparison-ghost" style={{left:c.pos[0],top:c.pos[1],width:c.size[0],height:c.size[1]}}>{c.label}</div>)}
+                  {comparisonPreview?.base === state.present &&
+                    layoutGhosts(state.present, comparisonPreview.document).map(
+                      (c) => (
+                        <div
+                          aria-hidden="true"
+                          key={`ghost:${c.id}`}
+                          className="comparison-ghost"
+                          style={{
+                            left: c.pos[0],
+                            top: c.pos[1],
+                            width: c.size[0],
+                            height: c.size[1],
+                          }}
+                        >
+                          {c.label}
+                        </div>
+                      ),
+                    )}
                   <div className="snap-guides" aria-hidden="true">
                     {guides.map((g, i) => (
                       <div
@@ -1539,7 +1696,12 @@ function App() {
               Arrow keys to nudge
             </div>
           </main>
-          <aside id="document-inspector" tabIndex={-1} className="inspector" aria-label="Document inspector">
+          <aside
+            id="document-inspector"
+            tabIndex={-1}
+            className="inspector"
+            aria-label="Document inspector"
+          >
             {documentModel?.diagram_type === "architecture" && (
               <label className="connection-mode">
                 <input
@@ -1694,11 +1856,46 @@ function App() {
                 </div>
               </form>
             ) : panel === "compare" ? (
-              <fieldset disabled={busy||!!draft}><ComparePanel key={`${presentText}:${locked.join(',')}`} document={state.present} locked={locked} onValidate={validateCandidate} onApply={change} onPreview={next=>setComparisonPreview(next?{base:state.present,document:next}:null)}/></fieldset>
+              <fieldset disabled={busy || !!draft}>
+                <ComparePanel
+                  key={`${presentText}:${locked.join(",")}`}
+                  document={state.present}
+                  locked={locked}
+                  onValidate={validateCandidate}
+                  onApply={change}
+                  onPreview={(next) =>
+                    setComparisonPreview(
+                      next ? { base: state.present, document: next } : null,
+                    )
+                  }
+                />
+              </fieldset>
             ) : panel === "templates" ? (
-              <fieldset disabled={busy || !!draft}><TemplatesPanel document={state.present} selection={selection} onValidate={validateCandidate} onInsert={result=>{change(result.document);setSelection(result.ids);setEdgeIndex(null);}} onExport={(value,name)=>download(serialize(value),name,'application/json')}/></fieldset>
+              <fieldset disabled={busy || !!draft}>
+                <TemplatesPanel
+                  document={state.present}
+                  selection={selection}
+                  onValidate={validateCandidate}
+                  onInsert={(result) => {
+                    change(result.document);
+                    setSelection(result.ids);
+                    setEdgeIndex(null);
+                  }}
+                  onExport={(value, name) =>
+                    download(serialize(value), name, "application/json")
+                  }
+                />
+              </fieldset>
             ) : panel === "layout" ? (
-              <fieldset disabled={busy || !!draft}><AutoLayoutPanel key={`${presentText}:${selection.join(',')}:${locked.join(',')}`} document={state.present} selection={selection} locked={locked} onApply={change}/></fieldset>
+              <fieldset disabled={busy || !!draft}>
+                <AutoLayoutPanel
+                  key={`${presentText}:${selection.join(",")}:${locked.join(",")}`}
+                  document={state.present}
+                  selection={selection}
+                  locked={locked}
+                  onApply={change}
+                />
+              </fieldset>
             ) : panel === "checkpoints" ? (
               <fieldset disabled={busy || !!draft}>
                 <CheckpointsPanel
@@ -1801,37 +1998,74 @@ function App() {
                 />
               </fieldset>
             ) : panel === "json" ? (
-              <React.Suspense fallback={<p>Loading JSON editor…</p>}><JsonEditor busy={busy} text={jsonText} onChange={setJsonText} selectedPath={selection.length?`/${nodeKey(state.present)}/${sourceNodes(state.present).findIndex(c=>c.id===selection[0])}`:edgeIndex!==null?`/${edgeKey(state.present)}/${edgeIndex}`:''} onFocus={(path,value)=>{
-                const [,collection,index]=path.split('/');const item=value[collection]?.[Number(index)];
-                if(collection===nodeKey(state.present)&&sourceNodes(state.present).some(c=>c.id===item?.id)){setSelection([item.id]);setEdgeIndex(null);flow.current?.fitView({nodes:[{id:`c:${item.id}`}],padding:0.5,maxZoom:1.5});}
-                else if(collection===edgeKey(state.present)){const i=item?.id?connections(state.present).findIndex(e=>e.id===item.id):-1;if(i>=0){setEdgeIndex(i);setSelection([]);}}
-              }}>                <div className="button-row">
-                  <button
-                    disabled={!rawDirty || busy}
-                    onClick={() => setJsonText(serialize(state.present))}
-                  >
-                    Discard text
-                  </button>
-                  <button
-                    className="primary"
-                    disabled={!rawDirty || busy}
-                    onClick={() =>
-                      act(async () => {
-                        const next = JSON.parse(jsonText);
-                        assertDocument(next);
-                        await request("validate", next);
-                        setState((s) => commit(s, next));
-                        setJsonText(serialize(next));
+              <React.Suspense fallback={<p>Loading JSON editor…</p>}>
+                <JsonEditor
+                  busy={busy}
+                  text={jsonText}
+                  onChange={setJsonText}
+                  selectedPath={
+                    selection.length
+                      ? `/${nodeKey(state.present)}/${sourceNodes(state.present).findIndex((c) => c.id === selection[0])}`
+                      : edgeIndex !== null
+                        ? `/${edgeKey(state.present)}/${edgeIndex}`
+                        : ""
+                  }
+                  onFocus={(path, value) => {
+                    const [, collection, index] = path.split("/");
+                    const item = value[collection]?.[Number(index)];
+                    if (
+                      collection === nodeKey(state.present) &&
+                      sourceNodes(state.present).some((c) => c.id === item?.id)
+                    ) {
+                      setSelection([item.id]);
+                      setEdgeIndex(null);
+                      flow.current?.fitView({
+                        nodes: [{ id: `c:${item.id}` }],
+                        padding: 0.5,
+                        maxZoom: 1.5,
+                      });
+                    } else if (collection === edgeKey(state.present)) {
+                      const i = item?.id
+                        ? connections(state.present).findIndex(
+                            (e) => e.id === item.id,
+                          )
+                        : -1;
+                      if (i >= 0) {
+                        setEdgeIndex(i);
                         setSelection([]);
-                        setEdgeIndex(null);
-                        setNotice("JSON applied.");
-                      })
+                      }
                     }
-                  >
-                    Apply JSON
-                  </button>
-                </div>
-              </JsonEditor></React.Suspense>
+                  }}
+                >
+                  {" "}
+                  <div className="button-row">
+                    <button
+                      disabled={!rawDirty || busy}
+                      onClick={() => setJsonText(serialize(state.present))}
+                    >
+                      Discard text
+                    </button>
+                    <button
+                      className="primary"
+                      disabled={!rawDirty || busy}
+                      onClick={() =>
+                        act(async () => {
+                          const next = JSON.parse(jsonText);
+                          assertDocument(next);
+                          await request("validate", next);
+                          setState((s) => commit(s, next));
+                          setJsonText(serialize(next));
+                          setSelection([]);
+                          setEdgeIndex(null);
+                          setNotice("JSON applied.");
+                        })
+                      }
+                    >
+                      Apply JSON
+                    </button>
+                  </div>
+                </JsonEditor>
+              </React.Suspense>
             ) : (
               <div className="properties">
                 {selected ? (
@@ -2505,6 +2739,3 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
-
-
-

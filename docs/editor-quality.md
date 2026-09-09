@@ -25,3 +25,6 @@ Local Playwright checks cover keyboard multiselection and nudging, undo, skip li
 
 Integration checks also caught an Apply race: JSON text is now disabled during validation, and template/comparison validation temporarily disables canvas edits. Connection-handle geometry remains at its tested dimensions after a larger-handle experiment broke reconnection; endpoint forms provide the accessible alternative.
 
+## Final integration verification
+
+On 2026-09-09, all 43 Node tests and 45 Playwright browser tests passed, and the Vite production build completed. The browser suite exercises all five renderers, undo/recovery, pointer gestures, structural editing, source conflicts, templates, JSON editing, layout previews and workspace switching. Desktop and narrow screenshots were inspected. The stable React/React Flow runtime is split from the editor code; JSON validators load only when the JSON panel opens. No new runtime dependencies were added.
