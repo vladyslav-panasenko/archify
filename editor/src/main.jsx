@@ -43,6 +43,7 @@ import {
 } from "./document.mjs";
 import "./style.css";
 import AutoLayoutPanel from "./AutoLayoutPanel.jsx";
+import TemplatesPanel from "./TemplatesPanel.jsx";
 import {
   adapterFor,
   editingOptions,
@@ -1513,6 +1514,7 @@ function App() {
                 review: "Review",
                 checkpoints: "Checkpoints",
                 layout: "Auto-arrange",
+                templates: "Templates",
               }).map(([key, label]) => (
                 <button
                   key={key}
@@ -1643,6 +1645,8 @@ function App() {
                   </button>
                 </div>
               </form>
+            ) : panel === "templates" ? (
+              <fieldset disabled={busy || !!draft}><TemplatesPanel document={state.present} selection={selection} onValidate={next=>request('validate',next)} onInsert={result=>{change(result.document);setSelection(result.ids);setEdgeIndex(null);}} onExport={(value,name)=>download(serialize(value),name,'application/json')}/></fieldset>
             ) : panel === "layout" ? (
               <fieldset disabled={busy || !!draft}><AutoLayoutPanel key={`${presentText}:${selection.join(',')}:${locked.join(',')}`} document={state.present} selection={selection} locked={locked} onApply={change}/></fieldset>
             ) : panel === "checkpoints" ? (

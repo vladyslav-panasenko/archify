@@ -102,3 +102,5 @@ npm run test:browser
 Tests cover all five adapters and renderers, JSON preservation, grid overrides, history, scoped saving, conflicts, recovery, compiler diagnostics, actual browser dragging/resizing, label/waypoint edits, download/reopen, keyboard movement and invalid input. React Flow's MIT core is used; no Pro example code is included.
 
 Auto-arrange: select architecture components, open Auto-arrange and preview the grid. Locked/unselected components act as obstacles. Apply creates one undo step; Cancel keeps the document. Authored connection routing remains unchanged.
+
+Templates: select architecture components and use Templates to save a named fragment, including internal connections. Import/export template JSON, rename or delete entries, and insert with fresh IDs. Templates use browser storage (20 entries / 2 MB); export important fragments. Inserts are validated and undoable.
