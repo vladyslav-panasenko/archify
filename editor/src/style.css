@@ -925,3 +925,25 @@ legend {
 .comparison-ghost { position: absolute; border: 2px dashed #a54608; color: #713504; background: #fff1cebb; pointer-events: none; padding: 5px; font-size: 12px; overflow: hidden; }
 .comparison-choice { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
 .comparison-choice small { display: block; color: #526570; }
+
+/* Keyboard and narrow-screen access retain the same editor structure. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.skip-link { position: fixed; left: 12px; top: -100px; z-index: 100; background: white; color: #075c54; padding: 12px; }
+.skip-link:focus { top: 12px; }
+:focus-visible { outline: 2px solid #075c54; outline-offset: 2px; }
+.toolbar :focus-visible { outline-color: #a1efe1; }
+button, summary { min-height: 32px; }
+button { overflow-wrap: anywhere; }
+.field, .muted, .eyebrow, .tabs button, .status, .canvas-heading p, .canvas-help, .outline-foot, .component-list small, .section-heading span, .json-panel p { color: #526570; }
+.boundary span { color: #526570; }
+.tabs button.active { color: #075c54; }
+.comparison-choice, .member-choice { min-height: 36px; }
+.waypoint { min-height: 24px; min-width: 24px; }
+.outline-toggle { display: none; }
+.workspace { position: relative; }
+.button-row { flex-wrap: wrap; }
+.inspector button { white-space: normal; max-width: 100%; }
+@media (max-width: 800px) {
+  .outline-toggle { display: inline-block; }
+  .outline.open { display: flex; position: absolute; z-index: 30; left: 0; top: 0; bottom: 0; width: min(280px, 90%); border-right: 2px solid #526570; box-shadow: 4px 0 14px #26364033; }
+}
