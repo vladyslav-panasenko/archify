@@ -44,6 +44,7 @@ import {
 import "./style.css";
 import AutoLayoutPanel from "./AutoLayoutPanel.jsx";
 import TemplatesPanel from "./TemplatesPanel.jsx";
+const JsonEditor = React.lazy(() => import("./JsonEditor.jsx"));
 import {
   adapterFor,
   editingOptions,
@@ -1751,15 +1752,11 @@ function App() {
                 />
               </fieldset>
             ) : panel === "json" ? (
-              <div className="json-panel">
-                <p>Edit the source, then apply it to the canvas.</p>
-                <textarea
-                  aria-label="Diagram JSON"
-                  spellCheck="false"
-                  value={jsonText}
-                  onChange={(e) => setJsonText(e.target.value)}
-                />
-                <div className="button-row">
+              <React.Suspense fallback={<p>Loading JSON editor…</p>}><JsonEditor text={jsonText} onChange={setJsonText} selectedPath={selection.length?`/${nodeKey(state.present)}/${sourceNodes(state.present).findIndex(c=>c.id===selection[0])}`:edgeIndex!==null?`/${edgeKey(state.present)}/${edgeIndex}`:''} onFocus={(path,value)=>{
+                const [,collection,index]=path.split('/');const item=value[collection]?.[Number(index)];
+                if(collection===nodeKey(state.present)&&sourceNodes(state.present).some(c=>c.id===item?.id)){setSelection([item.id]);setEdgeIndex(null);flow.current?.fitView({nodes:[{id:`c:${item.id}`}],padding:0.5,maxZoom:1.5});}
+                else if(collection===edgeKey(state.present)){const i=item?.id?connections(state.present).findIndex(e=>e.id===item.id):-1;if(i>=0){setEdgeIndex(i);setSelection([]);}}
+              }}>                <div className="button-row">
                   <button
                     disabled={!rawDirty || busy}
                     onClick={() => setJsonText(serialize(state.present))}
@@ -1785,7 +1782,7 @@ function App() {
                     Apply JSON
                   </button>
                 </div>
-              </div>
+              </JsonEditor></React.Suspense>
             ) : (
               <div className="properties">
                 {selected ? (
@@ -2458,3 +2455,4 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+

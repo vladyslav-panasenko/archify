@@ -916,3 +916,7 @@ legend {
 .inspector .tabs button {
   padding: 8px 2px;
 }
+
+.json-panel { overflow: auto; }
+.json-issues { max-height: 140px; overflow: auto; flex-shrink: 0; }
+.json-issues button { display: block; width: 100%; text-align: left; margin-bottom: 4px; overflow-wrap: anywhere; }

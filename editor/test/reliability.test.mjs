@@ -6,6 +6,16 @@ import {validate} from '../server.mjs';
 import {saveTemplate,renameTemplate,importTemplate,exportTemplate,checkTemplates} from '../src/templates.mjs';
 import {pasteSelection} from '../src/clipboard.mjs';
 import {newDocument} from '../src/document.mjs';
+import {inspectJson,sourceIndex,suggestions,insertSuggestion,pathAt} from '../src/json-source.mjs';
+
+test('JSON indexing handles escaped strings, schema refs and located diagnostics',()=>{
+ const text=JSON.stringify({...newDocument(),meta:{title:'Escaped " { } / ~ \\ text'}},null,2),index=inspectJson(text);
+ assert.equal(index.issues.length,0);assert.equal(pathAt(index.ranges,text.indexOf('backend')),'/components/0/type');
+ const opts=suggestions(index,'/components/0/type');assert.ok(opts.some(o=>o.value==='database'));
+ const next=insertSuggestion(text,index,'/components/0/type',opts.find(o=>o.value==='database'));assert.equal(JSON.parse(next).components[0].type,'database');
+ const meta=suggestions(index,'/meta');const inserted=insertSuggestion(text,index,'/meta',meta.find(o=>o.key==='subtitle'));assert.equal(JSON.parse(inserted).meta.subtitle,'');
+ const invalid=inspectJson(text.replace('backend','invalid'));assert.ok(invalid.issues.some(i=>i.path==='/components/0/type'&&i.line>1));assert.ok(inspectJson('{').issues.length);assert.throws(()=>sourceIndex('{'));
+});
 
 test('templates round trip, remap IDs and enforce bounds without evicting entries',()=>{
  const doc=newDocument();doc.components.push({...doc.components[0],id:'second',pos:[300,120]});doc.connections=[{id:'e',from:'component-1',to:'second'}];

@@ -6,6 +6,13 @@ import sequence from "../../archify/schemas/sequence.schema.json" with { type: "
 import common from "../../archify/schemas/common.schema.json" with { type: "json" };
 import { clone } from "./document.mjs";
 const schemas = { architecture, workflow, dataflow, lifecycle, sequence };
+export function schemaFor(type) { return schemas[type]; }
+export function resolveSchema(spec, root) {
+  if(!spec?.$ref)return spec || {};
+  const [file,pointer]=spec.$ref.split('#');
+  const base=file==='common.schema.json'?common:root;
+  return pointer?.split('/').slice(1).reduce((node,key)=>node?.[key.replace(/~1/g,'/').replace(/~0/g,'~')],base)||{};
+}
 export function settingFields(type) {
   const properties = schemas[type].properties.meta.properties;
   return [

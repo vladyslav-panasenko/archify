@@ -104,3 +104,5 @@ Tests cover all five adapters and renderers, JSON preservation, grid overrides, 
 Auto-arrange: select architecture components, open Auto-arrange and preview the grid. Locked/unselected components act as obstacles. Apply creates one undo step; Cancel keeps the document. Authored connection routing remains unchanged.
 
 Templates: select architecture components and use Templates to save a named fragment, including internal connections. Import/export template JSON, rename or delete entries, and insert with fresh IDs. Templates use browser storage (20 entries / 2 MB); export important fragments. Inserts are validated and undoable.
+
+JSON editor: place the caret on an object to suggest missing fields, or on an enum/boolean value to suggest allowed values. Insert suggestion changes only unapplied text. Validation errors link to their source line. Locate canvas selection jumps to JSON; Focus item on canvas follows stable IDs back to the diagram. Apply checks schema and references. The schema editor loads on demand.
