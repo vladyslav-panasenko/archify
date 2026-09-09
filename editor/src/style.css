@@ -1077,3 +1077,4 @@ button {
     box-shadow: 4px 0 14px #26364033;
   }
 }
+.history-list {list-style:none; padding:0; display:grid; gap:6px;} .history-list button {width:100%; text-align:left; display:flex; flex-direction:column; gap:4px;} .history-list small {color:var(--muted);} .history-list [aria-current] {border-color:var(--accent); opacity:1;}

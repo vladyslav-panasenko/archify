@@ -86,6 +86,8 @@ import SettingsPanel from "./SettingsPanel.jsx";
 import SearchPanel from "./SearchPanel.jsx";
 import ReviewPanel from "./ReviewPanel.jsx";
 import ConflictPanel from "./ConflictPanel.jsx";
+import HistoryPanel from './HistoryPanel.jsx';
+import {jumpHistory} from './history-labels.mjs';
 import CheckpointsPanel from "./CheckpointsPanel.jsx";
 
 const sides = {
@@ -1925,6 +1927,8 @@ function App() {
                   onApply={next=>{change(next);setLayoutPreview(null);}}
                 />
               </fieldset>
+            ) : panel === 'history' ? (
+              <HistoryPanel state={state} disabled={busy || rawDirty || !!draft} onJump={index=>{if(busy||rawDirty||draft)return;setState(current=>jumpHistory(current,index));setSelection([]);setEdgeIndex(null);setNotice('History state restored.');}} />
             ) : panel === "checkpoints" ? (
               <fieldset disabled={busy || !!draft}>
                 <CheckpointsPanel
@@ -2769,4 +2773,5 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+
 

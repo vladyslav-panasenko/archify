@@ -24,3 +24,7 @@ test('full canvas arrangement preview is cancellable and guards authoring',async
 
 
 
+
+test('readable history jumps backward and forward and a new edit clears future states',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Users users',exact:true}).click();await page.getByLabel('X',{exact:true}).fill('60');await page.getByLabel('X',{exact:true}).press('Tab');await page.getByLabel('X',{exact:true}).fill('80');await page.getByLabel('X',{exact:true}).press('Tab');await page.getByRole('button',{name:'History',exact:true}).click();await page.getByRole('button',{name:'0. Initial retained state Past',exact:true}).click();await expect(page.getByRole('button',{name:'Redo',exact:true})).toBeEnabled();await page.getByRole('button',{name:'2. Move 1 item Future',exact:true}).click();await expect(page.getByRole('button',{name:'Redo',exact:true})).toBeDisabled();await page.screenshot({path:'test-results/history-panel.png'});await page.getByRole('button',{name:'Properties',exact:true}).click();await page.getByRole('button',{name:'Users users',exact:true}).click();await expect(page.getByLabel('X',{exact:true})).toHaveValue('80');await page.keyboard.press('Control+z');await expect(page.getByLabel('X',{exact:true})).toHaveValue('60');await page.getByLabel('X',{exact:true}).fill('70');await page.getByLabel('X',{exact:true}).press('Tab');await expect(page.getByRole('button',{name:'Redo',exact:true})).toBeDisabled();
+});

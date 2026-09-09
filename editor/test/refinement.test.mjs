@@ -24,3 +24,10 @@ test('directed layout follows edges, changes direction and preserves cycles and 
  doc.connections.push({from:'c',to:'a'});assert.deepEqual(autoLayout(doc,ids,[],{mode:'directed'}),autoLayout(doc,[...ids].reverse(),[],{mode:'directed'}));assert.deepEqual(autoLayout(doc,ids,['b'],{mode:'directed'}).components[1],doc.components[1]);assert.throws(()=>autoLayout(doc,ids,[],{gap:-1}));
 });
 
+
+import {describeEdit,historyEntries,jumpHistory} from '../src/history-labels.mjs';
+import {history,commit} from '../src/document.mjs';
+test('history describes edits and preserves redo across bounded jumps',()=>{
+ const first=diagram();let state=history(first);const moved=structuredClone(first);moved.components[0].pos=[50,90];moved.components[1].pos=[200,90];assert.equal(describeEdit(first,moved),'Move 2 items');state=commit(state,moved);const routed=structuredClone(moved);routed.connections[0].via=[[10,10],[100,10]];state=commit(state,routed);assert.equal(historyEntries(state)[2].label,'Edit 1 connection route');const back=jumpHistory(state,0);assert.equal(back.present,first);assert.equal(back.future.length,2);assert.deepEqual(jumpHistory(back,2),state);assert.equal(commit(state,structuredClone(routed)),state);assert.equal(commit(back,moved).future.length,0);assert.throws(()=>jumpHistory(state,3));
+ for(let i=0;i<110;i++){const next=structuredClone(state.present);next.meta.title=String(i);state=commit(state,next);}assert.equal(state.past.length,100);assert.equal(historyEntries(state).length,101);assert.deepEqual(jumpHistory(jumpHistory(state,0),100),state);
+});
