@@ -51,6 +51,8 @@ import { layoutGhosts } from "./layout-comparison.mjs";
 import {routeSegments,moveSegment} from './segments.mjs';
 import {compilerProblems} from './problems.mjs';
 import ProblemsPanel from './ProblemsPanel.jsx';
+import EditorNavigation,{panelLabels} from './EditorNavigation.jsx';
+import CommandMenu from './CommandMenu.jsx';
 const JsonEditor = React.lazy(() => import("./JsonEditor.jsx"));
 import {
   adapterFor,
@@ -402,6 +404,7 @@ function App() {
   const [measurements, setMeasurements] = useState({});
   const [diagnostics, setDiagnostics] = useState([]);
   const [compilerReport,setCompilerReport]=useState(null),[activeProblemKey,setActiveProblemKey]=useState(null);
+  const [commandOpen,setCommandOpen]=useState(false);
   const [creation, setCreation] = useState(null);
   const [recovery, setRecovery] = useState(null);
   const recoveredText = useRef(null);
@@ -998,8 +1001,26 @@ function App() {
   const selected = items.find((c) => c.id === selection[0]),
     edge = connections(documentModel)[edgeIndex];
 
+  const panelDisabled=key=>!state||busy||!!draft||(rawDirty&&!['json','inspector'].includes(key));
+  function openPanel(key) {
+    if(panelDisabled(key))return;
+    if(rawDirty&&key==='inspector'&&!window.confirm('Discard unapplied JSON text changes?'))return;
+    if(key==='inspector')setJsonText(serialize(state.present));
+    setCreation(null);setPanel(key);
+  }
+  const commands=[
+    ...Object.entries(panelLabels).map(([key,label])=>({id:`panel:${key}`,label:`Open ${label}`,group:'Panels',disabled:panelDisabled(key),run:()=>openPanel(key)})),
+    {id:'undo',label:'Undo edit',shortcut:'Ctrl/Cmd+Z',disabled:!state?.past.length||busy||rawDirty||!!draft,run:()=>setState(undo)},
+    {id:'redo',label:'Redo edit',shortcut:'Ctrl/Cmd+Shift+Z',disabled:!state?.future.length||busy||rawDirty||!!draft,run:()=>setState(redo)},
+    {id:'save',label:session?.writable?'Save file':'Download JSON',shortcut:'Ctrl/Cmd+S',disabled:!state||busy||rawDirty||!!draft,run:()=>saveJson(session.writable)},
+    {id:'check',label:'Check diagram',disabled:!state||busy||rawDirty||!!draft,run:()=>act(async()=>{await request('render',state.present);setNotice('Archify validation passed.');})},
+    {id:'fit',label:'Fit diagram',disabled:!state,run:()=>flow.current?.fitView({padding:0.2})},
+    {id:'new',label:'New diagram',disabled:!state||busy||rawDirty||!!draft,run:()=>setCreation('diagram')},
+  ];
   function onKeys(event) {
     if (dialog.current?.open) return;
+    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();setCommandOpen(value=>!value);return;}
+    if(commandOpen)return;
     if(event.key==='Escape'&&layoutPreview){setLayoutPreview(null);return;}
     if (event.key === "Escape" && outlineOpen) {
       setOutlineOpen(false);
@@ -1176,6 +1197,7 @@ function App() {
             </span>
           </div>
           <nav aria-label="Document actions">
+            <button aria-keyshortcuts="Control+k Meta+k" onClick={()=>setCommandOpen(true)}>Commands</button>
             <button
               ref={outlineToggle}
               className="outline-toggle"
@@ -1732,47 +1754,7 @@ function App() {
                 Draw / reconnect connections
               </label>
             )}
-            <div className="tabs" aria-label="Inspector sections">
-              {Object.entries({
-                inspector: "Properties",
-                json: "JSON",
-                structure: "Structure",
-                settings: "Settings",
-                search: "Search",
-                review: "Review",
-                checkpoints: "Checkpoints",
-                layout: "Auto-arrange",
-                templates: "Templates",
-                compare: "Compare layout",
-                problems: "Problems",
-              }).map(([key, label]) => (
-                <button
-                  key={key}
-                  className={panel === key ? "active" : ""}
-                  aria-pressed={panel === key}
-                  disabled={
-                    !state ||
-                    busy ||
-                    !!draft ||
-                    (rawDirty && !["json", "inspector"].includes(key))
-                  }
-                  onClick={() => {
-                    if (
-                      rawDirty &&
-                      key === "inspector" &&
-                      !window.confirm("Discard unapplied JSON text changes?")
-                    )
-                      return;
-                    if (key === "inspector")
-                      setJsonText(serialize(state.present));
-                    setCreation(null);
-                    setPanel(key);
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <EditorNavigation panel={panel} disabled={panelDisabled} onSelect={openPanel}/>
             {creation ? (
               <form
                 className="properties"
@@ -2711,6 +2693,7 @@ function App() {
             </button>
           </div>
         )}
+        {commandOpen&&<CommandMenu commands={commands} onClose={()=>setCommandOpen(false)}/>}
         <footer className="status" role="status">
           <span>{notice}</span>
           <span>
@@ -2763,3 +2746,4 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+

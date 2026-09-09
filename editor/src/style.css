@@ -13,6 +13,18 @@
 .problem-item { padding: 12px 0; border-bottom: 1px solid #dbe2e6; }
 .problem-item button { text-align: left; }
 .problem-item small { display: block; color: #526570; }
+.editor-navigation { flex-shrink: 0; border-bottom: 1px solid #dbe2e6; }
+.editor-navigation summary { padding: 8px 14px; cursor: pointer; font-weight: 600; }
+.editor-navigation .tabs { display: block; max-height: 195px; overflow: auto; border: 0; padding-bottom: 6px; }
+.panel-group > span { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #526570; }
+.panel-group > div { display: flex; flex-wrap: wrap; gap: 0 10px; }
+.command-menu { width: min(540px,calc(100% - 24px)); max-height: 80vh; margin: auto; border: 1px solid #8ca5ae; border-radius: 6px; padding: 20px; color: #263640; }
+.command-menu::backdrop { background: #172c3b88; }
+.command-heading { display: flex; justify-content: space-between; gap: 15px; align-items: center; margin-bottom: 14px; }
+.command-results { display: grid; gap: 5px; max-height: 45vh; overflow: auto; margin-top: 14px; }
+.command-results button { text-align: left; white-space: normal; }
+.command-results small { display: block; color: #526570; }
+.command-results [aria-current=true] { border-color: #075c54; background: #e2f2ee; }
 .canvas-drag-point {
   position: absolute;
   pointer-events: all;

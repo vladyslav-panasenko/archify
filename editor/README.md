@@ -120,3 +120,5 @@ Directed layout: choose Follow connections, left-to-right or top-to-bottom, and 
 Route segments: select an architecture connection with at least two authored waypoints. Midpoint arrow handles move horizontal/vertical segments perpendicular to their direction. Both waypoints move together; endpoints and labels are preserved. Arrow keys (Shift for ten units), Escape and undo work as for other handles. Automatic routes, diagonal spans and endpoint-to-waypoint spans retain their existing editing controls.
 
 Problems: local overlaps and bounds checks update after committed edits. Run compiler checks for routing and labels. Click a problem or use Previous/Next to select and highlight affected components. Compiler results are marked stale after edits; unmapped diagnostics offer a JSON shortcut. No corrections are applied automatically.
+
+Navigation: inspector tools are grouped into Edit, Inspect and Document. Collapse Tools to reclaim panel space. Commands (Ctrl/Cmd+K) searches panels and common actions; Arrow keys and Enter select, Escape restores focus, and unavailable actions stay disabled. Existing shortcuts continue to work.
