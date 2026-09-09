@@ -106,7 +106,7 @@ test("auto-arrangement previews, cancels and applies one undoable edit", async (
   await page.getByRole("button", { name: "Auto-arrange", exact: true }).click();
   await page.getByRole("button", { name: "Preview arrangement" }).click();
   await expect(
-    page.getByRole("img", { name: "Proposed component arrangement" }),
+    page.getByLabel("Arrangement preview"),
   ).toBeVisible();
   await page.getByRole("button", { name: "Cancel arrangement" }).click();
   await page.getByRole("button", { name: "JSON", exact: true }).click();
@@ -120,3 +120,4 @@ test("auto-arrangement previews, cancels and applies one undoable edit", async (
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByLabel("Diagram JSON")).toHaveValue(before);
 });
+

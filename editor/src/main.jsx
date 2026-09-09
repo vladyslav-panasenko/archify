@@ -405,6 +405,7 @@ function App() {
   const [outlineOpen, setOutlineOpen] = useState(false);
   const outlineToggle = useRef();
   const [comparisonPreview, setComparisonPreview] = useState(null);
+  const [layoutPreview,setLayoutPreview]=useState(null);
   const workspaceDrafts = useRef(new Map());
   const [sourceBase, setSourceBase] = useState(null),
     [conflict, setConflict] = useState(null);
@@ -429,7 +430,8 @@ function App() {
     [edgeIndex, setEdgeIndex] = useState(null);
   const [error, setError] = useState(""),
     [notice, setNotice] = useState("Opening diagram…"),
-    [busy, setBusy] = useState(false);
+    [working, setBusy] = useState(false);
+  const busy=working||!!layoutPreview;
   const [snap, setSnap] = useState(false),
     [panel, setPanel] = useState("inspector"),
     [query, setQuery] = useState("");
@@ -440,7 +442,7 @@ function App() {
     dragBase = useRef(),
     cancelled = useRef(false),
     dialog = useRef();
-  const documentModel = draft || state?.present;
+  const documentModel = draft || layoutPreview || state?.present;
   const options = editingOptions(documentModel);
   const presentText = useMemo(
     () => (state ? serialize(state.present) : ""),
@@ -450,7 +452,7 @@ function App() {
   const rawDirty = Boolean(
     state && panel === "json" && jsonText !== presentText,
   );
-  const hasUnsaved = dirty || rawDirty || Boolean(draft);
+  const hasUnsaved = dirty || rawDirty || Boolean(draft) || Boolean(layoutPreview);
 
   useEffect(() => {
     fetch("/api/document")
@@ -549,6 +551,7 @@ function App() {
   });
 
   function load(data) {
+    setLayoutPreview(null);
     setSourceBase(data.document);
     setConflict(null);
     try {
@@ -984,6 +987,7 @@ function App() {
 
   function onKeys(event) {
     if (dialog.current?.open) return;
+    if(event.key==='Escape'&&layoutPreview){setLayoutPreview(null);return;}
     if (event.key === "Escape" && outlineOpen) {
       setOutlineOpen(false);
       outlineToggle.current?.focus();
@@ -1425,6 +1429,7 @@ function App() {
                 Snap to grid
               </label>
             </div>
+            {layoutPreview&&<div className="canvas-preview" aria-label="Arrangement preview">Arrangement preview · Pan and zoom to inspect · Apply or cancel in Auto-arrange</div>}
             {state && (
               <ReactFlow
                 key={canvasVersion}
@@ -1887,13 +1892,15 @@ function App() {
                 />
               </fieldset>
             ) : panel === "layout" ? (
-              <fieldset disabled={busy || !!draft}>
+              <fieldset disabled={working || !!draft}>
                 <AutoLayoutPanel
                   key={`${presentText}:${selection.join(",")}:${locked.join(",")}`}
                   document={state.present}
                   selection={selection}
                   locked={locked}
-                  onApply={change}
+                  preview={layoutPreview}
+                  onPreview={setLayoutPreview}
+                  onApply={next=>{change(next);setLayoutPreview(null);}}
                 />
               </fieldset>
             ) : panel === "checkpoints" ? (
