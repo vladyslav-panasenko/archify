@@ -920,3 +920,5 @@ legend {
 .json-panel { overflow: auto; }
 .json-issues { max-height: 140px; overflow: auto; flex-shrink: 0; }
 .json-issues button { display: block; width: 100%; text-align: left; margin-bottom: 4px; overflow-wrap: anywhere; }
+.workspace-picker { padding: 12px; border-bottom: 1px solid #dbe2e6; }
+.workspace-picker p { font-size: 12px; overflow-wrap: anywhere; }

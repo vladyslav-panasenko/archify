@@ -10,6 +10,7 @@ import { validateSchema } from "../archify/renderers/shared/validator.mjs";
 import { validateGuidedViews } from "../archify/renderers/shared/cli.mjs";
 import { assertDocument, serialize } from "./src/document.mjs";
 import { supportedTypes, sourceNodes } from "./src/adapters/index.mjs";
+import {createWorkspace} from './workspace.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const execute = promisify(execFile);
@@ -102,10 +103,12 @@ export async function render(document) {
   }
 }
 
-export async function createEditorServer({ file, dev = false } = {}) {
+export async function createEditorServer({ file, directory, dev = false } = {}) {
+  if(file && directory)throw new Error('Choose either --file or --directory.');
+  const workspace=directory?await createWorkspace(directory,validate):null;
   const token = randomBytes(32).toString("hex");
   // Resolve once: clients cannot choose a write path or replace it with a symlink.
-  const filePath = file ? await fs.realpath(path.resolve(file)) : null;
+  const startupFilePath = file ? await fs.realpath(path.resolve(file)) : null;
   let saving = false,
     rendering = false;
   const vite = dev
@@ -134,9 +137,17 @@ export async function createEditorServer({ file, dev = false } = {}) {
         });
       const url = new URL(req.url, origins[0]);
       if (url.pathname.startsWith("/api/")) {
+        if(req.method==='GET'&&url.pathname==='/api/workspace') {
+          if(!workspace)return send(200,{files:[],enabled:false});
+          await workspace.refresh();return send(200,{...workspace.list(),enabled:true});
+        }
         if (req.method === "GET" && url.pathname === "/api/document") {
+          const workspaceId=workspace?(url.searchParams.get('id')||workspace.list().files[0]?.id):null;
+          const readPath=workspaceId?await workspace.resolve(workspaceId):startupFilePath;
+          if(readPath&&await fs.realpath(readPath)!==readPath)throw new Error('Document location changed. Restart the editor.');
+          if(readPath&&(await fs.stat(readPath)).size>MAX_BYTES)throw new Error('JSON exceeds the 5 MB limit.');
           const text = await fs.readFile(
-            filePath ||
+            readPath ||
               path.join(root, "../archify/examples/web-app.architecture.json"),
             "utf8",
           );
@@ -145,9 +156,10 @@ export async function createEditorServer({ file, dev = false } = {}) {
             document,
             token,
             revision: hash(text),
-            writable: Boolean(filePath),
-            recoveryKey: hash(filePath || path.join(root, "sample")),
-            name: path.basename(filePath || "web-app.architecture.json"),
+            writable: Boolean(readPath),
+            recoveryKey: hash(readPath || path.join(root, "sample")),
+            name: workspaceId?workspace.list().files.find(f=>f.id===workspaceId).name:path.basename(readPath || "web-app.architecture.json"),
+            workspace: Boolean(workspace),workspaceId,
           });
         }
         if (req.headers["x-editor-token"] !== token)
@@ -164,6 +176,7 @@ export async function createEditorServer({ file, dev = false } = {}) {
         if (req.method === "POST" && url.pathname === "/api/validate")
           return send(200, { valid: true });
         if (req.method === "PUT" && url.pathname === "/api/document") {
+          const filePath=workspace?await workspace.resolve(url.searchParams.get('id')):startupFilePath;
           if (!filePath)
             return send(403, {
               error:
@@ -192,6 +205,7 @@ export async function createEditorServer({ file, dev = false } = {}) {
                 error:
                   "The file changed during saving. Download your draft and reopen the file.",
               });
+            if((await fs.realpath(filePath))!==filePath)throw new Error('Document location changed during saving.');
             await fs.rename(temporary, filePath);
             return send(200, { revision: hash(text) });
           } finally {
@@ -269,6 +283,7 @@ if (
   const port = Number(value("--port") || 4173);
   const server = await createEditorServer({
     file: value("--file"),
+    directory: value("--directory"),
     dev: args.includes("--dev"),
   });
   server.listen(port, "127.0.0.1", () =>

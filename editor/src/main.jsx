@@ -44,6 +44,7 @@ import {
 import "./style.css";
 import AutoLayoutPanel from "./AutoLayoutPanel.jsx";
 import TemplatesPanel from "./TemplatesPanel.jsx";
+import WorkspacePanel from "./WorkspacePanel.jsx";
 const JsonEditor = React.lazy(() => import("./JsonEditor.jsx"));
 import {
   adapterFor,
@@ -399,6 +400,7 @@ function App() {
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [canvasVersion, setCanvasVersion] = useState(0);
+  const workspaceDrafts = useRef(new Map());
   const [sourceBase, setSourceBase] = useState(null),
     [conflict, setConflict] = useState(null);
   const [clipboard, setClipboard] = useState(null);
@@ -468,7 +470,7 @@ function App() {
   }, []);
   useEffect(() => {
     const before = (e) => {
-      if (hasUnsaved) {
+      if (hasUnsaved || [...workspaceDrafts.current.values()].some(c=>c.saved!==serialize(c.state.present)||c.rawText!==null)) {
         e.preventDefault();
         e.returnValue = "";
       }
@@ -564,6 +566,23 @@ function App() {
     // second fit can move a resize handle out from under the user's pointer.
     setCanvasVersion((version) => version + 1);
   }
+  async function switchWorkspace(id) {
+    if(!id||id===session.workspaceId&&session.writable)return;
+    if(!session.writable&&hasUnsaved&&!window.confirm('Discard this imported draft and open a project diagram?'))return;
+    await act(async()=>{
+      if(session.workspaceId&&session.writable)workspaceDrafts.current.set(session.workspaceId,{session,state,saved,sourceBase,selection,edgeIndex,locked,panel,rawText:rawDirty?jsonText:null,recovery});
+      const cached=workspaceDrafts.current.get(id);
+      if(cached) {
+        load(cached.session);setState(cached.state);setSaved(cached.saved);setSourceBase(cached.sourceBase);setSelection(cached.selection);setEdgeIndex(cached.edgeIndex);setLocked(cached.locked);setPanel(cached.panel);setRecovery(cached.recovery);recoveredText.current=cached.rawText;setJsonText(cached.rawText??serialize(cached.state.present));
+        workspaceDrafts.current.delete(id);
+      } else {
+        const response=await fetch(`/api/document?id=${encodeURIComponent(id)}`);const data=await response.json();if(!response.ok)throw new Error(data.error);
+        load(data);setPanel('inspector');setRecovery(null);
+        try{const stored=JSON.parse(localStorage.getItem(`archify-draft:${data.recoveryKey}`)||'null');if(stored?.version===1&&stored.document)setRecovery(stored);}catch{setNotice('Recovery data could not be read.');}
+      }
+      setCreation(null);setDrawConnections(false);setNotice('Project diagram opened. Other file drafts remain in this session.');
+    });
+  }
   function change(next) {
     if (rawDirty) {
       setError(
@@ -577,7 +596,7 @@ function App() {
     setNotice("Layout updated.");
   }
   async function request(endpoint, document, method = "POST") {
-    const response = await fetch(`/api/${endpoint}`, {
+    const response = await fetch(`/api/${endpoint}${session.workspaceId?`?id=${encodeURIComponent(session.workspaceId)}`:''}`, {
       method,
       headers: {
         "Content-Type": "application/json",
@@ -655,7 +674,7 @@ function App() {
     });
   }
   async function compareSource(local = state.present) {
-    const response = await fetch("/api/document");
+    const response = await fetch(`/api/document${session.workspaceId?`?id=${encodeURIComponent(session.workspaceId)}`:''}`);
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
     setConflict({
@@ -1166,6 +1185,7 @@ function App() {
         )}
         <div className="workspace">
           <aside className="outline" aria-label="Components">
+            {session?.workspace&&<WorkspacePanel pendingCount={[...workspaceDrafts.current.values()].filter(c=>c.saved!==serialize(c.state.present)||c.rawText!==null).length} id={session.writable?session.workspaceId:null} disabled={busy||!!draft||!!conflict} onSwitch={switchWorkspace}/>}
             <div className="section-heading">
               <h2>Components</h2>
               <span>{items.length}</span>
@@ -2455,4 +2475,5 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+
 
