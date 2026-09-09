@@ -1,30 +1,202 @@
-import {test,expect} from '@playwright/test';
-test('document viewport, selection and inspector restore after reload',async({page})=>{
- await page.goto('/');await page.getByRole('button',{name:'Users users',exact:true}).click();await page.getByRole('button',{name:'Search',exact:true}).click();await page.getByRole('button',{name:'Zoom In',exact:true}).click();await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('archify-document-views:v1')||'[]').at(-1)?.view?.viewport?.zoom)).toBeTruthy();const viewport=page.locator('.react-flow__viewport');const before=await viewport.getAttribute('style');await page.reload();await expect(page.getByRole('button',{name:'Search',exact:true})).toHaveAttribute('aria-pressed','true');await expect(page.getByRole('button',{name:'Users users',exact:true})).toHaveAttribute('aria-pressed','true');await expect(viewport).toHaveAttribute('style',before);
+import { test, expect } from "@playwright/test";
+test("document viewport, selection and inspector restore after reload", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Users users", exact: true }).click();
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.getByRole("button", { name: "Zoom In", exact: true }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          JSON.parse(
+            localStorage.getItem("archify-document-views:v1") || "[]",
+          ).at(-1)?.view?.viewport?.zoom,
+      ),
+    )
+    .toBeTruthy();
+  const viewport = page.locator(".react-flow__viewport");
+  const before = await viewport.getAttribute("style");
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Search", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("button", { name: "Users users", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(viewport).toHaveAttribute("style", before);
 });
-test('commands search, navigate by keyboard and restore focus on Escape',async({page})=>{
- await page.goto('/');const trigger=page.getByRole('button',{name:'Commands',exact:true});await trigger.focus();await page.keyboard.press('Control+k');await expect(page.getByRole('dialog',{name:'Editor commands'})).toBeVisible();await page.getByLabel('Find command').fill('Open Templates');await page.keyboard.press('Enter');await expect(page.getByRole('heading',{name:'Reusable templates'})).toBeVisible();await trigger.focus();await page.keyboard.press('Control+k');await page.keyboard.press('Escape');await expect(trigger).toBeFocused();await page.screenshot({path:'test-results/grouped-navigation.png'});await page.setViewportSize({width:390,height:844});await trigger.click();await page.getByLabel('Find command').fill('Open');await page.screenshot({path:'test-results/commands-narrow.png'});
+test("commands search, navigate by keyboard and restore focus on Escape", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const trigger = page.getByRole("button", { name: "Commands", exact: true });
+  await trigger.focus();
+  await page.keyboard.press("Control+k");
+  await expect(
+    page.getByRole("dialog", { name: "Editor commands" }),
+  ).toBeVisible();
+  await page.getByLabel("Find command").fill("Open Templates");
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "Reusable templates" }),
+  ).toBeVisible();
+  await trigger.focus();
+  await page.keyboard.press("Control+k");
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+  await page.screenshot({ path: "test-results/grouped-navigation.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await trigger.click();
+  await page.getByLabel("Find command").fill("Open");
+  await page.screenshot({ path: "test-results/commands-narrow.png" });
 });
-test('problems select affected nodes and mark compiler results stale after edits',async({page})=>{
- await page.goto('/');await page.getByRole('button',{name:'Users users',exact:true}).click();await page.getByLabel('X',{exact:true}).fill('250');await page.getByLabel('X',{exact:true}).press('Tab');await page.getByRole('button',{name:'Problems',exact:true}).click();await page.getByRole('button',{name:'Users overlaps CloudFront.',exact:true}).click();await expect(page.locator('.problem-highlight')).toHaveCount(2);await page.screenshot({path:'test-results/problems-panel.png'});await page.getByRole('button',{name:'Run compiler checks'}).click();await expect(page.getByRole('button',{name:'Run compiler checks'})).toBeEnabled();await page.getByRole('button',{name:'Properties',exact:true}).click();await page.getByRole('button',{name:'Users users',exact:true}).click();await page.getByLabel('X',{exact:true}).fill('40');await page.getByLabel('X',{exact:true}).press('Tab');await page.getByRole('button',{name:'Problems',exact:true}).click();await expect(page.getByText('Compiler results are stale. Run checks again for this draft.',{exact:true})).toBeVisible();
+test("problems select affected nodes and mark compiler results stale after edits", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Users users", exact: true }).click();
+  await page.getByLabel("X", { exact: true }).fill("250");
+  await page.getByLabel("X", { exact: true }).press("Tab");
+  await page.getByRole("button", { name: "Problems", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Users overlaps CloudFront.", exact: true })
+    .click();
+  await expect(page.locator(".problem-highlight")).toHaveCount(2);
+  await page.screenshot({ path: "test-results/problems-panel.png" });
+  await page.getByRole("button", { name: "Run compiler checks" }).click();
+  await expect(
+    page.getByRole("button", { name: "Run compiler checks" }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "Properties", exact: true }).click();
+  await page.getByRole("button", { name: "Users users", exact: true }).click();
+  await page.getByLabel("X", { exact: true }).fill("40");
+  await page.getByLabel("X", { exact: true }).press("Tab");
+  await page.getByRole("button", { name: "Problems", exact: true }).click();
+  await expect(
+    page.getByText(
+      "Compiler results are stale. Run checks again for this draft.",
+      { exact: true },
+    ),
+  ).toBeVisible();
 });
-test('segment handles move both waypoints with keyboard and cancel a pointer drag',async({page})=>{
- await page.goto('/');await page.locator('.connection-list summary').click();await page.getByRole('button',{name:'users → cdn',exact:true}).click();const input=page.getByLabel('Waypoints · [[x, y], …]');await input.fill('[[180,240],[230,240]]');await input.press('Tab');const handle=page.getByRole('button',{name:'Move horizontal segment 1'});await handle.focus();await page.keyboard.press('Shift+ArrowDown');await expect(input).toHaveValue('[[180,250],[230,250]]');await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(input).toHaveValue('[[180,240],[230,240]]');const box=await handle.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2,box.y+50,{steps:6});await page.keyboard.press('Escape');await page.mouse.up();await expect(input).toHaveValue('[[180,240],[230,240]]');const again=await handle.boundingBox();await page.mouse.move(again.x+again.width/2,again.y+again.height/2);await page.mouse.down();await page.mouse.move(again.x+again.width/2,again.y+45,{steps:5});await page.mouse.up();const moved=JSON.parse(await input.inputValue());expect(moved[0][0]).toBe(180);expect(moved[1][0]).toBe(230);expect(moved[0][1]).toBe(moved[1][1]);expect(moved[0][1]).not.toBe(240);await page.screenshot({path:'test-results/segment-edit.png'});await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(input).toHaveValue('[[180,240],[230,240]]');
+test("segment handles move both waypoints with keyboard and cancel a pointer drag", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.locator(".connection-list summary").click();
+  await page.getByRole("button", { name: "users → cdn", exact: true }).click();
+  const input = page.getByLabel("Waypoints · [[x, y], …]");
+  await input.fill("[[180,240],[230,240]]");
+  await input.press("Tab");
+  const handle = page.getByRole("button", {
+    name: "Move horizontal segment 1",
+  });
+  await handle.focus();
+  await page.keyboard.press("Shift+ArrowDown");
+  await expect(input).toHaveValue("[[180,250],[230,250]]");
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(input).toHaveValue("[[180,240],[230,240]]");
+  const box = await handle.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + 50, { steps: 6 });
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(input).toHaveValue("[[180,240],[230,240]]");
+  const again = await handle.boundingBox();
+  await page.mouse.move(again.x + again.width / 2, again.y + again.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(again.x + again.width / 2, again.y + 45, { steps: 5 });
+  await page.mouse.up();
+  const moved = JSON.parse(await input.inputValue());
+  expect(moved[0][0]).toBe(180);
+  expect(moved[1][0]).toBe(230);
+  expect(moved[0][1]).toBe(moved[1][1]);
+  expect(moved[0][1]).not.toBe(240);
+  await page.screenshot({ path: "test-results/segment-edit.png" });
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(input).toHaveValue("[[180,240],[230,240]]");
 });
-test('directed arrangement exposes direction and spacing before preview',async({page})=>{
- await page.goto('/');await page.locator('.react-flow__node-component').first().click();await page.locator('.react-flow__node-component').nth(1).click({modifiers:['Shift']});await page.getByRole('button',{name:'Auto-arrange',exact:true}).click();await page.getByLabel('Layout method').selectOption('directed');await page.getByLabel('Layout direction').selectOption('down');await page.getByLabel('Layout spacing').fill('100');await page.getByRole('button',{name:'Preview arrangement'}).click();await expect(page.getByLabel('Arrangement preview')).toBeVisible();await page.screenshot({path:'test-results/directed-preview.png'});await page.getByRole('button',{name:'Apply arrangement'}).click();await page.getByRole('button',{name:'Undo',exact:true}).click();
+test("directed arrangement exposes direction and spacing before preview", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.locator(".react-flow__node-component").first().click();
+  await page
+    .locator(".react-flow__node-component")
+    .nth(1)
+    .click({ modifiers: ["Shift"] });
+  await page.getByRole("button", { name: "Auto-arrange", exact: true }).click();
+  await page.getByLabel("Layout method").selectOption("directed");
+  await page.getByLabel("Layout direction").selectOption("down");
+  await page.getByLabel("Layout spacing").fill("100");
+  await page.getByRole("button", { name: "Preview arrangement" }).click();
+  await expect(page.getByLabel("Arrangement preview")).toBeVisible();
+  await page.screenshot({ path: "test-results/directed-preview.png" });
+  await page.getByRole("button", { name: "Apply arrangement" }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
 });
 
-test('full canvas arrangement preview is cancellable and guards authoring',async({page})=>{
- await page.goto('/');const nodes=page.locator('.react-flow__node-component');await nodes.first().click();await nodes.nth(1).click({modifiers:['Shift']});
- const position=await nodes.first().getAttribute('style');await page.getByRole('button',{name:'Auto-arrange',exact:true}).click();await page.getByRole('button',{name:'Preview arrangement'}).click();
- await expect(page.getByLabel('Arrangement preview')).toBeVisible();await expect(nodes.first()).not.toHaveAttribute('style',position);await expect(page.getByRole('button',{name:'Add component',exact:true})).toBeDisabled();await expect(page.getByRole('button',{name:'Download JSON',exact:true})).toBeDisabled();
- await page.screenshot({path:'test-results/full-canvas-preview.png'});await page.keyboard.press('Escape');await expect(nodes.first()).toHaveAttribute('style',position);await expect(page.getByLabel('Arrangement preview')).toHaveCount(0);
+test("full canvas arrangement preview is cancellable and guards authoring", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const nodes = page.locator(".react-flow__node-component");
+  await nodes.first().click();
+  await nodes.nth(1).click({ modifiers: ["Shift"] });
+  const position = await nodes.first().getAttribute("style");
+  await page.getByRole("button", { name: "Auto-arrange", exact: true }).click();
+  await page.getByRole("button", { name: "Preview arrangement" }).click();
+  await expect(page.getByLabel("Arrangement preview")).toBeVisible();
+  await expect(nodes.first()).not.toHaveAttribute("style", position);
+  await expect(
+    page.getByRole("button", { name: "Add component", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Download JSON", exact: true }),
+  ).toBeDisabled();
+  await page.screenshot({ path: "test-results/full-canvas-preview.png" });
+  await page.keyboard.press("Escape");
+  await expect(nodes.first()).toHaveAttribute("style", position);
+  await expect(page.getByLabel("Arrangement preview")).toHaveCount(0);
 });
 
-
-
-
-test('readable history jumps backward and forward and a new edit clears future states',async({page})=>{
- await page.goto('/');await page.getByRole('button',{name:'Users users',exact:true}).click();await page.getByLabel('X',{exact:true}).fill('60');await page.getByLabel('X',{exact:true}).press('Tab');await page.getByLabel('X',{exact:true}).fill('80');await page.getByLabel('X',{exact:true}).press('Tab');await page.getByRole('button',{name:'History',exact:true}).click();await page.getByRole('button',{name:'0. Initial retained state Past',exact:true}).click();await expect(page.getByRole('button',{name:'Redo',exact:true})).toBeEnabled();await page.getByRole('button',{name:'2. Move 1 item Future',exact:true}).click();await expect(page.getByRole('button',{name:'Redo',exact:true})).toBeDisabled();await page.screenshot({path:'test-results/history-panel.png'});await page.getByRole('button',{name:'Properties',exact:true}).click();await page.getByRole('button',{name:'Users users',exact:true}).click();await expect(page.getByLabel('X',{exact:true})).toHaveValue('80');await page.keyboard.press('Control+z');await expect(page.getByLabel('X',{exact:true})).toHaveValue('60');await page.getByLabel('X',{exact:true}).fill('70');await page.getByLabel('X',{exact:true}).press('Tab');await expect(page.getByRole('button',{name:'Redo',exact:true})).toBeDisabled();
+test("readable history jumps backward and forward and a new edit clears future states", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Users users", exact: true }).click();
+  await page.getByLabel("X", { exact: true }).fill("60");
+  await page.getByLabel("X", { exact: true }).press("Tab");
+  await page.getByLabel("X", { exact: true }).fill("80");
+  await page.getByLabel("X", { exact: true }).press("Tab");
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: "0. Initial retained state Past",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Redo", exact: true }),
+  ).toBeEnabled();
+  await page
+    .getByRole("button", { name: "2. Move 1 item Future", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Redo", exact: true }),
+  ).toBeDisabled();
+  await page.screenshot({ path: "test-results/history-panel.png" });
+  await page.getByRole("button", { name: "Properties", exact: true }).click();
+  await page.getByRole("button", { name: "Users users", exact: true }).click();
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("80");
+  await page.keyboard.press("Control+z");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("60");
+  await page.getByLabel("X", { exact: true }).fill("70");
+  await page.getByLabel("X", { exact: true }).press("Tab");
+  await expect(
+    page.getByRole("button", { name: "Redo", exact: true }),
+  ).toBeDisabled();
 });

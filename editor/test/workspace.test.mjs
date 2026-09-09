@@ -5,18 +5,51 @@ import path from "node:path";
 import os from "node:os";
 import { createEditorServer } from "../server.mjs";
 import { newDocument } from "../src/document.mjs";
-import {createWorkspace} from '../workspace.mjs';
-import {validate} from '../server.mjs';
+import { createWorkspace } from "../workspace.mjs";
+import { validate } from "../server.mjs";
 
-test('Save As creates exclusively and replaces only the reviewed revision inside the workspace',async()=>{
- const directory=await fs.mkdtemp(path.join(os.tmpdir(),'archify-saveas-')),outside=await fs.mkdtemp(path.join(os.tmpdir(),'archify-target-'));
- try {
-  const ws=await createWorkspace(directory,validate),doc=newDocument('New');const created=await ws.saveAs('new.json',doc);assert.equal(JSON.parse(await fs.readFile(path.join(directory,'new.json'),'utf8')).meta.title,'New');
-  await assert.rejects(()=>ws.saveAs('new.json',newDocument('Overwrite')),e=>e.status===409&&e.conflict.revision===created.revision);await assert.rejects(()=>ws.saveAs('new.json',doc,'stale'),e=>e.status===409);
-  await ws.saveAs('new.json',newDocument('Confirmed'),created.revision);assert.equal(JSON.parse(await fs.readFile(path.join(directory,'new.json'),'utf8')).meta.title,'Confirmed');
-  for(const name of ['../escape.json','/absolute.json','C:\\outside.json','file.json:stream','missing/new.json','CON.json'])await assert.rejects(()=>ws.saveAs(name,doc));
-  await fs.symlink(outside,path.join(directory,'linked'),'junction');await assert.rejects(()=>ws.saveAs('linked/escape.json',doc));assert.deepEqual(await fs.readdir(outside),[]);
- }finally{await fs.rm(directory,{recursive:true,force:true});await fs.rm(outside,{recursive:true,force:true});}
+test("Save As creates exclusively and replaces only the reviewed revision inside the workspace", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "archify-saveas-")),
+    outside = await fs.mkdtemp(path.join(os.tmpdir(), "archify-target-"));
+  try {
+    const ws = await createWorkspace(directory, validate),
+      doc = newDocument("New");
+    const created = await ws.saveAs("new.json", doc);
+    assert.equal(
+      JSON.parse(await fs.readFile(path.join(directory, "new.json"), "utf8"))
+        .meta.title,
+      "New",
+    );
+    await assert.rejects(
+      () => ws.saveAs("new.json", newDocument("Overwrite")),
+      (e) => e.status === 409 && e.conflict.revision === created.revision,
+    );
+    await assert.rejects(
+      () => ws.saveAs("new.json", doc, "stale"),
+      (e) => e.status === 409,
+    );
+    await ws.saveAs("new.json", newDocument("Confirmed"), created.revision);
+    assert.equal(
+      JSON.parse(await fs.readFile(path.join(directory, "new.json"), "utf8"))
+        .meta.title,
+      "Confirmed",
+    );
+    for (const name of [
+      "../escape.json",
+      "/absolute.json",
+      "C:\\outside.json",
+      "file.json:stream",
+      "missing/new.json",
+      "CON.json",
+    ])
+      await assert.rejects(() => ws.saveAs(name, doc));
+    await fs.symlink(outside, path.join(directory, "linked"), "junction");
+    await assert.rejects(() => ws.saveAs("linked/escape.json", doc));
+    assert.deepEqual(await fs.readdir(outside), []);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+    await fs.rm(outside, { recursive: true, force: true });
+  }
 });
 
 test("workspace IDs scope reads and writes, preserve per-file revisions and reject redirected folders", async () => {

@@ -12,13 +12,11 @@ test("layout comparison previews ghost boxes and accepts selected placement with
   await page
     .getByRole("button", { name: "Compare layout", exact: true })
     .click();
-  await page
-    .getByLabel("Compare layout JSON", { exact: true })
-    .setInputFiles({
-      name: "layout.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(other)),
-    });
+  await page.getByLabel("Compare layout JSON", { exact: true }).setInputFiles({
+    name: "layout.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(other)),
+  });
   await page.getByRole("checkbox", { name: "Users pos", exact: true }).check();
   await expect(page.locator(".comparison-ghost")).toHaveCount(1);
   await page.screenshot({ path: "test-results/layout-comparison.png" });
@@ -105,9 +103,7 @@ test("auto-arrangement previews, cancels and applies one undoable edit", async (
   const before = await page.getByLabel("Diagram JSON").inputValue();
   await page.getByRole("button", { name: "Auto-arrange", exact: true }).click();
   await page.getByRole("button", { name: "Preview arrangement" }).click();
-  await expect(
-    page.getByLabel("Arrangement preview"),
-  ).toBeVisible();
+  await expect(page.getByLabel("Arrangement preview")).toBeVisible();
   await page.getByRole("button", { name: "Cancel arrangement" }).click();
   await page.getByRole("button", { name: "JSON", exact: true }).click();
   expect(await page.getByLabel("Diagram JSON").inputValue()).toBe(before);
@@ -120,4 +116,3 @@ test("auto-arrangement previews, cancels and applies one undoable edit", async (
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByLabel("Diagram JSON")).toHaveValue(before);
 });
-

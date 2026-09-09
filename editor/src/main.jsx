@@ -48,13 +48,13 @@ import TemplatesPanel from "./TemplatesPanel.jsx";
 import WorkspacePanel from "./WorkspacePanel.jsx";
 import ComparePanel from "./ComparePanel.jsx";
 import { layoutGhosts } from "./layout-comparison.mjs";
-import {routeSegments,moveSegment} from './segments.mjs';
-import {compilerProblems} from './problems.mjs';
-import ProblemsPanel from './ProblemsPanel.jsx';
-import EditorNavigation,{panelLabels} from './EditorNavigation.jsx';
-import CommandMenu from './CommandMenu.jsx';
-import SaveAsPanel from './SaveAsPanel.jsx';
-import {readView,writeView,viewKey} from './document-view.mjs';
+import { routeSegments, moveSegment } from "./segments.mjs";
+import { compilerProblems } from "./problems.mjs";
+import ProblemsPanel from "./ProblemsPanel.jsx";
+import EditorNavigation, { panelLabels } from "./EditorNavigation.jsx";
+import CommandMenu from "./CommandMenu.jsx";
+import SaveAsPanel from "./SaveAsPanel.jsx";
+import { readView, writeView, viewKey } from "./document-view.mjs";
 const JsonEditor = React.lazy(() => import("./JsonEditor.jsx"));
 import {
   adapterFor,
@@ -86,8 +86,8 @@ import SettingsPanel from "./SettingsPanel.jsx";
 import SearchPanel from "./SearchPanel.jsx";
 import ReviewPanel from "./ReviewPanel.jsx";
 import ConflictPanel from "./ConflictPanel.jsx";
-import HistoryPanel from './HistoryPanel.jsx';
-import {jumpHistory} from './history-labels.mjs';
+import HistoryPanel from "./HistoryPanel.jsx";
+import { jumpHistory } from "./history-labels.mjs";
 import CheckpointsPanel from "./CheckpointsPanel.jsx";
 
 const sides = {
@@ -324,7 +324,25 @@ function ConnectionEdge(props) {
       )}
       {props.selected && (
         <EdgeLabelRenderer>
-          {data.segmentEditing&&routeSegments(data).map(segment=><DragPoint key={`segment:${segment.index}`} point={segment.point} label={`Move ${segment.orientation} segment ${segment.index+1}`} className={`route-segment ${segment.orientation}`} edit={point=>document=>moveSegment(document,Number(props.id.slice(2)),segment.index,point)}>{segment.orientation==='horizontal'?'↕':'↔'}</DragPoint>)}
+          {data.segmentEditing &&
+            routeSegments(data).map((segment) => (
+              <DragPoint
+                key={`segment:${segment.index}`}
+                point={segment.point}
+                label={`Move ${segment.orientation} segment ${segment.index + 1}`}
+                className={`route-segment ${segment.orientation}`}
+                edit={(point) => (document) =>
+                  moveSegment(
+                    document,
+                    Number(props.id.slice(2)),
+                    segment.index,
+                    point,
+                  )
+                }
+              >
+                {segment.orientation === "horizontal" ? "↕" : "↔"}
+              </DragPoint>
+            ))}
           {(data.via || []).map((point, index) => (
             <DragPoint
               key={index}
@@ -407,19 +425,20 @@ function App() {
   // them across coordinate updates or React Flow hides and remeasures each node.
   const [measurements, setMeasurements] = useState({});
   const [diagnostics, setDiagnostics] = useState([]);
-  const [compilerReport,setCompilerReport]=useState(null),[activeProblemKey,setActiveProblemKey]=useState(null);
-  const [commandOpen,setCommandOpen]=useState(false);
+  const [compilerReport, setCompilerReport] = useState(null),
+    [activeProblemKey, setActiveProblemKey] = useState(null);
+  const [commandOpen, setCommandOpen] = useState(false);
   const [creation, setCreation] = useState(null);
   const [recovery, setRecovery] = useState(null);
   const recoveredText = useRef(null);
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [canvasVersion, setCanvasVersion] = useState(0);
-  const [initialView,setInitialView]=useState(null);
+  const [initialView, setInitialView] = useState(null);
   const [outlineOpen, setOutlineOpen] = useState(false);
   const outlineToggle = useRef();
   const [comparisonPreview, setComparisonPreview] = useState(null);
-  const [layoutPreview,setLayoutPreview]=useState(null);
+  const [layoutPreview, setLayoutPreview] = useState(null);
   const workspaceDrafts = useRef(new Map());
   const [sourceBase, setSourceBase] = useState(null),
     [conflict, setConflict] = useState(null);
@@ -445,7 +464,7 @@ function App() {
   const [error, setError] = useState(""),
     [notice, setNotice] = useState("Opening diagram…"),
     [working, setBusy] = useState(false);
-  const busy=working||!!layoutPreview;
+  const busy = working || !!layoutPreview;
   const [snap, setSnap] = useState(false),
     [panel, setPanel] = useState("inspector"),
     [query, setQuery] = useState("");
@@ -466,12 +485,21 @@ function App() {
   const rawDirty = Boolean(
     state && panel === "json" && jsonText !== presentText,
   );
-  const hasUnsaved = dirty || rawDirty || Boolean(draft) || Boolean(layoutPreview);
-  function rememberView(viewport=flow.current?.getViewport()) {
-    if(!session||!state||!viewport)return;
-    writeView(localStorage,viewKey(session),{viewport,selection,panel},state.present,Object.keys(panelLabels));
+  const hasUnsaved =
+    dirty || rawDirty || Boolean(draft) || Boolean(layoutPreview);
+  function rememberView(viewport = flow.current?.getViewport()) {
+    if (!session || !state || !viewport) return;
+    writeView(
+      localStorage,
+      viewKey(session),
+      { viewport, selection, panel },
+      state.present,
+      Object.keys(panelLabels),
+    );
   }
-  useEffect(()=>{if(flow.current)rememberView();},[selection,panel]);
+  useEffect(() => {
+    if (flow.current) rememberView();
+  }, [selection, panel]);
 
   useEffect(() => {
     fetch("/api/document")
@@ -570,9 +598,18 @@ function App() {
   });
 
   function load(data) {
-    rememberView();flow.current=null;
-    const view=readView(localStorage,viewKey(data),data.document,Object.keys(panelLabels));setInitialView(view);setPanel(view?.panel||'inspector');
-    setCompilerReport(null);setActiveProblemKey(null);
+    rememberView();
+    flow.current = null;
+    const view = readView(
+      localStorage,
+      viewKey(data),
+      data.document,
+      Object.keys(panelLabels),
+    );
+    setInitialView(view);
+    setPanel(view?.panel || "inspector");
+    setCompilerReport(null);
+    setActiveProblemKey(null);
     setLayoutPreview(null);
     setSourceBase(data.document);
     setConflict(null);
@@ -592,7 +629,7 @@ function App() {
     setDraft(null);
     setSession(data);
     setSaved(serialize(data.document));
-    setSelection(view?.selection||[]);
+    setSelection(view?.selection || []);
     setEdgeIndex(null);
     setError("");
     setNotice(
@@ -664,15 +701,53 @@ function App() {
       );
     });
   }
-  async function saveAsProject(name,revision) {
-    const targetDraft=[...workspaceDrafts.current.values()].find(c=>c.session.name===name.replace(/\\/g,'/'));
-    if(targetDraft&&(targetDraft.saved!==serialize(targetDraft.state.present)||targetDraft.rawText!==null))throw new Error('That file has an unsaved editor draft. Open and save it first, or choose another name.');
+  async function saveAsProject(name, revision) {
+    const targetDraft = [...workspaceDrafts.current.values()].find(
+      (c) => c.session.name === name.replace(/\\/g, "/"),
+    );
+    if (
+      targetDraft &&
+      (targetDraft.saved !== serialize(targetDraft.state.present) ||
+        targetDraft.rawText !== null)
+    )
+      throw new Error(
+        "That file has an unsaved editor draft. Open and save it first, or choose another name.",
+      );
     setBusy(true);
     try {
-      const response=await fetch('/api/save-as',{method:'POST',headers:{'Content-Type':'application/json','X-Editor-Token':session.token},body:JSON.stringify({name,revision,document:state.present})});const data=await response.json();if(!response.ok)throw Object.assign(new Error(data.error),{conflict:data.conflict});
-      if(session.writable&&session.workspaceId!==data.workspaceId)workspaceDrafts.current.set(session.workspaceId,{session,state,saved,sourceBase,selection,edgeIndex,locked,panel:'inspector',rawText:null,recovery});
-      workspaceDrafts.current.delete(data.workspaceId);load(data);setState(state);setRecovery(null);setPanel('inspector');setNotice(`Saved ${data.name}.`);
-    }finally{setBusy(false);}
+      const response = await fetch("/api/save-as", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Editor-Token": session.token,
+        },
+        body: JSON.stringify({ name, revision, document: state.present }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw Object.assign(new Error(data.error), { conflict: data.conflict });
+      if (session.writable && session.workspaceId !== data.workspaceId)
+        workspaceDrafts.current.set(session.workspaceId, {
+          session,
+          state,
+          saved,
+          sourceBase,
+          selection,
+          edgeIndex,
+          locked,
+          panel: "inspector",
+          rawText: null,
+          recovery,
+        });
+      workspaceDrafts.current.delete(data.workspaceId);
+      load(data);
+      setState(state);
+      setRecovery(null);
+      setPanel("inspector");
+      setNotice(`Saved ${data.name}.`);
+    } finally {
+      setBusy(false);
+    }
   }
   function change(next) {
     if (rawDirty) {
@@ -700,13 +775,22 @@ function App() {
     );
     if (!response.ok) {
       const data = await response.json();
-      if(endpoint==='render')setCompilerReport({document,issues:compilerProblems(document,data.diagnostics?.length?data.diagnostics:[{message:data.error}])});
+      if (endpoint === "render")
+        setCompilerReport({
+          document,
+          issues: compilerProblems(
+            document,
+            data.diagnostics?.length
+              ? data.diagnostics
+              : [{ message: data.error }],
+          ),
+        });
       throw Object.assign(new Error(data.error), {
         diagnostics: data.diagnostics,
         status: response.status,
       });
     }
-    if(endpoint==='render')setCompilerReport({document,issues:[]});
+    if (endpoint === "render") setCompilerReport({ document, issues: [] });
     return response;
   }
   async function act(action) {
@@ -1001,7 +1085,7 @@ function App() {
         data: {
           ...(options.edgeData?.(documentModel, e) || e),
           editorBoxes: components(documentModel),
-          segmentEditing:documentModel?.diagram_type==='architecture',
+          segmentEditing: documentModel?.diagram_type === "architecture",
         },
         type: "connection",
         selected: index === edgeIndex,
@@ -1016,33 +1100,112 @@ function App() {
     () => (state ? layoutProblems(state.present) : []),
     [state?.present],
   );
-  const warnings=localProblems.map(p=>p.message);
-  const problems=[...localProblems.map(p=>({...p,fixes:[]})),...(compilerReport?.issues||[])],activeProblem=problems.find(p=>p.key===activeProblemKey);
-  function focusProblem(problem){setActiveProblemKey(problem.key);const ids=problem.ids.filter(id=>items.some(n=>n.id===id));setSelection(ids);setEdgeIndex(problem.edgeIndex!=null&&compilerReport?.document===state.present?problem.edgeIndex:null);if(ids.length)flow.current?.fitView({nodes:ids.map(id=>({id:`c:${id}`})),padding:0.6,maxZoom:1.5});}
+  const warnings = localProblems.map((p) => p.message);
+  const problems = [
+      ...localProblems.map((p) => ({ ...p, fixes: [] })),
+      ...(compilerReport?.issues || []),
+    ],
+    activeProblem = problems.find((p) => p.key === activeProblemKey);
+  function focusProblem(problem) {
+    setActiveProblemKey(problem.key);
+    const ids = problem.ids.filter((id) => items.some((n) => n.id === id));
+    setSelection(ids);
+    setEdgeIndex(
+      problem.edgeIndex != null && compilerReport?.document === state.present
+        ? problem.edgeIndex
+        : null,
+    );
+    if (ids.length)
+      flow.current?.fitView({
+        nodes: ids.map((id) => ({ id: `c:${id}` })),
+        padding: 0.6,
+        maxZoom: 1.5,
+      });
+  }
   const selected = items.find((c) => c.id === selection[0]),
     edge = connections(documentModel)[edgeIndex];
 
-  const panelDisabled=key=>!state||busy||!!draft||(rawDirty&&!['json','inspector'].includes(key));
+  const panelDisabled = (key) =>
+    !state ||
+    busy ||
+    !!draft ||
+    (rawDirty && !["json", "inspector"].includes(key));
   function openPanel(key) {
-    if(panelDisabled(key))return;
-    if(rawDirty&&key==='inspector'&&!window.confirm('Discard unapplied JSON text changes?'))return;
-    if(key==='inspector')setJsonText(serialize(state.present));
-    setCreation(null);setPanel(key);
+    if (panelDisabled(key)) return;
+    if (
+      rawDirty &&
+      key === "inspector" &&
+      !window.confirm("Discard unapplied JSON text changes?")
+    )
+      return;
+    if (key === "inspector") setJsonText(serialize(state.present));
+    setCreation(null);
+    setPanel(key);
   }
-  const commands=[
-    ...Object.entries(panelLabels).map(([key,label])=>({id:`panel:${key}`,label:`Open ${label}`,group:'Panels',disabled:panelDisabled(key),run:()=>openPanel(key)})),
-    {id:'undo',label:'Undo edit',shortcut:'Ctrl/Cmd+Z',disabled:!state?.past.length||busy||rawDirty||!!draft,run:()=>setState(undo)},
-    {id:'redo',label:'Redo edit',shortcut:'Ctrl/Cmd+Shift+Z',disabled:!state?.future.length||busy||rawDirty||!!draft,run:()=>setState(redo)},
-    {id:'save',label:session?.writable?'Save file':'Download JSON',shortcut:'Ctrl/Cmd+S',disabled:!state||busy||rawDirty||!!draft,run:()=>saveJson(session.writable)},
-    {id:'check',label:'Check diagram',disabled:!state||busy||rawDirty||!!draft,run:()=>act(async()=>{await request('render',state.present);setNotice('Archify validation passed.');})},
-    {id:'fit',label:'Fit diagram',disabled:!state,run:()=>flow.current?.fitView({padding:0.2})},
-    {id:'new',label:'New diagram',disabled:!state||busy||rawDirty||!!draft,run:()=>setCreation('diagram')},
+  const commands = [
+    ...Object.entries(panelLabels).map(([key, label]) => ({
+      id: `panel:${key}`,
+      label: `Open ${label}`,
+      group: "Panels",
+      disabled: panelDisabled(key),
+      run: () => openPanel(key),
+    })),
+    {
+      id: "undo",
+      label: "Undo edit",
+      shortcut: "Ctrl/Cmd+Z",
+      disabled: !state?.past.length || busy || rawDirty || !!draft,
+      run: () => setState(undo),
+    },
+    {
+      id: "redo",
+      label: "Redo edit",
+      shortcut: "Ctrl/Cmd+Shift+Z",
+      disabled: !state?.future.length || busy || rawDirty || !!draft,
+      run: () => setState(redo),
+    },
+    {
+      id: "save",
+      label: session?.writable ? "Save file" : "Download JSON",
+      shortcut: "Ctrl/Cmd+S",
+      disabled: !state || busy || rawDirty || !!draft,
+      run: () => saveJson(session.writable),
+    },
+    {
+      id: "check",
+      label: "Check diagram",
+      disabled: !state || busy || rawDirty || !!draft,
+      run: () =>
+        act(async () => {
+          await request("render", state.present);
+          setNotice("Archify validation passed.");
+        }),
+    },
+    {
+      id: "fit",
+      label: "Fit diagram",
+      disabled: !state,
+      run: () => flow.current?.fitView({ padding: 0.2 }),
+    },
+    {
+      id: "new",
+      label: "New diagram",
+      disabled: !state || busy || rawDirty || !!draft,
+      run: () => setCreation("diagram"),
+    },
   ];
   function onKeys(event) {
     if (dialog.current?.open) return;
-    if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();setCommandOpen(value=>!value);return;}
-    if(commandOpen)return;
-    if(event.key==='Escape'&&layoutPreview){setLayoutPreview(null);return;}
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      setCommandOpen((value) => !value);
+      return;
+    }
+    if (commandOpen) return;
+    if (event.key === "Escape" && layoutPreview) {
+      setLayoutPreview(null);
+      return;
+    }
     if (event.key === "Escape" && outlineOpen) {
       setOutlineOpen(false);
       outlineToggle.current?.focus();
@@ -1218,7 +1381,12 @@ function App() {
             </span>
           </div>
           <nav aria-label="Document actions">
-            <button aria-keyshortcuts="Control+k Meta+k" onClick={()=>setCommandOpen(true)}>Commands</button>
+            <button
+              aria-keyshortcuts="Control+k Meta+k"
+              onClick={() => setCommandOpen(true)}
+            >
+              Commands
+            </button>
             <button
               ref={outlineToggle}
               className="outline-toggle"
@@ -1485,7 +1653,12 @@ function App() {
                 Snap to grid
               </label>
             </div>
-            {layoutPreview&&<div className="canvas-preview" aria-label="Arrangement preview">Arrangement preview · Pan and zoom to inspect · Apply or cancel in Auto-arrange</div>}
+            {layoutPreview && (
+              <div className="canvas-preview" aria-label="Arrangement preview">
+                Arrangement preview · Pan and zoom to inspect · Apply or cancel
+                in Auto-arrange
+              </div>
+            )}
             {state && (
               <ReactFlow
                 key={canvasVersion}
@@ -1498,7 +1671,7 @@ function App() {
                 }}
                 defaultViewport={initialView?.viewport}
                 fitView={!initialView}
-                onMoveEnd={(_,viewport)=>rememberView(viewport)}
+                onMoveEnd={(_, viewport) => rememberView(viewport)}
                 fitViewOptions={{ padding: 0.2 }}
                 minZoom={0.15}
                 maxZoom={3}
@@ -1722,7 +1895,23 @@ function App() {
                 <Background gap={20} size={1} color="#cdd7dc" />
                 <Controls showInteractive={false} />
                 <ViewportPortal>
-                  {panel==='problems'&&activeProblem&&items.filter(c=>activeProblem.ids.includes(c.id)).map(c=><div key={`problem:${c.id}`} aria-hidden="true" className="problem-highlight" style={{left:c.pos[0]-5,top:c.pos[1]-5,width:c.size[0]+10,height:c.size[1]+10}}/>)}
+                  {panel === "problems" &&
+                    activeProblem &&
+                    items
+                      .filter((c) => activeProblem.ids.includes(c.id))
+                      .map((c) => (
+                        <div
+                          key={`problem:${c.id}`}
+                          aria-hidden="true"
+                          className="problem-highlight"
+                          style={{
+                            left: c.pos[0] - 5,
+                            top: c.pos[1] - 5,
+                            width: c.size[0] + 10,
+                            height: c.size[1] + 10,
+                          }}
+                        />
+                      ))}
                   {comparisonPreview?.base === state.present &&
                     layoutGhosts(state.present, comparisonPreview.document).map(
                       (c) => (
@@ -1777,7 +1966,11 @@ function App() {
                 Draw / reconnect connections
               </label>
             )}
-            <EditorNavigation panel={panel} disabled={panelDisabled} onSelect={openPanel}/>
+            <EditorNavigation
+              panel={panel}
+              disabled={panelDisabled}
+              onSelect={openPanel}
+            />
             {creation ? (
               <form
                 className="properties"
@@ -1881,9 +2074,32 @@ function App() {
                 </div>
               </form>
             ) : panel === "saveas" ? (
-              <fieldset disabled={busy||!!draft||rawDirty}><SaveAsPanel enabled={session.workspace} onSave={saveAsProject}/></fieldset>
+              <fieldset disabled={busy || !!draft || rawDirty}>
+                <SaveAsPanel
+                  enabled={session.workspace}
+                  onSave={saveAsProject}
+                />
+              </fieldset>
             ) : panel === "problems" ? (
-              <fieldset disabled={busy||!!draft}><ProblemsPanel issues={problems} activeKey={activeProblemKey} onFocus={focusProblem} onJson={()=>setPanel('json')} checked={!!compilerReport} stale={!!compilerReport&&compilerReport.document!==state.present} onCheck={()=>act(async()=>{await request('render',state.present);setNotice('Archify validation passed.');})}/></fieldset>
+              <fieldset disabled={busy || !!draft}>
+                <ProblemsPanel
+                  issues={problems}
+                  activeKey={activeProblemKey}
+                  onFocus={focusProblem}
+                  onJson={() => setPanel("json")}
+                  checked={!!compilerReport}
+                  stale={
+                    !!compilerReport &&
+                    compilerReport.document !== state.present
+                  }
+                  onCheck={() =>
+                    act(async () => {
+                      await request("render", state.present);
+                      setNotice("Archify validation passed.");
+                    })
+                  }
+                />
+              </fieldset>
             ) : panel === "compare" ? (
               <fieldset disabled={busy || !!draft}>
                 <ComparePanel
@@ -1924,11 +2140,24 @@ function App() {
                   locked={locked}
                   preview={layoutPreview}
                   onPreview={setLayoutPreview}
-                  onApply={next=>{change(next);setLayoutPreview(null);}}
+                  onApply={(next) => {
+                    change(next);
+                    setLayoutPreview(null);
+                  }}
                 />
               </fieldset>
-            ) : panel === 'history' ? (
-              <HistoryPanel state={state} disabled={busy || rawDirty || !!draft} onJump={index=>{if(busy||rawDirty||draft)return;setState(current=>jumpHistory(current,index));setSelection([]);setEdgeIndex(null);setNotice('History state restored.');}} />
+            ) : panel === "history" ? (
+              <HistoryPanel
+                state={state}
+                disabled={busy || rawDirty || !!draft}
+                onJump={(index) => {
+                  if (busy || rawDirty || draft) return;
+                  setState((current) => jumpHistory(current, index));
+                  setSelection([]);
+                  setEdgeIndex(null);
+                  setNotice("History state restored.");
+                }}
+              />
             ) : panel === "checkpoints" ? (
               <fieldset disabled={busy || !!draft}>
                 <CheckpointsPanel
@@ -2720,7 +2949,12 @@ function App() {
             </button>
           </div>
         )}
-        {commandOpen&&<CommandMenu commands={commands} onClose={()=>setCommandOpen(false)}/>}
+        {commandOpen && (
+          <CommandMenu
+            commands={commands}
+            onClose={() => setCommandOpen(false)}
+          />
+        )}
         <footer className="status" role="status">
           <span>{notice}</span>
           <span>
@@ -2773,5 +3007,3 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
-
-
