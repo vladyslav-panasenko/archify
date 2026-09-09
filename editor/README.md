@@ -114,3 +114,5 @@ Compare layout: import a compatible version, then check individual node placemen
 Keyboard access: skip links focus the canvas or inspector. In the component list, Enter selects and Shift+Enter adds/removes an item; arrow keys nudge the selection (Shift for ten units). The selection announcement includes committed position and lock state. Connections also support keyboard selection. On narrow screens, Components and files opens the outline; Escape closes it and restores toggle focus. Numeric fields and connection forms provide alternatives to pointer handles. Ctrl/Cmd+S respects unapplied JSON.
 
 Full-canvas arrangement preview: Auto-arrange projects proposed positions onto the main canvas. Pan/zoom stays available; editing and saving are paused until Apply or Cancel. Escape also cancels without changing JSON.
+
+Directed layout: choose Follow connections, left-to-right or top-to-bottom, and spacing (16–500 units). Cycles share a layer; neighbor-order sweeps reduce crossings heuristically. Locked/unselected components remain obstacles and authored routes are preserved. Arrange at most 2,000 selected components at once; inspect the preview before applying.

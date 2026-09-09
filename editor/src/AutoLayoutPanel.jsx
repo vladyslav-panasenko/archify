@@ -12,17 +12,18 @@ export default function AutoLayoutPanel({
 }) {
   const
     [error, setError] = useState("");
+  const [mode,setMode]=useState('grid'),[direction,setDirection]=useState('right'),[gap,setGap]=useState(60);
   const boxes = preview ? components(preview) : [];
   return (
     <div className="properties">
       <h2>Auto-arrange selection</h2>
       <p>
-        Place unlocked selected architecture components in a stable grid,
-        avoiding other components. Connections, waypoints and labels retain
+        Arrange unlocked selected architecture components, avoiding other components. Directed layout follows connections and orders layers to reduce crossings; cycles share a layer. Connections, waypoints and labels retain
         their authored values. The layout can extend beyond the canvas; inspect
         it before rendering.
       </p>
       {error && <p role="alert">{error}</p>}
+      {!preview&&<><label className="field">Layout method<select value={mode} onChange={e=>setMode(e.target.value)}><option value="grid">Grid</option><option value="directed">Follow connections</option></select></label><label className="field">Layout direction<select value={direction} onChange={e=>setDirection(e.target.value)} disabled={mode!=='directed'}><option value="right">Left to right</option><option value="down">Top to bottom</option></select></label><label className="field">Layout spacing<input type="number" min="16" max="500" value={gap} onChange={e=>setGap(Number(e.target.value))}/></label></>}
       {!preview ? (
         <button
           disabled={
@@ -30,7 +31,7 @@ export default function AutoLayoutPanel({
           }
           onClick={() => {
             try {
-              onPreview(autoLayout(document, selection, locked));
+              onPreview(autoLayout(document, selection, locked,{mode,direction,gap}));
               setError("");
             } catch (e) {
               setError(e.message);

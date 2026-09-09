@@ -5,7 +5,7 @@ Approved batch: F37–F44. Keep Archify JSON as the source of truth. Editor navi
 | ID | Improvement | Acceptance | Status |
 | --- | --- | --- | --- |
 | F37 | Full-canvas layout preview | Preview arrangement on the main canvas, retain zoom/pan, block conflicting edits, Apply once or Cancel/Escape without changing JSON. | Implemented |
-| F38 | Connection-aware auto-arrange | Offer deterministic directed layout with direction and spacing controls, cycle handling and crossing-reduction ordering; preserve locked/unselected nodes and authored routes. | Pending |
+| F38 | Connection-aware auto-arrange | Offer deterministic directed layout with direction and spacing controls, cycle handling and crossing-reduction ordering; preserve locked/unselected nodes and authored routes. | Implemented |
 | F39 | Drag connection segments | Drag an authored horizontal/vertical route segment perpendicular to its direction, update its two JSON waypoints in one undo step, and support keyboard movement/cancellation. | Pending |
 | F40 | Problems panel | List overlap, bounds and renderer issues with stable item references; select, highlight and step through problems. Mark compiler results stale after edits. | Pending |
 | F41 | Inspector navigation and commands | Group panels into task-oriented navigation; provide a searchable keyboard command menu with available actions, shortcuts, focus restoration and disabled-state guards. | Pending |
