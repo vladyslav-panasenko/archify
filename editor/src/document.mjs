@@ -375,7 +375,7 @@ export function redo(state) {
   };
 }
 
-export function layoutWarnings(document) {
+export function layoutProblems(document) {
   const items = components(document),
     warnings = [];
   for (let i = 0; i < items.length; i++) {
@@ -388,7 +388,7 @@ export function layoutWarnings(document) {
       (document.meta.viewBox &&
         (x + w > document.meta.viewBox[0] || y + h > document.meta.viewBox[1]))
     )
-      warnings.push(`${a.label} extends outside the canvas bounds.`);
+      warnings.push({key:`bounds:${a.id}`,ids:[a.id],message:`${a.label} extends outside the canvas bounds.`,kind:'bounds'});
     for (const b of items.slice(i + 1))
       if (
         x < b.pos[0] + b.size[0] &&
@@ -396,7 +396,8 @@ export function layoutWarnings(document) {
         y < b.pos[1] + b.size[1] &&
         y + h > b.pos[1]
       )
-        warnings.push(`${a.label} overlaps ${b.label}.`);
+        warnings.push({key:`overlap:${[a.id,b.id].sort().join(':')}`,ids:[a.id,b.id],message:`${a.label} overlaps ${b.label}.`,kind:'overlap'});
   }
   return warnings;
 }
+export function layoutWarnings(document) {return layoutProblems(document).map(p=>p.message);}

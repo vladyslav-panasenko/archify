@@ -34,6 +34,7 @@ import {
   undo,
   redo,
   layoutWarnings,
+  layoutProblems,
   newDocument,
   addComponent,
   addConnection,
@@ -48,6 +49,8 @@ import WorkspacePanel from "./WorkspacePanel.jsx";
 import ComparePanel from "./ComparePanel.jsx";
 import { layoutGhosts } from "./layout-comparison.mjs";
 import {routeSegments,moveSegment} from './segments.mjs';
+import {compilerProblems} from './problems.mjs';
+import ProblemsPanel from './ProblemsPanel.jsx';
 const JsonEditor = React.lazy(() => import("./JsonEditor.jsx"));
 import {
   adapterFor,
@@ -398,6 +401,7 @@ function App() {
   // them across coordinate updates or React Flow hides and remeasures each node.
   const [measurements, setMeasurements] = useState({});
   const [diagnostics, setDiagnostics] = useState([]);
+  const [compilerReport,setCompilerReport]=useState(null),[activeProblemKey,setActiveProblemKey]=useState(null);
   const [creation, setCreation] = useState(null);
   const [recovery, setRecovery] = useState(null);
   const recoveredText = useRef(null);
@@ -553,6 +557,7 @@ function App() {
   });
 
   function load(data) {
+    setCompilerReport(null);setActiveProblemKey(null);
     setLayoutPreview(null);
     setSourceBase(data.document);
     setConflict(null);
@@ -671,11 +676,13 @@ function App() {
     );
     if (!response.ok) {
       const data = await response.json();
+      if(endpoint==='render')setCompilerReport({document,issues:compilerProblems(document,data.diagnostics?.length?data.diagnostics:[{message:data.error}])});
       throw Object.assign(new Error(data.error), {
         diagnostics: data.diagnostics,
         status: response.status,
       });
     }
+    if(endpoint==='render')setCompilerReport({document,issues:[]});
     return response;
   }
   async function act(action) {
@@ -981,10 +988,13 @@ function App() {
   );
   // Overlap diagnostics describe committed edits; dragging must not run the
   // quadratic all-pairs check on every pointer event.
-  const warnings = useMemo(
-    () => (state ? layoutWarnings(state.present) : []),
+  const localProblems = useMemo(
+    () => (state ? layoutProblems(state.present) : []),
     [state?.present],
   );
+  const warnings=localProblems.map(p=>p.message);
+  const problems=[...localProblems.map(p=>({...p,fixes:[]})),...(compilerReport?.issues||[])],activeProblem=problems.find(p=>p.key===activeProblemKey);
+  function focusProblem(problem){setActiveProblemKey(problem.key);const ids=problem.ids.filter(id=>items.some(n=>n.id===id));setSelection(ids);setEdgeIndex(problem.edgeIndex!=null&&compilerReport?.document===state.present?problem.edgeIndex:null);if(ids.length)flow.current?.fitView({nodes:ids.map(id=>({id:`c:${id}`})),padding:0.6,maxZoom:1.5});}
   const selected = items.find((c) => c.id === selection[0]),
     edge = connections(documentModel)[edgeIndex];
 
@@ -1249,7 +1259,7 @@ function App() {
                 })
               }
             >
-              {busy ? "Working…" : "Render HTML"}
+              {working ? "Working…" : "Render HTML"}
             </button>
             <button
               disabled={!state || busy || rawDirty || !!draft}
@@ -1667,6 +1677,7 @@ function App() {
                 <Background gap={20} size={1} color="#cdd7dc" />
                 <Controls showInteractive={false} />
                 <ViewportPortal>
+                  {panel==='problems'&&activeProblem&&items.filter(c=>activeProblem.ids.includes(c.id)).map(c=><div key={`problem:${c.id}`} aria-hidden="true" className="problem-highlight" style={{left:c.pos[0]-5,top:c.pos[1]-5,width:c.size[0]+10,height:c.size[1]+10}}/>)}
                   {comparisonPreview?.base === state.present &&
                     layoutGhosts(state.present, comparisonPreview.document).map(
                       (c) => (
@@ -1733,6 +1744,7 @@ function App() {
                 layout: "Auto-arrange",
                 templates: "Templates",
                 compare: "Compare layout",
+                problems: "Problems",
               }).map(([key, label]) => (
                 <button
                   key={key}
@@ -1863,6 +1875,8 @@ function App() {
                   </button>
                 </div>
               </form>
+            ) : panel === "problems" ? (
+              <fieldset disabled={busy||!!draft}><ProblemsPanel issues={problems} activeKey={activeProblemKey} onFocus={focusProblem} onJson={()=>setPanel('json')} checked={!!compilerReport} stale={!!compilerReport&&compilerReport.document!==state.present} onCheck={()=>act(async()=>{await request('render',state.present);setNotice('Archify validation passed.');})}/></fieldset>
             ) : panel === "compare" ? (
               <fieldset disabled={busy || !!draft}>
                 <ComparePanel

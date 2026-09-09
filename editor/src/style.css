@@ -9,6 +9,10 @@
 .route-segment { padding: 2px; width: 28px; height: 28px; min-height: 28px; color: #075c54; border: 2px solid #087b72; background: #e2f2ee; }
 .route-segment.horizontal { cursor: ns-resize; }
 .route-segment.vertical { cursor: ew-resize; }
+.problem-highlight { position: absolute; pointer-events: none; border: 3px dashed #a5351b; border-radius: 7px; background: #ffccbb22; }
+.problem-item { padding: 12px 0; border-bottom: 1px solid #dbe2e6; }
+.problem-item button { text-align: left; }
+.problem-item small { display: block; color: #526570; }
 .canvas-drag-point {
   position: absolute;
   pointer-events: all;
