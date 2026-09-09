@@ -13,6 +13,7 @@ export default function AutoLayoutPanel({document, selection, locked, onApply}) 
       <svg role="img" aria-label="Proposed component arrangement" viewBox={`0 0 ${width} ${height}`} style={{width:'100%',minHeight:200,background:'#f4f7f8'}}>
         {boxes.map(c=><g key={c.id}><rect x={c.pos[0]} y={c.pos[1]} width={c.size[0]} height={c.size[1]} fill={selection.includes(c.id)&&!locked.includes(c.id)?'#ccece6':'#e0e5e8'} stroke="#49616b"/><text x={c.pos[0]+4} y={c.pos[1]+18} fontSize="12">{c.label}</text></g>)}
       </svg><p>Green boxes are the selected items to arrange. Grey boxes stay in place.</p>
+      <ul>{boxes.filter(c=>selection.includes(c.id)&&!locked.includes(c.id)).map(c=><li key={c.id}>{c.label}: {c.pos.join(', ')}</li>)}</ul>
       <button onClick={()=>setPreview(null)}>Cancel arrangement</button>
       <button onClick={()=>{onApply(preview);setPreview(null);}}>Apply arrangement</button>
     </>}

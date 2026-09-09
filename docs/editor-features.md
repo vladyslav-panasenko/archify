@@ -77,7 +77,7 @@ F29–F36 are approved for implementation. Each item is delivered as a tested co
 | --- | --- | --- | --- |
 | F29 | Editor hardening | Audit all five adapters, reject malformed references and geometry without losing the draft, and verify long undo/redo sessions and cancellation. Record findings and fixes. | Implemented |
 | F30 | Large-diagram performance | Record repeatable measurements for selection, dragging and rendering hundreds of nodes; fix measured bottlenecks and document practical limits. | Implemented |
-| F31 | Auto-arrange selection | Preview a deterministic architecture layout, preserve locked/unselected items and authored routes, then apply as one undoable JSON edit or cancel. | Pending |
+| F31 | Auto-arrange selection | Preview a deterministic architecture layout, preserve locked/unselected items and authored routes, then apply as one undoable JSON edit or cancel. | Implemented |
 | F32 | Reusable templates | Save, rename, export/import and insert architecture fragments with fresh IDs and remapped internal connections; preserve unrelated JSON and bound local storage. | Pending |
 | F33 | Schema-aware JSON editing | Offer schema-based field/value suggestions, inline validation with locations, and navigation between source fields and canvas items while preserving unapplied text. | Pending |
 | F34 | Local project workspace | Browse diagrams under an explicitly opened local directory, switch documents while retaining separate drafts/history, and save with per-file revision and path checks. | Pending |
