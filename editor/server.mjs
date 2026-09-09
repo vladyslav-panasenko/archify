@@ -192,6 +192,13 @@ export async function createEditorServer({
         validate(body.document);
         if (req.method === "POST" && url.pathname === "/api/validate")
           return send(200, { valid: true });
+        if(req.method==='POST'&&url.pathname==='/api/save-as') {
+          if(!workspace)return send(403,{error:'Start with --directory to save new project files.'});
+          if(saving)return send(409,{error:'A save is in progress. Try again.'});
+          saving=true;
+          try{const result=await workspace.saveAs(body.name,body.document,body.revision);return send(200,{document:body.document,token,revision:result.revision,writable:true,recoveryKey:hash(result.file),name:result.name,workspace:true,workspaceId:result.id});}
+          finally{saving=false;}
+        }
         if (req.method === "PUT" && url.pathname === "/api/document") {
           const filePath = workspace
             ? await workspace.resolve(url.searchParams.get("id"))
@@ -284,6 +291,7 @@ export async function createEditorServer({
       send(error.status || 400, {
         error: error.message,
         diagnostics: error.archifyDiagnostics || [],
+        conflict:error.conflict,
       });
     }
   });

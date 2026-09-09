@@ -26,7 +26,7 @@ export default function WorkspacePanel({
   }
   useEffect(() => {
     refresh();
-  }, []);
+  }, [id]);
   return (
     <section className="workspace-picker">
       <label className="field">

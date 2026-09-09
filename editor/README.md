@@ -122,3 +122,5 @@ Route segments: select an architecture connection with at least two authored way
 Problems: local overlaps and bounds checks update after committed edits. Run compiler checks for routing and labels. Click a problem or use Previous/Next to select and highlight affected components. Compiler results are marked stale after edits; unmapped diagnostics offer a JSON shortcut. No corrections are applied automatically.
 
 Navigation: inspector tools are grouped into Edit, Inspect and Document. Collapse Tools to reclaim panel space. Commands (Ctrl/Cmd+K) searches panels and common actions; Arrow keys and Enter select, Escape restores focus, and unavailable actions stay disabled. Existing shortcuts continue to work.
+
+Workspace Save As: create a diagram or open a draft, then use Save As with a relative .json filename. New files are created exclusively; existing files require explicit replacement of the displayed revision. Existing subfolders are allowed, symbolic links and traversal are rejected. Files with another unsaved editor draft must be saved first. Successful creation opens the new file and refreshes the project picker.

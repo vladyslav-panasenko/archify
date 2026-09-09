@@ -2,7 +2,7 @@ import React from 'react';
 export const panelGroups=[
   {label:'Edit',panels:{inspector:'Properties',structure:'Structure',layout:'Auto-arrange',templates:'Templates'}},
   {label:'Inspect',panels:{json:'JSON',search:'Search',problems:'Problems',compare:'Compare layout',review:'Review'}},
-  {label:'Document',panels:{settings:'Settings',checkpoints:'Checkpoints'}},
+  {label:'Document',panels:{settings:'Settings',checkpoints:'Checkpoints',saveas:'Save As'}},
 ];
 export const panelLabels=Object.assign({},...panelGroups.map(g=>g.panels));
 export default function EditorNavigation({panel,disabled,onSelect}) {

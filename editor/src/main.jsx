@@ -53,6 +53,7 @@ import {compilerProblems} from './problems.mjs';
 import ProblemsPanel from './ProblemsPanel.jsx';
 import EditorNavigation,{panelLabels} from './EditorNavigation.jsx';
 import CommandMenu from './CommandMenu.jsx';
+import SaveAsPanel from './SaveAsPanel.jsx';
 const JsonEditor = React.lazy(() => import("./JsonEditor.jsx"));
 import {
   adapterFor,
@@ -652,6 +653,16 @@ function App() {
         "Project diagram opened. Other file drafts remain in this session.",
       );
     });
+  }
+  async function saveAsProject(name,revision) {
+    const targetDraft=[...workspaceDrafts.current.values()].find(c=>c.session.name===name.replace(/\\/g,'/'));
+    if(targetDraft&&(targetDraft.saved!==serialize(targetDraft.state.present)||targetDraft.rawText!==null))throw new Error('That file has an unsaved editor draft. Open and save it first, or choose another name.');
+    setBusy(true);
+    try {
+      const response=await fetch('/api/save-as',{method:'POST',headers:{'Content-Type':'application/json','X-Editor-Token':session.token},body:JSON.stringify({name,revision,document:state.present})});const data=await response.json();if(!response.ok)throw Object.assign(new Error(data.error),{conflict:data.conflict});
+      if(session.writable&&session.workspaceId!==data.workspaceId)workspaceDrafts.current.set(session.workspaceId,{session,state,saved,sourceBase,selection,edgeIndex,locked,panel:'inspector',rawText:null,recovery});
+      workspaceDrafts.current.delete(data.workspaceId);load(data);setState(state);setRecovery(null);setPanel('inspector');setNotice(`Saved ${data.name}.`);
+    }finally{setBusy(false);}
   }
   function change(next) {
     if (rawDirty) {
@@ -1857,6 +1868,8 @@ function App() {
                   </button>
                 </div>
               </form>
+            ) : panel === "saveas" ? (
+              <fieldset disabled={busy||!!draft||rawDirty}><SaveAsPanel enabled={session.workspace} onSave={saveAsProject}/></fieldset>
             ) : panel === "problems" ? (
               <fieldset disabled={busy||!!draft}><ProblemsPanel issues={problems} activeKey={activeProblemKey} onFocus={focusProblem} onJson={()=>setPanel('json')} checked={!!compilerReport} stale={!!compilerReport&&compilerReport.document!==state.present} onCheck={()=>act(async()=>{await request('render',state.present);setNotice('Archify validation passed.');})}/></fieldset>
             ) : panel === "compare" ? (
