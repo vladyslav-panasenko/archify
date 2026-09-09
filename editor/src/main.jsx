@@ -54,6 +54,7 @@ import ProblemsPanel from './ProblemsPanel.jsx';
 import EditorNavigation,{panelLabels} from './EditorNavigation.jsx';
 import CommandMenu from './CommandMenu.jsx';
 import SaveAsPanel from './SaveAsPanel.jsx';
+import {readView,writeView,viewKey} from './document-view.mjs';
 const JsonEditor = React.lazy(() => import("./JsonEditor.jsx"));
 import {
   adapterFor,
@@ -412,6 +413,7 @@ function App() {
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [canvasVersion, setCanvasVersion] = useState(0);
+  const [initialView,setInitialView]=useState(null);
   const [outlineOpen, setOutlineOpen] = useState(false);
   const outlineToggle = useRef();
   const [comparisonPreview, setComparisonPreview] = useState(null);
@@ -463,6 +465,11 @@ function App() {
     state && panel === "json" && jsonText !== presentText,
   );
   const hasUnsaved = dirty || rawDirty || Boolean(draft) || Boolean(layoutPreview);
+  function rememberView(viewport=flow.current?.getViewport()) {
+    if(!session||!state||!viewport)return;
+    writeView(localStorage,viewKey(session),{viewport,selection,panel},state.present,Object.keys(panelLabels));
+  }
+  useEffect(()=>{if(flow.current)rememberView();},[selection,panel]);
 
   useEffect(() => {
     fetch("/api/document")
@@ -561,6 +568,8 @@ function App() {
   });
 
   function load(data) {
+    rememberView();flow.current=null;
+    const view=readView(localStorage,viewKey(data),data.document,Object.keys(panelLabels));setInitialView(view);setPanel(view?.panel||'inspector');
     setCompilerReport(null);setActiveProblemKey(null);
     setLayoutPreview(null);
     setSourceBase(data.document);
@@ -581,7 +590,7 @@ function App() {
     setDraft(null);
     setSession(data);
     setSaved(serialize(data.document));
-    setSelection([]);
+    setSelection(view?.selection||[]);
     setEdgeIndex(null);
     setError("");
     setNotice(
@@ -636,7 +645,6 @@ function App() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
         load(data);
-        setPanel("inspector");
         setRecovery(null);
         try {
           const stored = JSON.parse(
@@ -1486,7 +1494,9 @@ function App() {
                 onInit={(instance) => {
                   flow.current = instance;
                 }}
-                fitView
+                defaultViewport={initialView?.viewport}
+                fitView={!initialView}
+                onMoveEnd={(_,viewport)=>rememberView(viewport)}
                 fitViewOptions={{ padding: 0.2 }}
                 minZoom={0.15}
                 maxZoom={3}

@@ -224,6 +224,8 @@ code {
 }
 .toolbar nav {
   display: flex;
+  flex: 1 1 700px;
+  min-width: 0;
   gap: 7px;
   margin-left: auto;
   flex-wrap: wrap;

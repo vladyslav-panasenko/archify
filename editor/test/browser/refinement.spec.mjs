@@ -1,4 +1,7 @@
 import {test,expect} from '@playwright/test';
+test('document viewport, selection and inspector restore after reload',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Users users',exact:true}).click();await page.getByRole('button',{name:'Search',exact:true}).click();await page.getByRole('button',{name:'Zoom In',exact:true}).click();await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('archify-document-views:v1')||'[]').at(-1)?.view?.viewport?.zoom)).toBeTruthy();const viewport=page.locator('.react-flow__viewport');const before=await viewport.getAttribute('style');await page.reload();await expect(page.getByRole('button',{name:'Search',exact:true})).toHaveAttribute('aria-pressed','true');await expect(page.getByRole('button',{name:'Users users',exact:true})).toHaveAttribute('aria-pressed','true');await expect(viewport).toHaveAttribute('style',before);
+});
 test('commands search, navigate by keyboard and restore focus on Escape',async({page})=>{
  await page.goto('/');const trigger=page.getByRole('button',{name:'Commands',exact:true});await trigger.focus();await page.keyboard.press('Control+k');await expect(page.getByRole('dialog',{name:'Editor commands'})).toBeVisible();await page.getByLabel('Find command').fill('Open Templates');await page.keyboard.press('Enter');await expect(page.getByRole('heading',{name:'Reusable templates'})).toBeVisible();await trigger.focus();await page.keyboard.press('Control+k');await page.keyboard.press('Escape');await expect(trigger).toBeFocused();await page.screenshot({path:'test-results/grouped-navigation.png'});await page.setViewportSize({width:390,height:844});await trigger.click();await page.getByLabel('Find command').fill('Open');await page.screenshot({path:'test-results/commands-narrow.png'});
 });
@@ -18,5 +21,6 @@ test('full canvas arrangement preview is cancellable and guards authoring',async
  await expect(page.getByLabel('Arrangement preview')).toBeVisible();await expect(nodes.first()).not.toHaveAttribute('style',position);await expect(page.getByRole('button',{name:'Add component',exact:true})).toBeDisabled();await expect(page.getByRole('button',{name:'Download JSON',exact:true})).toBeDisabled();
  await page.screenshot({path:'test-results/full-canvas-preview.png'});await page.keyboard.press('Escape');await expect(nodes.first()).toHaveAttribute('style',position);await expect(page.getByLabel('Arrangement preview')).toHaveCount(0);
 });
+
 
 

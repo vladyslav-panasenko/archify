@@ -5,6 +5,11 @@ import {newDocument} from '../src/document.mjs';
 import {moveSegment,routeSegments} from '../src/segments.mjs';
 import {layoutProblems} from '../src/document.mjs';
 import {compilerProblems} from '../src/problems.mjs';
+import {readView,writeView,validView,viewStorageKey} from '../src/document-view.mjs';
+test('document views filter stale selections and bound storage without changing JSON',()=>{
+ const doc=diagram(),before=JSON.stringify(doc),data=new Map(),storage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)},view={viewport:{x:20,y:30,zoom:1.2},selection:['a','missing'],panel:'search'};
+ for(let i=0;i<55;i++)assert.equal(writeView(storage,`file-${i}`,view,doc,['search']),true);assert.equal(JSON.parse(data.get(viewStorageKey)).length,50);assert.equal(readView(storage,'file-0',doc,['search']),null);assert.deepEqual(readView(storage,'file-54',doc,['search']).selection,['a']);assert.equal(validView({...view,viewport:{x:NaN,y:0,zoom:1}},doc,['search']),null);assert.equal(JSON.stringify(doc),before);
+});
 test('problems keep stable node references and map compiler paths without guessing unknown subjects',()=>{
  const doc=diagram();const issues=layoutProblems(doc);assert.ok(issues.some(p=>p.ids.includes('a')&&p.ids.includes('b')));const outside=structuredClone(doc);outside.components[0].pos=[-10,80];assert.ok(layoutProblems(outside).some(p=>p.kind==='bounds'&&p.ids[0]==='a'));
  const mapped=compilerProblems(doc,[{message:'bad edge',subject:{path:'/connections/0'}},{message:'unknown',subject:{path:'/meta'}}]);assert.deepEqual(mapped[0].ids,['a','b']);assert.equal(mapped[0].edgeIndex,0);assert.deepEqual(mapped[1].ids,[]);

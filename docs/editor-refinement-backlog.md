@@ -10,9 +10,10 @@ Approved batch: F37–F44. Keep Archify JSON as the source of truth. Editor navi
 | F40 | Problems panel | List overlap, bounds and renderer issues with stable item references; select, highlight and step through problems. Mark compiler results stale after edits. | Implemented |
 | F41 | Inspector navigation and commands | Group panels into task-oriented navigation; provide a searchable keyboard command menu with available actions, shortcuts, focus restoration and disabled-state guards. | Implemented |
 | F42 | Workspace Create / Save As | Save new diagrams or copies beneath the opened directory, validate paths/content, prevent accidental overwrite and check revisions when replacement is explicitly requested. | Implemented |
-| F43 | Remember document views | Restore bounded local zoom/pan, selection and panel state across switching/reopening without changing JSON or losing unapplied text. | Pending |
+| F43 | Remember document views | Restore bounded local zoom/pan, selection and panel state across switching/reopening without changing JSON or losing unapplied text. | Implemented |
 | F44 | Readable undo history | Describe edits, show past/current/future states and jump through retained history without losing redo until a new edit. | Pending |
 
 ## Delivery
 
 Commit IDs and verification results will be recorded as each item completes.
+

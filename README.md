@@ -286,3 +286,5 @@ Issues, pull requests, and real-world diagrams are welcome. Start with the [cont
 ## Star History
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/tt-a1i/archify/star-history/assets/star-history-dark.svg" /><img alt="Star History" src="https://raw.githubusercontent.com/tt-a1i/archify/star-history/assets/star-history-light.svg" /></picture></p>
+
+The editor remembers each document's zoom, pan, selected components and inspector panel locally. Views are bounded to 50 recent documents and stay outside exported JSON; recovered unapplied text takes precedence.
