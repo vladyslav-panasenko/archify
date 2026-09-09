@@ -6,6 +6,9 @@
   font-size: 13px;
 }
 .canvas-preview { position: absolute; top: 86px; left: 20px; right: 20px; padding: 10px; z-index: 8; background: #e2f2ee; color: #075c54; border: 1px solid #087b72; pointer-events: none; }
+.route-segment { padding: 2px; width: 28px; height: 28px; min-height: 28px; color: #075c54; border: 2px solid #087b72; background: #e2f2ee; }
+.route-segment.horizontal { cursor: ns-resize; }
+.route-segment.vertical { cursor: ew-resize; }
 .canvas-drag-point {
   position: absolute;
   pointer-events: all;

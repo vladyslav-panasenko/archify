@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {autoLayout} from '../src/auto-layout.mjs';
 import {newDocument} from '../src/document.mjs';
+import {moveSegment,routeSegments} from '../src/segments.mjs';
+test('segment motion edits exactly two coordinates perpendicular to an authored route',()=>{
+ const doc=diagram();doc.connections[0].via=[[10,10],[100,10],[100,90]];doc.connections[0].labelAt=[40,5];const next=moveSegment(doc,0,0,[999,35]);assert.deepEqual(next.connections[0].via,[[10,35],[100,35],[100,90]]);assert.deepEqual(next.connections[0].labelAt,[40,5]);assert.deepEqual(doc.connections[0].via,[[10,10],[100,10],[100,90]]);assert.equal(routeSegments(doc.connections[0]).length,2);assert.throws(()=>moveSegment(doc,0,0,[NaN,0]));assert.equal(routeSegments({via:[[0,0],[1,1]]}).length,0);
+});
 const diagram=()=>({...newDocument(),components:['a','b','c'].map(id=>({id,type:'backend',label:id,pos:[20,80],size:[100,50]})),connections:[{from:'a',to:'b'},{from:'b',to:'c'}]});
 test('directed layout follows edges, changes direction and preserves cycles and locks',()=>{
  const doc=diagram(),ids=['c','a','b'];const right=autoLayout(doc,ids,[],{mode:'directed',direction:'right',gap:80});assert.ok(right.components[0].pos[0]<right.components[1].pos[0]);assert.ok(right.components[1].pos[0]<right.components[2].pos[0]);assert.deepEqual(right.connections,doc.connections);

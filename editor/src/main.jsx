@@ -47,6 +47,7 @@ import TemplatesPanel from "./TemplatesPanel.jsx";
 import WorkspacePanel from "./WorkspacePanel.jsx";
 import ComparePanel from "./ComparePanel.jsx";
 import { layoutGhosts } from "./layout-comparison.mjs";
+import {routeSegments,moveSegment} from './segments.mjs';
 const JsonEditor = React.lazy(() => import("./JsonEditor.jsx"));
 import {
   adapterFor,
@@ -314,6 +315,7 @@ function ConnectionEdge(props) {
       )}
       {props.selected && (
         <EdgeLabelRenderer>
+          {data.segmentEditing&&routeSegments(data).map(segment=><DragPoint key={`segment:${segment.index}`} point={segment.point} label={`Move ${segment.orientation} segment ${segment.index+1}`} className={`route-segment ${segment.orientation}`} edit={point=>document=>moveSegment(document,Number(props.id.slice(2)),segment.index,point)}>{segment.orientation==='horizontal'?'↕':'↔'}</DragPoint>)}
           {(data.via || []).map((point, index) => (
             <DragPoint
               key={index}
@@ -968,6 +970,7 @@ function App() {
         data: {
           ...(options.edgeData?.(documentModel, e) || e),
           editorBoxes: components(documentModel),
+          segmentEditing:documentModel?.diagram_type==='architecture',
         },
         type: "connection",
         selected: index === edgeIndex,

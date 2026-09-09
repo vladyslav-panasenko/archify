@@ -116,3 +116,5 @@ Keyboard access: skip links focus the canvas or inspector. In the component list
 Full-canvas arrangement preview: Auto-arrange projects proposed positions onto the main canvas. Pan/zoom stays available; editing and saving are paused until Apply or Cancel. Escape also cancels without changing JSON.
 
 Directed layout: choose Follow connections, left-to-right or top-to-bottom, and spacing (16–500 units). Cycles share a layer; neighbor-order sweeps reduce crossings heuristically. Locked/unselected components remain obstacles and authored routes are preserved. Arrange at most 2,000 selected components at once; inspect the preview before applying.
+
+Route segments: select an architecture connection with at least two authored waypoints. Midpoint arrow handles move horizontal/vertical segments perpendicular to their direction. Both waypoints move together; endpoints and labels are preserved. Arrow keys (Shift for ten units), Escape and undo work as for other handles. Automatic routes, diagonal spans and endpoint-to-waypoint spans retain their existing editing controls.
