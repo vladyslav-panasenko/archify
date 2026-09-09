@@ -7,6 +7,16 @@ import {saveTemplate,renameTemplate,importTemplate,exportTemplate,checkTemplates
 import {pasteSelection} from '../src/clipboard.mjs';
 import {newDocument} from '../src/document.mjs';
 import {inspectJson,sourceIndex,suggestions,insertSuggestion,pathAt} from '../src/json-source.mjs';
+import {compareLayout,acceptLayout,layoutGhosts} from '../src/layout-comparison.mjs';
+import {createDiagram} from '../src/topology.mjs';
+
+test('layout comparison accepts only chosen placements and preserves topology and content',()=>{
+ const doc=newDocument(),other=structuredClone(doc);other.components[0].pos=[400,300];other.components[0].label='Changed content';
+ const changes=compareLayout(doc,other);assert.equal(changes.length,1);const next=acceptLayout(doc,other,[changes[0].key]);assert.equal(next.components[0].label,doc.components[0].label);assert.deepEqual(next.components[0].pos,[400,300]);assert.deepEqual(next.connections,doc.connections);assert.equal(layoutGhosts(doc,next).length,1);assert.deepEqual(acceptLayout(doc,other,[],[]),doc);assert.deepEqual(compareLayout(doc,other,['component-1']),[]);
+ const bad=structuredClone(other);bad.components[0].id='different';assert.throws(()=>compareLayout(doc,bad));
+ for(const type of ['workflow','dataflow','lifecycle']){const base=createDiagram(type,'Test'),candidate=structuredClone(base),collection=type==='lifecycle'?'states':'nodes';candidate[collection][0].yOffset=10;const accepted=acceptLayout(base,candidate,compareLayout(base,candidate).map(c=>c.key));validate(accepted);assert.equal(accepted[collection][0].yOffset,10);}
+ const seq=createDiagram('sequence','Sequence'),swapped=structuredClone(seq);swapped.participants.reverse();const reordered=acceptLayout(seq,swapped,['participant-order']);validate(reordered);assert.deepEqual(reordered.messages,seq.messages);assert.equal(reordered.participants[0].id,seq.participants[1].id);
+});
 
 test('JSON indexing handles escaped strings, schema refs and located diagnostics',()=>{
  const text=JSON.stringify({...newDocument(),meta:{title:'Escaped " { } / ~ \\ text'}},null,2),index=inspectJson(text);

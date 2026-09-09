@@ -922,3 +922,6 @@ legend {
 .json-issues button { display: block; width: 100%; text-align: left; margin-bottom: 4px; overflow-wrap: anywhere; }
 .workspace-picker { padding: 12px; border-bottom: 1px solid #dbe2e6; }
 .workspace-picker p { font-size: 12px; overflow-wrap: anywhere; }
+.comparison-ghost { position: absolute; border: 2px dashed #a54608; color: #713504; background: #fff1cebb; pointer-events: none; padding: 5px; font-size: 12px; overflow: hidden; }
+.comparison-choice { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+.comparison-choice small { display: block; color: #526570; }

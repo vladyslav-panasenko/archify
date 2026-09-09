@@ -45,6 +45,8 @@ import "./style.css";
 import AutoLayoutPanel from "./AutoLayoutPanel.jsx";
 import TemplatesPanel from "./TemplatesPanel.jsx";
 import WorkspacePanel from "./WorkspacePanel.jsx";
+import ComparePanel from "./ComparePanel.jsx";
+import {layoutGhosts} from './layout-comparison.mjs';
 const JsonEditor = React.lazy(() => import("./JsonEditor.jsx"));
 import {
   adapterFor,
@@ -400,6 +402,7 @@ function App() {
   const [session, setSession] = useState(null),
     [saved, setSaved] = useState("");
   const [canvasVersion, setCanvasVersion] = useState(0);
+  const [comparisonPreview,setComparisonPreview]=useState(null);
   const workspaceDrafts = useRef(new Map());
   const [sourceBase, setSourceBase] = useState(null),
     [conflict, setConflict] = useState(null);
@@ -1494,6 +1497,7 @@ function App() {
                 <Background gap={20} size={1} color="#cdd7dc" />
                 <Controls showInteractive={false} />
                 <ViewportPortal>
+                  {comparisonPreview?.base===state.present&&layoutGhosts(state.present,comparisonPreview.document).map(c=><div key={`ghost:${c.id}`} className="comparison-ghost" style={{left:c.pos[0],top:c.pos[1],width:c.size[0],height:c.size[1]}}>{c.label}</div>)}
                   <div className="snap-guides" aria-hidden="true">
                     {guides.map((g, i) => (
                       <div
@@ -1536,6 +1540,7 @@ function App() {
                 checkpoints: "Checkpoints",
                 layout: "Auto-arrange",
                 templates: "Templates",
+                compare: "Compare layout",
               }).map(([key, label]) => (
                 <button
                   key={key}
@@ -1666,6 +1671,8 @@ function App() {
                   </button>
                 </div>
               </form>
+            ) : panel === "compare" ? (
+              <fieldset disabled={busy||!!draft}><ComparePanel key={`${presentText}:${locked.join(',')}`} document={state.present} locked={locked} onValidate={next=>request('validate',next)} onApply={change} onPreview={next=>setComparisonPreview(next?{base:state.present,document:next}:null)}/></fieldset>
             ) : panel === "templates" ? (
               <fieldset disabled={busy || !!draft}><TemplatesPanel document={state.present} selection={selection} onValidate={next=>request('validate',next)} onInsert={result=>{change(result.document);setSelection(result.ids);setEdgeIndex(null);}} onExport={(value,name)=>download(serialize(value),name,'application/json')}/></fieldset>
             ) : panel === "layout" ? (

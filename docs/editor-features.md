@@ -81,7 +81,7 @@ F29–F36 are approved for implementation. Each item is delivered as a tested co
 | F32 | Reusable templates | Save, rename, export/import and insert architecture fragments with fresh IDs and remapped internal connections; preserve unrelated JSON and bound local storage. | Implemented |
 | F33 | Schema-aware JSON editing | Offer schema-based field/value suggestions, inline validation with locations, and navigation between source fields and canvas items while preserving unapplied text. | Implemented |
 | F34 | Local project workspace | Browse diagrams under an explicitly opened local directory, switch documents while retaining separate drafts/history, and save with per-file revision and path checks. | Implemented |
-| F35 | Layout comparison | Compare two compatible JSON versions on the canvas and selectively accept supported placement changes by stable item ID, with undo and topology preserved. | Pending |
+| F35 | Layout comparison | Compare two compatible JSON versions on the canvas and selectively accept supported placement changes by stable item ID, with undo and topology preserved. | Implemented |
 | F36 | Accessibility pass | Audit keyboard workflows, focus/selection announcements, labels, contrast and hit targets; fix barriers and verify desktop/narrow layouts. | Pending |
 
 ## Delivery commits
