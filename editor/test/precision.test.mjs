@@ -7,3 +7,8 @@ test('guides use screen-scaled tolerance, preserve groups and ignore remote spac
  const box={pos:[251,100],size:[100,60]},near=[{pos:[100,100],size:[100,60]},{pos:[400,100],size:[100,60]}];assert.equal(snapBox(box,near).delta[0],-1);assert.equal(snapBox(box,near.map(c=>({...c,pos:[c.pos[0],900]}))).delta[0],0);assert.equal(snapBox({...box,pos:[255,100]},near,{threshold:3}).delta[0],0);assert.equal(snapBox({...box,pos:[255,100]},near,{threshold:12}).delta[0],-5);assert.deepEqual(snapBox(box,near,{bypass:true}).guides,[]);
  const doc=fixture(),positions=new Map([['a',[104,100]],['c',[254,300]]]),result=snapPositions(doc,positions,{threshold:6});assert.equal(result.positions.get('c')[0]-result.positions.get('a')[0],150);assert.deepEqual(doc.components[0].pos,[100,100]);
 });
+
+import {simplifyRoute} from '../src/segments.mjs';
+test('route cleanup preserves shape and metadata; straightening only removes authored waypoints',()=>{
+ const doc=fixture();doc.connections[0].via=[[0,0],[10,0],[10,0],[20,0],[10,0],[10,10]];doc.connections[0].labelAt=[5,8];const next=simplifyRoute(doc,0);assert.deepEqual(next.connections[0].via,[[0,0],[20,0],[10,0],[10,10]]);assert.deepEqual(next.connections[0].labelAt,[5,8]);assert.deepEqual(next.components,doc.components);const straight=simplifyRoute(doc,0,'straight');assert.equal(straight.connections[0].via,undefined);assert.equal(straight.connections[0].route,'straight');assert.equal(straight.connections[0].label,'HTTP');assert.equal(doc.connections[0].via.length,6);
+});

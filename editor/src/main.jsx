@@ -43,6 +43,7 @@ import {
   reconnectConnection,
 } from "./document.mjs";
 import "./style.css";
+import RouteTools from './RouteTools.jsx';
 import AttachmentControls from './AttachmentControls.jsx';
 import AutoLayoutPanel from "./AutoLayoutPanel.jsx";
 import TemplatesPanel from "./TemplatesPanel.jsx";
@@ -439,6 +440,7 @@ function App() {
   const [outlineOpen, setOutlineOpen] = useState(false);
   const outlineToggle = useRef();
   const [comparisonPreview, setComparisonPreview] = useState(null);
+  const [routePreview, setRoutePreview] = useState(null);
   const [layoutPreview, setLayoutPreview] = useState(null);
   const workspaceDrafts = useRef(new Map());
   const [sourceBase, setSourceBase] = useState(null),
@@ -465,7 +467,7 @@ function App() {
   const [error, setError] = useState(""),
     [notice, setNotice] = useState("Opening diagram…"),
     [working, setBusy] = useState(false);
-  const busy = working || !!layoutPreview;
+  const busy = working || !!layoutPreview || !!routePreview;
   const [snap, setSnap] = useState(false),
     [panel, setPanel] = useState("inspector"),
     [query, setQuery] = useState("");
@@ -476,7 +478,7 @@ function App() {
     dragBase = useRef(),
     cancelled = useRef(false),
     dialog = useRef();
-  const documentModel = draft || layoutPreview || state?.present;
+  const documentModel = draft || routePreview?.document || layoutPreview || state?.present;
   const options = editingOptions(documentModel);
   const presentText = useMemo(
     () => (state ? serialize(state.present) : ""),
@@ -487,7 +489,7 @@ function App() {
     state && panel === "json" && jsonText !== presentText,
   );
   const hasUnsaved =
-    dirty || rawDirty || Boolean(draft) || Boolean(layoutPreview);
+    dirty || rawDirty || Boolean(draft) || Boolean(layoutPreview) || Boolean(routePreview);
   function rememberView(viewport = flow.current?.getViewport()) {
     if (!session || !state || !viewport) return;
     writeView(
@@ -611,6 +613,7 @@ function App() {
     setPanel(view?.panel || "inspector");
     setCompilerReport(null);
     setActiveProblemKey(null);
+    setRoutePreview(null);
     setLayoutPreview(null);
     setSourceBase(data.document);
     setConflict(null);
@@ -1203,8 +1206,9 @@ function App() {
       return;
     }
     if (commandOpen) return;
-    if (event.key === "Escape" && layoutPreview) {
-      setLayoutPreview(null);
+    if (event.key === "Escape" && (layoutPreview || routePreview)) {
+      setRoutePreview(null);
+    setLayoutPreview(null);
       return;
     }
     if (event.key === "Escape" && outlineOpen) {
@@ -1946,6 +1950,7 @@ function App() {
               </ReactFlow>
             )}
             {documentModel?.diagram_type==='architecture' && edgeIndex!==null && documentModel.connections[edgeIndex] && <AttachmentControls edge={documentModel.connections[edgeIndex]} disabled={busy||rawDirty||!!draft} onChange={edgePatch} />}
+            {documentModel?.diagram_type==='architecture' && (routePreview || (edgeIndex!==null && state.present.connections[edgeIndex])) && <RouteTools document={state.present} index={routePreview?.index??edgeIndex} preview={routePreview} disabled={working||rawDirty||!!draft||!!layoutPreview} onPreview={setRoutePreview} onApply={next=>{change(next);setRoutePreview(null);}} />}
             <div className="canvas-help">
               Drag to move · Shift to select several · Space + drag to pan ·
               Arrow keys to nudge
@@ -2144,7 +2149,8 @@ function App() {
                   onPreview={setLayoutPreview}
                   onApply={(next) => {
                     change(next);
-                    setLayoutPreview(null);
+                    setRoutePreview(null);
+    setLayoutPreview(null);
                   }}
                 />
               </fieldset>
@@ -3009,5 +3015,6 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+
 
 

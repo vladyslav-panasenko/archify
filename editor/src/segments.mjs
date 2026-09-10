@@ -1,4 +1,22 @@
 import { patchConnection } from "./document.mjs";
+export function simplifyRoute(document, index, mode='simplify') {
+  if(document.diagram_type!=='architecture'||!document.connections[index]) throw new Error('Select an architecture connection.');
+  if(!['simplify','straight'].includes(mode)) throw new Error('Unknown route operation.');
+  if(mode==='straight') return patchConnection(document,index,{via:undefined,route:'straight'});
+  const via=[];
+  for(const point of document.connections[index].via||[]) {
+    if(via.length && point.every((v,i)=>v===via.at(-1)[i]))continue;
+    while(via.length>=2) {
+      const a=via.at(-2),b=via.at(-1);
+      const cross=(b[0]-a[0])*(point[1]-b[1])-(b[1]-a[1])*(point[0]-b[0]);
+      const forward=(b[0]-a[0])*(point[0]-b[0])+(b[1]-a[1])*(point[1]-b[1]);
+      if(cross!==0||forward<0)break;
+      via.pop();
+    }
+    via.push([...point]);
+  }
+  return patchConnection(document,index,{via:via.length?via:undefined});
+}
 export function routeSegments(edge) {
   const via = edge?.via || [];
   return via.slice(0, -1).flatMap((a, index) => {
