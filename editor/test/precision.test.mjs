@@ -22,3 +22,10 @@ import {autoLayout} from '../src/auto-layout.mjs';
 test('partial layout positions selection around fixed neighbors and preserves routes and locks',()=>{
  const doc=fixture();const next=autoLayout(doc,['b'],[],{mode:'anchored',gap:60});assert.deepEqual(next.components[1].pos,[260,100]);assert.deepEqual(next.components[0],doc.components[0]);assert.deepEqual(next.connections,doc.connections);const down=autoLayout(doc,['b'],[],{mode:'anchored',direction:'down',gap:60});assert.deepEqual(down.components[1].pos,[100,220]);assert.deepEqual(autoLayout(doc,['a','b'],['a'],{mode:'anchored'}).components[0],doc.components[0]);assert.deepEqual(autoLayout(doc,['c'],[],{mode:'anchored'}).connections,doc.connections);
 });
+
+import {watchSource} from '../src/source-watch.mjs';
+test('source watchers ignore late responses after cleanup and report changes or errors',async()=>{
+ const events=new EventTarget(),results=[];let resolve;const stop=watchSource({url:'/a',revision:'a',events,onResult:r=>results.push(r),fetcher:()=>new Promise(r=>resolve=r)});stop();resolve({ok:true,json:async()=>({revision:'b'})});await new Promise(r=>setImmediate(r));assert.deepEqual(results,[]);
+ const active=watchSource({url:'/a',revision:'a',events,onResult:r=>results.push(r),fetcher:async()=>({ok:true,json:async()=>({revision:'b'})})});await new Promise(r=>setImmediate(r));active();assert.deepEqual(results,[{revision:'b'}]);
+ const failed=watchSource({url:'/a',revision:'a',events,onResult:r=>results.push(r),fetcher:async()=>{throw new Error('missing');}});await new Promise(r=>setImmediate(r));failed();assert.equal(results.at(-1).error,'missing');
+});

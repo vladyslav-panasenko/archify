@@ -43,6 +43,7 @@ import {
   reconnectConnection,
 } from "./document.mjs";
 import "./style.css";
+import {watchSource} from './source-watch.mjs';
 import RouteTools from './RouteTools.jsx';
 import AttachmentControls from './AttachmentControls.jsx';
 import AutoLayoutPanel from "./AutoLayoutPanel.jsx";
@@ -443,6 +444,8 @@ function App() {
   const [routePreview, setRoutePreview] = useState(null);
   const [layoutPreview, setLayoutPreview] = useState(null);
   const workspaceDrafts = useRef(new Map());
+  const [sourceAlert,setSourceAlert]=useState(null);
+  useEffect(()=>{setSourceAlert(null);if(!session?.writable)return;return watchSource({url:'/api/document'+(session.workspaceId?'?id='+encodeURIComponent(session.workspaceId):''),revision:session.revision,onResult:setSourceAlert});},[session?.writable,session?.workspaceId,session?.revision,session?.recoveryKey]);
   const [sourceBase, setSourceBase] = useState(null),
     [conflict, setConflict] = useState(null);
   const [clipboard, setClipboard] = useState(null);
@@ -863,6 +866,15 @@ function App() {
       await request("validate", document);
       load({ ...session, document, name: file.name, writable: false });
       setNotice("JSON imported. Changes can be downloaded.");
+    });
+  }
+  async function reloadSource() {
+    if(busy||draft||rawDirty)return;
+    if(dirty&&!window.confirm('Discard your applied edits and reload the current source file?'))return;
+    await act(async()=>{
+      const response=await fetch('/api/document'+(session.workspaceId?'?id='+encodeURIComponent(session.workspaceId):''),{cache:'no-store'});
+      const data=await response.json();if(!response.ok)throw new Error(data.error);
+      load(data);setRecovery(null);setSourceAlert(null);setNotice('Current source reloaded.');
     });
   }
   async function compareSource(local = state.present) {
@@ -1644,6 +1656,7 @@ function App() {
             className="canvas"
             aria-label="Diagram canvas"
           >
+            {sourceAlert && <section className="source-alert" aria-label="Source file changes"><span>{sourceAlert.error?'Source check unavailable: '+sourceAlert.error:'Source file changed outside the editor.'}</span>{!sourceAlert.error&&<><button disabled={busy||!!draft||rawDirty} onClick={()=>act(()=>compareSource())}>Compare source changes</button><button disabled={busy||!!draft||rawDirty} onClick={reloadSource}>Reload source file</button>{rawDirty&&<small>Apply or discard JSON text before comparing or reloading.</small>}</>}</section>}
             <div className="canvas-heading">
               <div>
                 <h1>{documentModel?.meta?.title || "Archify diagram"}</h1>
@@ -3015,6 +3028,7 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+
 
 
 

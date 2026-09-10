@@ -113,3 +113,9 @@ test("workspace switches preserve applied history and unapplied text independent
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test('external source notification preserves raw text and supports explicit reload',async({page})=>{
+ const directory=await fs.mkdtemp(path.join(os.tmpdir(),'archify-watch-'));const file=path.join(directory,'A.json');const doc=newDocument('Original');await fs.writeFile(file,JSON.stringify(doc));const server=await createEditorServer({directory});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{await page.goto(`http://127.0.0.1:${server.address().port}`);await page.getByRole('button',{name:'JSON',exact:true}).click();const raw=await page.getByLabel('Diagram JSON').inputValue()+' INVALID';await page.getByLabel('Diagram JSON').fill(raw);doc.meta.title='External title';await fs.writeFile(file,JSON.stringify(doc));await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await expect(page.getByLabel('Source file changes')).toContainText('Source file changed');await expect(page.getByLabel('Diagram JSON')).toHaveValue(raw);await expect(page.getByRole('button',{name:'Reload source file',exact:true})).toBeDisabled();await page.getByRole('button',{name:'Discard text',exact:true}).click();await page.getByRole('button',{name:'Compare source changes',exact:true}).click();await expect(page.getByRole('heading',{name:'Source conflict',exact:true})).toBeVisible();await page.getByRole('button',{name:'Reload source file',exact:true}).click();await expect(page.getByRole('heading',{name:'External title',exact:true})).toBeVisible();await expect(page.getByLabel('Source file changes')).toHaveCount(0);}
+ finally{await page.close();await new Promise(r=>server.close(r));await fs.rm(directory,{recursive:true,force:true});}
+});
