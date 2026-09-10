@@ -17,3 +17,8 @@ import {boundaryBounds,fitBoundary} from '../src/structure.mjs';
 test('boundary fit changes only native padding and computes bounds around members',()=>{
  const doc=fixture();doc.boundaries=[{label:'Cloud',kind:'region',wraps:['a','b'],pad:30}];assert.deepEqual(boundaryBounds(doc,doc.boundaries[0],10),{pos:[90,90],size:[420,100]});const next=fitBoundary(doc,0,10);assert.deepEqual(next.components,doc.components);assert.deepEqual(next.connections,doc.connections);assert.equal(next.boundaries[0].pad,10);assert.equal(doc.boundaries[0].pad,30);assert.throws(()=>fitBoundary(doc,0,-1));assert.throws(()=>boundaryBounds(doc,{wraps:['missing']}));
 });
+
+import {autoLayout} from '../src/auto-layout.mjs';
+test('partial layout positions selection around fixed neighbors and preserves routes and locks',()=>{
+ const doc=fixture();const next=autoLayout(doc,['b'],[],{mode:'anchored',gap:60});assert.deepEqual(next.components[1].pos,[260,100]);assert.deepEqual(next.components[0],doc.components[0]);assert.deepEqual(next.connections,doc.connections);const down=autoLayout(doc,['b'],[],{mode:'anchored',direction:'down',gap:60});assert.deepEqual(down.components[1].pos,[100,220]);assert.deepEqual(autoLayout(doc,['a','b'],['a'],{mode:'anchored'}).components[0],doc.components[0]);assert.deepEqual(autoLayout(doc,['c'],[],{mode:'anchored'}).connections,doc.connections);
+});

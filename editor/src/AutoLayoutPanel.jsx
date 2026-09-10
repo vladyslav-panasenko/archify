@@ -23,7 +23,7 @@ export default function AutoLayoutPanel({
         components. Directed layout follows connections and orders layers to
         reduce crossings; cycles share a layer. Connections, waypoints and
         labels retain their authored values. The layout can extend beyond the
-        canvas; inspect it before rendering.
+        canvas; inspect it before rendering. Around fixed neighbors positions the selected group relative to directly connected unselected or locked components. Multiple anchors are balanced; obstacles take precedence. Without fixed neighbors it uses directed layout.
       </p>
       {error && <p role="alert">{error}</p>}
       {!preview && (
@@ -32,7 +32,7 @@ export default function AutoLayoutPanel({
             Layout method
             <select value={mode} onChange={(e) => setMode(e.target.value)}>
               <option value="grid">Grid</option>
-              <option value="directed">Follow connections</option>
+              <option value="directed">Follow connections</option><option value="anchored">Around fixed neighbors</option>
             </select>
           </label>
           <label className="field">
@@ -40,7 +40,7 @@ export default function AutoLayoutPanel({
             <select
               value={direction}
               onChange={(e) => setDirection(e.target.value)}
-              disabled={mode !== "directed"}
+              disabled={mode === "grid"}
             >
               <option value="right">Left to right</option>
               <option value="down">Top to bottom</option>
@@ -110,3 +110,4 @@ export default function AutoLayoutPanel({
     </div>
   );
 }
+

@@ -100,7 +100,7 @@ export function autoLayout(
   { mode = "grid", direction = "right", gap = 60 } = {},
 ) {
   if (
-    !["grid", "directed"].includes(mode) ||
+    !["grid", "directed", "anchored"].includes(mode) ||
     !["right", "down"].includes(direction) ||
     !Number.isFinite(gap) ||
     gap < 16 ||
@@ -128,7 +128,7 @@ export function autoLayout(
   ];
   const positions = new Map();
   const layers =
-    mode === "directed"
+    mode !== "grid"
       ? directedLayers(moving, document.connections || [])
       : null;
   const cells = layers
@@ -138,6 +138,22 @@ export function autoLayout(
         ),
       )
     : null;
+  if(mode==='anchored') {
+    const byId=new Map(boxes.map(c=>[c.id,c])), offsets=[];
+    const axis=direction==='right'?0:1,cross=1-axis,step=[width,height];
+    for(const edge of document.connections||[]) {
+      const incoming=!selected.has(edge.from)&&selected.has(edge.to);
+      const outgoing=selected.has(edge.from)&&!selected.has(edge.to);
+      if(!incoming&&!outgoing)continue;
+      const fixed=byId.get(incoming?edge.from:edge.to),item=byId.get(incoming?edge.to:edge.from);
+      if(!fixed||!item)continue;
+      const offset=[0,0],cell=cells.get(item.id);
+      offset[axis]=(incoming?fixed.pos[axis]+fixed.size[axis]+gap:fixed.pos[axis]-gap-item.size[axis])-cell[axis]*step[axis];
+      offset[cross]=fixed.pos[cross]+(fixed.size[cross]-item.size[cross])/2-cell[cross]*step[cross];
+      offsets.push(offset);
+    }
+    if(offsets.length) for(const axis of [0,1]) origin[axis]=Math.max(axis?60:20,offsets.reduce((sum,p)=>sum+p[axis],0)/offsets.length);
+  }
   let cell = 0;
   for (const item of moving) {
     let pos,
