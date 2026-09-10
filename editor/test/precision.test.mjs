@@ -12,3 +12,8 @@ import {simplifyRoute} from '../src/segments.mjs';
 test('route cleanup preserves shape and metadata; straightening only removes authored waypoints',()=>{
  const doc=fixture();doc.connections[0].via=[[0,0],[10,0],[10,0],[20,0],[10,0],[10,10]];doc.connections[0].labelAt=[5,8];const next=simplifyRoute(doc,0);assert.deepEqual(next.connections[0].via,[[0,0],[20,0],[10,0],[10,10]]);assert.deepEqual(next.connections[0].labelAt,[5,8]);assert.deepEqual(next.components,doc.components);const straight=simplifyRoute(doc,0,'straight');assert.equal(straight.connections[0].via,undefined);assert.equal(straight.connections[0].route,'straight');assert.equal(straight.connections[0].label,'HTTP');assert.equal(doc.connections[0].via.length,6);
 });
+
+import {boundaryBounds,fitBoundary} from '../src/structure.mjs';
+test('boundary fit changes only native padding and computes bounds around members',()=>{
+ const doc=fixture();doc.boundaries=[{label:'Cloud',kind:'region',wraps:['a','b'],pad:30}];assert.deepEqual(boundaryBounds(doc,doc.boundaries[0],10),{pos:[90,90],size:[420,100]});const next=fitBoundary(doc,0,10);assert.deepEqual(next.components,doc.components);assert.deepEqual(next.connections,doc.connections);assert.equal(next.boundaries[0].pad,10);assert.equal(doc.boundaries[0].pad,30);assert.throws(()=>fitBoundary(doc,0,-1));assert.throws(()=>boundaryBounds(doc,{wraps:['missing']}));
+});
