@@ -10,12 +10,13 @@ Approved batch: F45–F52. Archify JSON remains authoritative. Each feature rece
 | F48 | Fit boundaries to contents | Explicit fit action with configurable padding and computed dimensions; use native wraps/pad JSON and preserve member placement. | Implemented |
 | F49 | Anchored partial arrangement | Arrange unlocked selected nodes relative to directly connected fixed neighbors; preview, cancel and undo; retain anchors and routes. | Implemented |
 | F50 | External-file changes | Detect revision changes while open; offer explicit reload or merge, preserve drafts and unapplied text, ignore stale responses after switching files. | Implemented |
-| F51 | Large-diagram performance | Add repeatable realistic benchmarks, measure bottlenecks and improve projection/diagnostics or rendering with equivalent results. | Pending |
+| F51 | Large-diagram performance | Add repeatable realistic benchmarks, measure bottlenecks and improve projection/diagnostics or rendering with equivalent results. | Implemented |
 | F52 | JSON round-trip coverage | Exercise edits for all five schemas through serialize/reopen/undo, asserting unrelated fields survive and outputs validate. | Pending |
 
 ## Delivery
 
 Feature commits, measured checks and scope details are recorded here as work completes.
+
 
 
 

@@ -29,3 +29,9 @@ test('source watchers ignore late responses after cleanup and report changes or 
  const active=watchSource({url:'/a',revision:'a',events,onResult:r=>results.push(r),fetcher:async()=>({ok:true,json:async()=>({revision:'b'})})});await new Promise(r=>setImmediate(r));active();assert.deepEqual(results,[{revision:'b'}]);
  const failed=watchSource({url:'/a',revision:'a',events,onResult:r=>results.push(r),fetcher:async()=>{throw new Error('missing');}});await new Promise(r=>setImmediate(r));failed();assert.equal(results.at(-1).error,'missing');
 });
+
+import {automaticLabelPoint} from '../src/label-placement.mjs';
+test('optimized label placement matches exhaustive placement for dense and sparse layouts',()=>{
+ function reference(point,label,boxes){const w=Math.max(20,label.length*2.8+7),h=10,overlap=([x,y],b)=>x+w>b.pos[0]&&x-w<b.pos[0]+b.size[0]&&y+h>b.pos[1]&&y-h<b.pos[1]+b.size[1];if(!boxes.some(b=>overlap(point,b)))return point;return boxes.flatMap(b=>[[point[0],b.pos[1]-h-4],[point[0],b.pos[1]+b.size[1]+h+4],[b.pos[0]-w-4,point[1]],[b.pos[0]+b.size[0]+w+4,point[1]]]).filter(p=>!boxes.some(b=>overlap(p,b))).sort((a,b)=>Math.hypot(a[0]-point[0],a[1]-point[1])-Math.hypot(b[0]-point[0],b[1]-point[1]))[0]||point;}
+ for(let seed=1;seed<=50;seed++){const boxes=Array.from({length:30},(_,i)=>({pos:[(i*71+seed*13)%600,(i*113+seed*7)%400],size:[40+seed,30]})),point=[boxes[seed%30].pos[0]+20,boxes[seed%30].pos[1]+10];assert.deepEqual(automaticLabelPoint(point,'HTTP request',boxes),reference(point,'HTTP request',boxes));}
+});

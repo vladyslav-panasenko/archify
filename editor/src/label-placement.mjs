@@ -15,13 +15,12 @@ export function automaticLabelPoint(point, label, boxes) {
       [point[0], box.pos[1] + box.size[1] + halfHeight + 4],
       [box.pos[0] - halfWidth - 4, point[1]],
       [box.pos[0] + box.size[0] + halfWidth + 4, point[1]],
-    ])
-    .filter((candidate) => !boxes.some((box) => overlaps(candidate, box)));
+    ]);
   return (
     candidates.sort(
       (a, b) =>
         Math.hypot(a[0] - point[0], a[1] - point[1]) -
         Math.hypot(b[0] - point[0], b[1] - point[1]),
-    )[0] || point
+    ).find(candidate => !boxes.some(box => overlaps(candidate, box))) || point
   );
 }
