@@ -1187,3 +1187,4 @@ button {
   border-color: #087b72;
   opacity: 1;
 }
+.canvas-attachments {position:absolute;bottom:38px;right:14px;z-index:9;background:#fff;border:1px solid #cad5dc;border-radius:4px;padding:8px;display:flex;gap:12px;max-width:calc(100% - 70px);} .canvas-attachments label {display:grid;gap:4px;min-width:0;} .canvas-attachments select {max-width:100%;} .canvas-attachments legend {background:#fff;padding:0 4px;}

@@ -43,6 +43,7 @@ import {
   reconnectConnection,
 } from "./document.mjs";
 import "./style.css";
+import AttachmentControls from './AttachmentControls.jsx';
 import AutoLayoutPanel from "./AutoLayoutPanel.jsx";
 import TemplatesPanel from "./TemplatesPanel.jsx";
 import WorkspacePanel from "./WorkspacePanel.jsx";
@@ -1944,6 +1945,7 @@ function App() {
                 </ViewportPortal>
               </ReactFlow>
             )}
+            {documentModel?.diagram_type==='architecture' && edgeIndex!==null && documentModel.connections[edgeIndex] && <AttachmentControls edge={documentModel.connections[edgeIndex]} disabled={busy||rawDirty||!!draft} onChange={edgePatch} />}
             <div className="canvas-help">
               Drag to move · Shift to select several · Space + drag to pan ·
               Arrow keys to nudge
@@ -3007,4 +3009,5 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+
 
