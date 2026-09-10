@@ -9,18 +9,20 @@ export function automaticLabelPoint(point, label, boxes) {
     y + halfHeight > box.pos[1] &&
     y - halfHeight < box.pos[1] + box.size[1];
   if (!boxes.some((box) => overlaps(point, box))) return point;
-  const candidates = boxes
-    .flatMap((box) => [
-      [point[0], box.pos[1] - halfHeight - 4],
-      [point[0], box.pos[1] + box.size[1] + halfHeight + 4],
-      [box.pos[0] - halfWidth - 4, point[1]],
-      [box.pos[0] + box.size[0] + halfWidth + 4, point[1]],
-    ]);
+  const candidates = boxes.flatMap((box) => [
+    [point[0], box.pos[1] - halfHeight - 4],
+    [point[0], box.pos[1] + box.size[1] + halfHeight + 4],
+    [box.pos[0] - halfWidth - 4, point[1]],
+    [box.pos[0] + box.size[0] + halfWidth + 4, point[1]],
+  ]);
   return (
-    candidates.sort(
-      (a, b) =>
-        Math.hypot(a[0] - point[0], a[1] - point[1]) -
-        Math.hypot(b[0] - point[0], b[1] - point[1]),
-    ).find(candidate => !boxes.some(box => overlaps(candidate, box))) || point
+    candidates
+      .sort(
+        (a, b) =>
+          Math.hypot(a[0] - point[0], a[1] - point[1]) -
+          Math.hypot(b[0] - point[0], b[1] - point[1]),
+      )
+      .find((candidate) => !boxes.some((box) => overlaps(candidate, box))) ||
+    point
   );
 }

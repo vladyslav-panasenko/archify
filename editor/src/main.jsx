@@ -43,9 +43,9 @@ import {
   reconnectConnection,
 } from "./document.mjs";
 import "./style.css";
-import {watchSource} from './source-watch.mjs';
-import RouteTools from './RouteTools.jsx';
-import AttachmentControls from './AttachmentControls.jsx';
+import { watchSource } from "./source-watch.mjs";
+import RouteTools from "./RouteTools.jsx";
+import AttachmentControls from "./AttachmentControls.jsx";
 import AutoLayoutPanel from "./AutoLayoutPanel.jsx";
 import TemplatesPanel from "./TemplatesPanel.jsx";
 import WorkspacePanel from "./WorkspacePanel.jsx";
@@ -444,8 +444,25 @@ function App() {
   const [routePreview, setRoutePreview] = useState(null);
   const [layoutPreview, setLayoutPreview] = useState(null);
   const workspaceDrafts = useRef(new Map());
-  const [sourceAlert,setSourceAlert]=useState(null);
-  useEffect(()=>{setSourceAlert(null);if(!session?.writable)return;return watchSource({url:'/api/document'+(session.workspaceId?'?id='+encodeURIComponent(session.workspaceId):''),revision:session.revision,onResult:setSourceAlert});},[session?.writable,session?.workspaceId,session?.revision,session?.recoveryKey]);
+  const [sourceAlert, setSourceAlert] = useState(null);
+  useEffect(() => {
+    setSourceAlert(null);
+    if (!session?.writable) return;
+    return watchSource({
+      url:
+        "/api/document" +
+        (session.workspaceId
+          ? "?id=" + encodeURIComponent(session.workspaceId)
+          : ""),
+      revision: session.revision,
+      onResult: setSourceAlert,
+    });
+  }, [
+    session?.writable,
+    session?.workspaceId,
+    session?.revision,
+    session?.recoveryKey,
+  ]);
   const [sourceBase, setSourceBase] = useState(null),
     [conflict, setConflict] = useState(null);
   const [clipboard, setClipboard] = useState(null);
@@ -481,7 +498,8 @@ function App() {
     dragBase = useRef(),
     cancelled = useRef(false),
     dialog = useRef();
-  const documentModel = draft || routePreview?.document || layoutPreview || state?.present;
+  const documentModel =
+    draft || routePreview?.document || layoutPreview || state?.present;
   const options = editingOptions(documentModel);
   const presentText = useMemo(
     () => (state ? serialize(state.present) : ""),
@@ -492,7 +510,11 @@ function App() {
     state && panel === "json" && jsonText !== presentText,
   );
   const hasUnsaved =
-    dirty || rawDirty || Boolean(draft) || Boolean(layoutPreview) || Boolean(routePreview);
+    dirty ||
+    rawDirty ||
+    Boolean(draft) ||
+    Boolean(layoutPreview) ||
+    Boolean(routePreview);
   function rememberView(viewport = flow.current?.getViewport()) {
     if (!session || !state || !viewport) return;
     writeView(
@@ -869,12 +891,28 @@ function App() {
     });
   }
   async function reloadSource() {
-    if(busy||draft||rawDirty)return;
-    if(dirty&&!window.confirm('Discard your applied edits and reload the current source file?'))return;
-    await act(async()=>{
-      const response=await fetch('/api/document'+(session.workspaceId?'?id='+encodeURIComponent(session.workspaceId):''),{cache:'no-store'});
-      const data=await response.json();if(!response.ok)throw new Error(data.error);
-      load(data);setRecovery(null);setSourceAlert(null);setNotice('Current source reloaded.');
+    if (busy || draft || rawDirty) return;
+    if (
+      dirty &&
+      !window.confirm(
+        "Discard your applied edits and reload the current source file?",
+      )
+    )
+      return;
+    await act(async () => {
+      const response = await fetch(
+        "/api/document" +
+          (session.workspaceId
+            ? "?id=" + encodeURIComponent(session.workspaceId)
+            : ""),
+        { cache: "no-store" },
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      load(data);
+      setRecovery(null);
+      setSourceAlert(null);
+      setNotice("Current source reloaded.");
     });
   }
   async function compareSource(local = state.present) {
@@ -1220,7 +1258,7 @@ function App() {
     if (commandOpen) return;
     if (event.key === "Escape" && (layoutPreview || routePreview)) {
       setRoutePreview(null);
-    setLayoutPreview(null);
+      setLayoutPreview(null);
       return;
     }
     if (event.key === "Escape" && outlineOpen) {
@@ -1326,7 +1364,12 @@ function App() {
             dragBase.current || state.present,
             id,
             rect,
-            { grid: snap ? gridSize : 0, smart: smartSnap, threshold: 6 / (flow.current?.getZoom() || 1), bypass },
+            {
+              grid: snap ? gridSize : 0,
+              smart: smartSnap,
+              threshold: 6 / (flow.current?.getZoom() || 1),
+              bypass,
+            },
           );
           setGuides(result.guides);
           return result.rect;
@@ -1656,7 +1699,40 @@ function App() {
             className="canvas"
             aria-label="Diagram canvas"
           >
-            {sourceAlert && <section className="source-alert" aria-label="Source file changes"><span>{sourceAlert.error?'Source check unavailable: '+sourceAlert.error:'Source file changed outside the editor.'}</span>{!sourceAlert.error&&<><button disabled={busy||!!draft||rawDirty} onClick={()=>act(()=>compareSource())}>Compare source changes</button><button disabled={busy||!!draft||rawDirty} onClick={reloadSource}>Reload source file</button>{rawDirty&&<small>Apply or discard JSON text before comparing or reloading.</small>}</>}</section>}
+            {sourceAlert && (
+              <section
+                className="source-alert"
+                aria-label="Source file changes"
+              >
+                <span>
+                  {sourceAlert.error
+                    ? "Source check unavailable: " + sourceAlert.error
+                    : "Source file changed outside the editor."}
+                </span>
+                {!sourceAlert.error && (
+                  <>
+                    <button
+                      disabled={busy || !!draft || rawDirty}
+                      onClick={() => act(() => compareSource())}
+                    >
+                      Compare source changes
+                    </button>
+                    <button
+                      disabled={busy || !!draft || rawDirty}
+                      onClick={reloadSource}
+                    >
+                      Reload source file
+                    </button>
+                    {rawDirty && (
+                      <small>
+                        Apply or discard JSON text before comparing or
+                        reloading.
+                      </small>
+                    )}
+                  </>
+                )}
+              </section>
+            )}
             <div className="canvas-heading">
               <div>
                 <h1>{documentModel?.meta?.title || "Archify diagram"}</h1>
@@ -1871,7 +1947,8 @@ function App() {
                     ),
                     {
                       grid: snap ? gridSize : 0,
-                      smart: smartSnap, threshold: 6 / (flow.current?.getZoom() || 1),
+                      smart: smartSnap,
+                      threshold: 6 / (flow.current?.getZoom() || 1),
                       bypass: event.altKey,
                     },
                   );
@@ -1899,7 +1976,8 @@ function App() {
                           ),
                           {
                             grid: snap ? gridSize : 0,
-                            smart: smartSnap, threshold: 6 / (flow.current?.getZoom() || 1),
+                            smart: smartSnap,
+                            threshold: 6 / (flow.current?.getZoom() || 1),
                             bypass: event.altKey,
                           },
                         ).positions,
@@ -1962,8 +2040,33 @@ function App() {
                 </ViewportPortal>
               </ReactFlow>
             )}
-            {documentModel?.diagram_type==='architecture' && edgeIndex!==null && documentModel.connections[edgeIndex] && <AttachmentControls edge={documentModel.connections[edgeIndex]} disabled={busy||rawDirty||!!draft} onChange={edgePatch} />}
-            {documentModel?.diagram_type==='architecture' && (routePreview || (edgeIndex!==null && state.present.connections[edgeIndex])) && <RouteTools document={state.present} index={routePreview?.index??edgeIndex} preview={routePreview} disabled={working||rawDirty||!!draft||!!layoutPreview} onPreview={setRoutePreview} onApply={next=>{change(next);setRoutePreview(null);}} />}
+            <div className="canvas-edge-tools">
+              {documentModel?.diagram_type === "architecture" &&
+                edgeIndex !== null &&
+                documentModel.connections[edgeIndex] && (
+                  <AttachmentControls
+                    edge={documentModel.connections[edgeIndex]}
+                    disabled={busy || rawDirty || !!draft}
+                    onChange={edgePatch}
+                  />
+                )}
+              {documentModel?.diagram_type === "architecture" &&
+                (routePreview ||
+                  (edgeIndex !== null &&
+                    state.present.connections[edgeIndex])) && (
+                  <RouteTools
+                    document={state.present}
+                    index={routePreview?.index ?? edgeIndex}
+                    preview={routePreview}
+                    disabled={working || rawDirty || !!draft || !!layoutPreview}
+                    onPreview={setRoutePreview}
+                    onApply={(next) => {
+                      change(next);
+                      setRoutePreview(null);
+                    }}
+                  />
+                )}
+            </div>
             <div className="canvas-help">
               Drag to move · Shift to select several · Space + drag to pan ·
               Arrow keys to nudge
@@ -2163,7 +2266,7 @@ function App() {
                   onApply={(next) => {
                     change(next);
                     setRoutePreview(null);
-    setLayoutPreview(null);
+                    setLayoutPreview(null);
                   }}
                 />
               </fieldset>
@@ -3028,7 +3131,3 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
-
-
-
-

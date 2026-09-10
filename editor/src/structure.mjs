@@ -1,19 +1,29 @@
 import { clone, components, moveComponents } from "./document.mjs";
 import { freshId } from "./topology.mjs";
-export function boundaryBounds(document, boundary, pad=boundary.pad??30) {
-  if(!Number.isFinite(pad)||pad<0||pad>1000) throw new Error('Use padding from 0 to 1,000.');
-  const byId=new Map(components(document).map(c=>[c.id,c]));
-  const members=boundary.wraps.map(id=>byId.get(id));
-  if(!members.length||members.some(c=>!c))throw new Error('Choose existing boundary members.');
-  const pos=[0,1].map(axis=>Math.min(...members.map(c=>c.pos[axis]))-pad);
-  const size=[0,1].map(axis=>Math.max(...members.map(c=>c.pos[axis]+c.size[axis]))+pad-pos[axis]+(axis?20:0));
-  return {pos,size};
+export function boundaryBounds(document, boundary, pad = boundary.pad ?? 30) {
+  if (!Number.isFinite(pad) || pad < 0 || pad > 1000)
+    throw new Error("Use padding from 0 to 1,000.");
+  const byId = new Map(components(document).map((c) => [c.id, c]));
+  const members = boundary.wraps.map((id) => byId.get(id));
+  if (!members.length || members.some((c) => !c))
+    throw new Error("Choose existing boundary members.");
+  const pos = [0, 1].map(
+    (axis) => Math.min(...members.map((c) => c.pos[axis])) - pad,
+  );
+  const size = [0, 1].map(
+    (axis) =>
+      Math.max(...members.map((c) => c.pos[axis] + c.size[axis])) +
+      pad -
+      pos[axis] +
+      (axis ? 20 : 0),
+  );
+  return { pos, size };
 }
-export function fitBoundary(document,index,pad) {
-  const boundary=document.boundaries?.[index];
-  if(!boundary)throw new Error('Select an existing boundary.');
-  boundaryBounds(document,boundary,pad);
-  return saveBoundary(document,index,{...boundary,pad});
+export function fitBoundary(document, index, pad) {
+  const boundary = document.boundaries?.[index];
+  if (!boundary) throw new Error("Select an existing boundary.");
+  boundaryBounds(document, boundary, pad);
+  return saveBoundary(document, index, { ...boundary, pad });
 }
 export function saveView(document, index, values) {
   const next = clone(document);

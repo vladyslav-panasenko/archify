@@ -1,26 +1,168 @@
-import {test,expect} from '@playwright/test';
-test('smart guides appear during a drag and Escape preserves placement',async({page})=>{
- await page.goto('/');await page.getByRole('button',{name:'Users users',exact:true}).click();const x=await page.getByLabel('X',{exact:true}).inputValue();await page.getByText('Snapping',{exact:true}).click();await page.getByLabel('Smart guides',{exact:true}).check();const box=await page.locator('[data-id="c:users"]').boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+12,box.y+box.height/2+1,{steps:6});await expect(page.locator('.snap-guide').first()).toBeVisible();await page.screenshot({path:'test-results/precision-guides.png'});await page.keyboard.press('Escape');await page.mouse.up();await expect(page.getByLabel('X',{exact:true})).toHaveValue(x);
+import { test, expect } from "@playwright/test";
+test("smart guides appear during a drag and Escape preserves placement", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Users users", exact: true }).click();
+  const x = await page.getByLabel("X", { exact: true }).inputValue();
+  await page.getByText("Snapping", { exact: true }).click();
+  await page.getByLabel("Smart guides", { exact: true }).check();
+  const box = await page.locator('[data-id="c:users"]').boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    box.x + box.width / 2 + 12,
+    box.y + box.height / 2 + 1,
+    { steps: 6 },
+  );
+  await expect(page.locator(".snap-guide").first()).toBeVisible();
+  await page.screenshot({ path: "test-results/precision-guides.png" });
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue(x);
 });
 
-test('canvas attachment controls update sides and undo without changing endpoints',async({page})=>{
- await page.goto('/');await page.locator('.connection-list summary').click();await page.getByRole('button',{name:'users → cdn',exact:true}).click();await page.getByLabel('Canvas source attachment',{exact:true}).selectOption('bottom');await page.getByLabel('Canvas target attachment',{exact:true}).selectOption('top');await page.screenshot({path:'test-results/precision-attachments.png'});await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(page.getByLabel('Canvas source attachment',{exact:true})).toHaveValue('bottom');await page.getByRole('button',{name:'JSON',exact:true}).click();const doc=JSON.parse(await page.getByLabel('Diagram JSON').inputValue());expect(doc.connections[0].from).toBe('users');expect(doc.connections[0].to).toBe('cdn');expect(doc.connections[0].fromSide).toBe('bottom');
+test("canvas attachment controls update sides and undo without changing endpoints", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.locator(".connection-list summary").click();
+  await page.getByRole("button", { name: "users → cdn", exact: true }).click();
+  await page
+    .getByLabel("Canvas source attachment", { exact: true })
+    .selectOption("bottom");
+  await page
+    .getByLabel("Canvas target attachment", { exact: true })
+    .selectOption("top");
+  await page.screenshot({ path: "test-results/precision-attachments.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: "test-results/precision-controls-narrow.png" });
+  await page.setViewportSize({ width: 1440, height: 940 });
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(
+    page.getByLabel("Canvas source attachment", { exact: true }),
+  ).toHaveValue("bottom");
+  await page.getByRole("button", { name: "JSON", exact: true }).click();
+  const doc = JSON.parse(await page.getByLabel("Diagram JSON").inputValue());
+  expect(doc.connections[0].from).toBe("users");
+  expect(doc.connections[0].to).toBe("cdn");
+  expect(doc.connections[0].fromSide).toBe("bottom");
 });
 
-test('route cleanup previews, cancels and applies one undoable change',async({page})=>{
- await page.goto('/');await page.locator('.connection-list summary').click();await page.getByRole('button',{name:'users → cdn',exact:true}).click();const via=page.getByLabel('Waypoints · [[x, y], …]');await via.fill('[[180,240],[200,240],[230,240]]');await via.press('Tab');await page.getByRole('button',{name:'Preview simplified route',exact:true}).click();await expect(page.getByRole('button',{name:'Download JSON',exact:true})).toBeDisabled();await page.getByRole('button',{name:'Cancel route',exact:true}).click();await expect(via).toHaveValue('[[180,240],[200,240],[230,240]]');await page.getByRole('button',{name:'Preview simplified route',exact:true}).click();await page.getByRole('button',{name:'Apply route',exact:true}).click();await expect(via).toHaveValue('[[180,240],[230,240]]');await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(via).toHaveValue('[[180,240],[200,240],[230,240]]');
+test("route cleanup previews, cancels and applies one undoable change", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.locator(".connection-list summary").click();
+  await page.getByRole("button", { name: "users → cdn", exact: true }).click();
+  const via = page.getByLabel("Waypoints · [[x, y], …]");
+  await via.fill("[[180,240],[200,240],[230,240]]");
+  await via.press("Tab");
+  await page
+    .getByRole("button", { name: "Preview simplified route", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Download JSON", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Cancel route", exact: true }).click();
+  await expect(via).toHaveValue("[[180,240],[200,240],[230,240]]");
+  await page
+    .getByRole("button", { name: "Preview simplified route", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Apply route", exact: true }).click();
+  await expect(via).toHaveValue("[[180,240],[230,240]]");
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(via).toHaveValue("[[180,240],[200,240],[230,240]]");
 });
 
-test('boundary fit previews dimensions and writes padding with undo',async({page})=>{
- await page.goto('/');await page.getByRole('button',{name:'Structure',exact:true}).click();const details=page.locator('.inspector details').filter({has:page.getByRole('button',{name:'Fit boundary to contents',exact:true,includeHidden:true})}).first();await details.locator('summary').click();const padding=details.getByLabel('Padding',{exact:true});await padding.fill('45');await expect(details.getByLabel('Fitted boundary dimensions')).toContainText('diagram units');await details.getByRole('button',{name:'Fit boundary to contents',exact:true}).click();await page.getByRole('button',{name:'JSON',exact:true}).click();const doc=JSON.parse(await page.getByLabel('Diagram JSON').inputValue());expect(doc.boundaries[0].pad).toBe(45);await page.getByRole('button',{name:'Undo',exact:true}).click();expect(JSON.parse(await page.getByLabel('Diagram JSON').inputValue()).boundaries[0].pad).not.toBe(45);
+test("boundary fit previews dimensions and writes padding with undo", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Structure", exact: true }).click();
+  const details = page
+    .locator(".inspector details")
+    .filter({
+      has: page.getByRole("button", {
+        name: "Fit boundary to contents",
+        exact: true,
+        includeHidden: true,
+      }),
+    })
+    .first();
+  await details.locator("summary").click();
+  const padding = details.getByLabel("Padding", { exact: true });
+  await padding.fill("45");
+  await expect(details.getByLabel("Fitted boundary dimensions")).toContainText(
+    "diagram units",
+  );
+  await details
+    .getByRole("button", { name: "Fit boundary to contents", exact: true })
+    .click();
+  await page.getByRole("button", { name: "JSON", exact: true }).click();
+  const doc = JSON.parse(await page.getByLabel("Diagram JSON").inputValue());
+  expect(doc.boundaries[0].pad).toBe(45);
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  expect(
+    JSON.parse(await page.getByLabel("Diagram JSON").inputValue()).boundaries[0]
+      .pad,
+  ).not.toBe(45);
 });
 
-
-test('anchored arrangement previews without moving fixed neighbors',async({page})=>{
- await page.goto('/');await page.getByRole('button',{name:'Users users',exact:true}).click();const fixed=await page.locator('[data-id="c:cdn"]').getAttribute('style');await page.getByRole('button',{name:'Auto-arrange',exact:true}).click();await page.getByLabel('Layout method').selectOption('anchored');await page.getByRole('button',{name:'Preview arrangement',exact:true}).click();await expect(page.locator('[data-id="c:cdn"]')).toHaveAttribute('style',fixed);await page.getByRole('button',{name:'Apply arrangement',exact:true}).click();await expect(page.getByRole('button',{name:'Undo',exact:true})).toBeEnabled();await page.getByRole('button',{name:'Undo',exact:true}).click();
+test("anchored arrangement previews without moving fixed neighbors", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Users users", exact: true }).click();
+  const fixed = await page.locator('[data-id="c:cdn"]').getAttribute("style");
+  await page.getByRole("button", { name: "Auto-arrange", exact: true }).click();
+  await page.getByLabel("Layout method").selectOption("anchored");
+  await page
+    .getByRole("button", { name: "Preview arrangement", exact: true })
+    .click();
+  await expect(page.locator('[data-id="c:cdn"]')).toHaveAttribute(
+    "style",
+    fixed,
+  );
+  await page
+    .getByRole("button", { name: "Apply arrangement", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Undo", exact: true }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
 });
 
-import {largeDiagram} from '../../bench/large-diagram.mjs';
-test('large diagram opens and edits without changing unrelated services',async({page})=>{
- await page.goto('/');const doc=largeDiagram(500);await page.locator('input[type=file]').first().setInputFiles({name:'large.architecture.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(doc))});await expect(page.getByRole('heading',{name:'Large service map',exact:true})).toBeVisible();await page.getByRole('button',{name:'Service 0 service-0',exact:true}).click();await page.getByLabel('X',{exact:true}).fill('85');await page.getByLabel('X',{exact:true}).press('Tab');await page.getByRole('button',{name:'JSON',exact:true}).click();const next=JSON.parse(await page.getByLabel('Diagram JSON').inputValue());expect(next.components[0].pos[0]).toBe(85);expect(next.components.slice(1)).toEqual(doc.components.slice(1));expect(next.connections).toEqual(doc.connections);await page.getByRole('button',{name:'Undo',exact:true}).click();expect(JSON.parse(await page.getByLabel('Diagram JSON').inputValue()).components[0].pos[0]).toBe(40);
+import { largeDiagram } from "../../bench/large-diagram.mjs";
+test("large diagram opens and edits without changing unrelated services", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const doc = largeDiagram(500);
+  await page
+    .locator("input[type=file]")
+    .first()
+    .setInputFiles({
+      name: "large.architecture.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(doc)),
+    });
+  await expect(
+    page.getByRole("heading", { name: "Large service map", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Service 0 service-0", exact: true })
+    .click();
+  await page.getByLabel("X", { exact: true }).fill("85");
+  await page.getByLabel("X", { exact: true }).press("Tab");
+  await page.getByRole("button", { name: "JSON", exact: true }).click();
+  const next = JSON.parse(await page.getByLabel("Diagram JSON").inputValue());
+  expect(next.components[0].pos[0]).toBe(85);
+  expect(next.components.slice(1)).toEqual(doc.components.slice(1));
+  expect(next.connections).toEqual(doc.connections);
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  expect(
+    JSON.parse(await page.getByLabel("Diagram JSON").inputValue()).components[0]
+      .pos[0],
+  ).toBe(40);
 });

@@ -11,7 +11,8 @@
     "build": "vite build",
     "start": "node server.mjs",
     "test": "node --test test/*.test.mjs",
-    "test:browser": "playwright test", "bench": "node bench/large-diagram.mjs"
+    "test:browser": "playwright test",
+    "bench": "node bench/large-diagram.mjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.8.0",
@@ -23,4 +24,3 @@
     "@playwright/test": "^1.55.0"
   }
 }
-

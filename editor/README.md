@@ -124,3 +124,15 @@ Problems: local overlaps and bounds checks update after committed edits. Run com
 Navigation: inspector tools are grouped into Edit, Inspect and Document. Collapse Tools to reclaim panel space. Commands (Ctrl/Cmd+K) searches panels and common actions; Arrow keys and Enter select, Escape restores focus, and unavailable actions stay disabled. Existing shortcuts continue to work.
 
 Workspace Save As: create a diagram or open a draft, then use Save As with a relative .json filename. New files are created exclusively; existing files require explicit replacement of the displayed revision. Existing subfolders are allowed, symbolic links and traversal are rejected. Files with another unsaved editor draft must be saved first. Successful creation opens the new file and refreshes the project picker.
+
+## Precision editing
+
+Enable **Smart guides** under Properties > Snapping for alignment and nearby equal-spacing feedback. The attraction distance stays consistent as you zoom; Alt bypasses snapping.
+
+Select an architecture connection to choose source/target attachment sides on the canvas. **Preview simplified route** removes duplicate and redundant collinear waypoints while retaining backtracking. **Preview straight route** removes authored waypoints and selects straight routing. Apply makes one undoable JSON edit; Cancel or Escape restores the original.
+
+In Structure, set a boundary's padding and use **Fit boundary to contents** to apply it. The dimensions preview reflects member bounds; members stay in place. In Auto-arrange, **Around fixed neighbors** places selected unlocked components relative to their directly connected fixed neighbors. Multiple anchors are balanced and obstacle avoidance takes precedence.
+
+Writable source files are checked every ten seconds and when the window regains focus. A changed source offers comparison/merge or explicit reload. Unapplied JSON must be applied or discarded first; reloading an applied draft asks before discarding it.
+
+Performance measurements and the repeatable benchmark are documented in [editor-performance.md](../docs/editor-performance.md). Round-trip tests cover all five schemas alongside the existing feature-specific tests.

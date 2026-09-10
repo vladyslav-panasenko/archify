@@ -1187,6 +1187,105 @@ button {
   border-color: #087b72;
   opacity: 1;
 }
-.canvas-attachments {position:absolute;bottom:38px;right:14px;z-index:9;background:#fff;border:1px solid #cad5dc;border-radius:4px;padding:8px;display:flex;gap:12px;max-width:calc(100% - 70px);} .canvas-attachments label {display:grid;gap:4px;min-width:0;} .canvas-attachments select {max-width:100%;} .canvas-attachments legend {background:#fff;padding:0 4px;}
-.canvas-route-tools {position:absolute;bottom:130px;right:14px;z-index:9;background:#fff;border:1px solid #cad5dc;border-radius:4px;padding:8px;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100% - 70px);}
-.source-alert {position:absolute;top:82px;left:14px;right:14px;z-index:12;padding:10px;background:#fff4df;border:1px solid #c49a4b;display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+.canvas-attachments {
+  position: absolute;
+  bottom: 38px;
+  right: 14px;
+  z-index: 9;
+  background: #fff;
+  border: 1px solid #cad5dc;
+  border-radius: 4px;
+  padding: 8px;
+  display: flex;
+  gap: 12px;
+  max-width: calc(100% - 70px);
+}
+.canvas-attachments label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.canvas-attachments select {
+  max-width: 100%;
+}
+.canvas-attachments legend {
+  background: #fff;
+  padding: 0 4px;
+}
+.canvas-route-tools {
+  position: absolute;
+  bottom: 130px;
+  right: 14px;
+  z-index: 9;
+  background: #fff;
+  border: 1px solid #cad5dc;
+  border-radius: 4px;
+  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: calc(100% - 70px);
+}
+.source-alert {
+  position: absolute;
+  top: 82px;
+  left: 14px;
+  right: 14px;
+  z-index: 12;
+  padding: 10px;
+  background: #fff4df;
+  border: 1px solid #c49a4b;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.canvas-edge-tools {
+  position: absolute;
+  bottom: 38px;
+  right: 14px;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: calc(100% - 28px);
+  max-height: 55%;
+  overflow: auto;
+  pointer-events: none;
+}
+.canvas-edge-tools fieldset {
+  position: static;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  pointer-events: auto;
+}
+.canvas-edge-tools button {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.canvas-route-tools {
+  order: 0;
+}
+.canvas-attachments {
+  order: 1;
+  flex-wrap: wrap;
+}
+.canvas-attachments legend {
+  max-width: 100%;
+  white-space: normal;
+}
+@media (max-width: 800px) {
+  .canvas-edge-tools {
+    max-width: calc(100% - 70px);
+  }
+  .canvas-attachments label {
+    width: 100%;
+  }
+  .canvas-attachments select {
+    width: 100%;
+  }
+  .canvas-edge-tools button {
+    width: 100%;
+  }
+}
