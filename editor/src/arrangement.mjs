@@ -90,7 +90,11 @@ export function snapBox(
             });
         }
       // Fit an item between two neighbors with equal clear space on either side.
-      const sorted = others.toSorted((a, b) => a.pos[axis] - b.pos[axis]);
+      const cross = 1 - axis;
+      const sorted = others.filter(other =>
+        other.pos[cross] < box.pos[cross] + box.size[cross] &&
+        other.pos[cross] + other.size[cross] > box.pos[cross]
+      ).toSorted((a, b) => a.pos[axis] - b.pos[axis]);
       for (let i = 1; i < sorted.length; i++) {
         const left = sorted[i - 1].pos[axis] + sorted[i - 1].size[axis],
           right = sorted[i].pos[axis];

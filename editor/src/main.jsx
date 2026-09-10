@@ -1309,7 +1309,7 @@ function App() {
             dragBase.current || state.present,
             id,
             rect,
-            { grid: snap ? gridSize : 0, smart: smartSnap, bypass },
+            { grid: snap ? gridSize : 0, smart: smartSnap, threshold: 6 / (flow.current?.getZoom() || 1), bypass },
           );
           setGuides(result.guides);
           return result.rect;
@@ -1853,7 +1853,7 @@ function App() {
                     ),
                     {
                       grid: snap ? gridSize : 0,
-                      smart: smartSnap,
+                      smart: smartSnap, threshold: 6 / (flow.current?.getZoom() || 1),
                       bypass: event.altKey,
                     },
                   );
@@ -1881,7 +1881,7 @@ function App() {
                           ),
                           {
                             grid: snap ? gridSize : 0,
-                            smart: smartSnap,
+                            smart: smartSnap, threshold: 6 / (flow.current?.getZoom() || 1),
                             bypass: event.altKey,
                           },
                         ).positions,
@@ -3007,3 +3007,4 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+

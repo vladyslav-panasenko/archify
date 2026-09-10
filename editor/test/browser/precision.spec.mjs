@@ -1,0 +1,4 @@
+import {test,expect} from '@playwright/test';
+test('smart guides appear during a drag and Escape preserves placement',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Users users',exact:true}).click();const x=await page.getByLabel('X',{exact:true}).inputValue();await page.getByText('Snapping',{exact:true}).click();await page.getByLabel('Smart guides',{exact:true}).check();const box=await page.locator('[data-id="c:users"]').boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+12,box.y+box.height/2+1,{steps:6});await expect(page.locator('.snap-guide').first()).toBeVisible();await page.screenshot({path:'test-results/precision-guides.png'});await page.keyboard.press('Escape');await page.mouse.up();await expect(page.getByLabel('X',{exact:true})).toHaveValue(x);
+});

@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {snapBox,snapPositions} from '../src/arrangement.mjs';
+import {newDocument} from '../src/document.mjs';
+export const fixture=()=>({...newDocument(),components:[{id:'a',type:'backend',label:'A',pos:[100,100],size:[100,60]},{id:'b',type:'backend',label:'B',pos:[400,100],size:[100,60]},{id:'c',type:'backend',label:'C',pos:[250,300],size:[100,60]}],connections:[{from:'a',to:'b',label:'HTTP',via:[[200,130],[250,130],[400,130]]}]});
+test('guides use screen-scaled tolerance, preserve groups and ignore remote spacing neighbors',()=>{
+ const box={pos:[251,100],size:[100,60]},near=[{pos:[100,100],size:[100,60]},{pos:[400,100],size:[100,60]}];assert.equal(snapBox(box,near).delta[0],-1);assert.equal(snapBox(box,near.map(c=>({...c,pos:[c.pos[0],900]}))).delta[0],0);assert.equal(snapBox({...box,pos:[255,100]},near,{threshold:3}).delta[0],0);assert.equal(snapBox({...box,pos:[255,100]},near,{threshold:12}).delta[0],-5);assert.deepEqual(snapBox(box,near,{bypass:true}).guides,[]);
+ const doc=fixture(),positions=new Map([['a',[104,100]],['c',[254,300]]]),result=snapPositions(doc,positions,{threshold:6});assert.equal(result.positions.get('c')[0]-result.positions.get('a')[0],150);assert.deepEqual(doc.components[0].pos,[100,100]);
+});
