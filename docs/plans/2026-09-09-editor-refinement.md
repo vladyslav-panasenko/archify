@@ -90,3 +90,7 @@ Files: `editor/src/history-labels.mjs`, `editor/src/HistoryPanel.jsx`, `editor/s
 ## Integration
 
 Run `npm test`, `npm run build`, `npm run test:browser`, inspect desktop/narrow screenshots, and run `git diff --check`. Update usage docs and delivery IDs. Push final documentation/formatting cleanup and verify a clean synchronized checkout. Report measured checks and remaining scope limits accurately.
+
+## Completion — 2026-09-10
+
+F37–F44 are implemented and individually committed/pushed. Delivery IDs and scope details are recorded in the refinement backlog. Final validation: 49 Node tests, 53 browser tests, production build, desktop/narrow visual inspection and clean whitespace checks.

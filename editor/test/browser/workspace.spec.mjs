@@ -66,7 +66,7 @@ test("workspace switches preserve applied history and unapplied text independent
     await page.locator(".react-flow__node-component").first().click();
     await page.keyboard.press("ArrowRight");
     await page.getByRole("button", { name: "JSON", exact: true }).click();
-    await page.getByRole("button", { name: "Zoom In", exact: true }).click();
+    await page.getByRole("button", { name: "Zoom Out", exact: true }).click();
     const viewA = await page
       .locator(".react-flow__viewport")
       .getAttribute("style");

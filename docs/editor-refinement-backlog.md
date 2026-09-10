@@ -15,4 +15,19 @@ Approved batch: F37–F44. Keep Archify JSON as the source of truth. Editor navi
 
 ## Delivery
 
-Commit IDs and verification results will be recorded as each item completes.
+| Feature | Commit    |
+| ------- | --------- |
+| F37     | `58e440e` |
+| F38     | `2e00a8a` |
+| F39     | `0908a0b` |
+| F40     | `f627e76` |
+| F41     | `7fbfb6c` |
+| F42     | `1372ffc` |
+| F43     | `1a793d1` |
+| F44     | `83bf724` |
+
+Each feature was committed and pushed separately. Formatting and integration cleanup followed in `443c9c1`.
+
+Scope details: segment handles edit authored orthogonal waypoint pairs; automatic routes retain their existing controls. Save As requires an opened workspace directory and existing parent folders. View preferences are local and limited to 50 documents. Undo history is session-only and retains up to 100 edits.
+
+Final verification (2026-09-10): 49 Node tests and 53 browser tests passed; production build and whitespace checks passed. Desktop Save As/history and narrow command-menu screenshots were inspected. View tests cover both reload and workspace switching with unapplied JSON preserved.

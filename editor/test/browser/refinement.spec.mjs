@@ -5,6 +5,11 @@ test("document viewport, selection and inspector restore after reload", async ({
   await page.goto("/");
   await page.getByRole("button", { name: "Users users", exact: true }).click();
   await page.getByRole("button", { name: "Search", exact: true }).click();
+  const oldZoom = await page.evaluate(
+    () =>
+      JSON.parse(localStorage.getItem("archify-document-views:v1")).at(-1).view
+        .viewport.zoom,
+  );
   await page.getByRole("button", { name: "Zoom In", exact: true }).click();
   await expect
     .poll(() =>
@@ -15,7 +20,7 @@ test("document viewport, selection and inspector restore after reload", async ({
           ).at(-1)?.view?.viewport?.zoom,
       ),
     )
-    .toBeTruthy();
+    .toBeGreaterThan(oldZoom);
   const viewport = page.locator(".react-flow__viewport");
   const before = await viewport.getAttribute("style");
   await page.reload();
