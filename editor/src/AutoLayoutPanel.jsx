@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import {resolveOverlaps} from './arrangement.mjs';
 import { autoLayout } from "./auto-layout.mjs";
 import { components } from "./document.mjs";
 
@@ -34,7 +35,7 @@ export default function AutoLayoutPanel({
           <label className="field">
             Layout method
             <select value={mode} onChange={(e) => setMode(e.target.value)}>
-              <option value="grid">Grid</option>
+              <option value="grid">Grid</option><option value="resolve">Resolve overlaps</option>
               <option value="directed">Follow connections</option>
               <option value="anchored">Around fixed neighbors</option>
             </select>
@@ -44,7 +45,7 @@ export default function AutoLayoutPanel({
             <select
               value={direction}
               onChange={(e) => setDirection(e.target.value)}
-              disabled={mode === "grid"}
+              disabled={mode === "grid" || mode === "resolve"}
             >
               <option value="right">Left to right</option>
               <option value="down">Top to bottom</option>
@@ -70,7 +71,7 @@ export default function AutoLayoutPanel({
           onClick={() => {
             try {
               onPreview(
-                autoLayout(document, selection, locked, {
+                mode==='resolve'?resolveOverlaps(document,selection,locked,gap):autoLayout(document, selection, locked, {
                   mode,
                   direction,
                   gap,
@@ -114,3 +115,4 @@ export default function AutoLayoutPanel({
     </div>
   );
 }
+

@@ -1,4 +1,24 @@
 import { components, moveComponents } from "./document.mjs";
+export function resolveOverlaps(document,ids,locked=[],gap=16) {
+ if(document.diagram_type!=='architecture'||!Number.isFinite(gap)||gap<0||gap>500)throw new Error('Choose architecture components and spacing from 0 to 500.');
+ const selected=new Set(ids.filter(id=>!locked.includes(id))),boxes=components(document).map(c=>({...c})),positions=new Map();
+ if(!selected.size)throw new Error('Select an unlocked component.');
+ if(selected.size>500)throw new Error('Resolve at most 500 selected components at once.');
+ for(const item of boxes.filter(c=>selected.has(c.id)).sort((a,b)=>a.id.localeCompare(b.id))) {
+  const obstacles=boxes.filter(c=>c.id!==item.id),overlaps=(p,b)=>p[0]<b.pos[0]+b.size[0]&&p[0]+item.size[0]>b.pos[0]&&p[1]<b.pos[1]+b.size[1]&&p[1]+item.size[1]>b.pos[1];
+  const queue=[[...item.pos]],seen=new Set();let result;
+  for(let attempts=0;queue.length&&attempts<2000;attempts++) {
+   if(queue.length>4000)throw new Error('Placement search is too dense. Resolve fewer components at a time.');
+   queue.sort((a,b)=>Math.hypot(a[0]-item.pos[0],a[1]-item.pos[1])-Math.hypot(b[0]-item.pos[0],b[1]-item.pos[1])||a[0]-b[0]||a[1]-b[1]);
+   const p=queue.shift(),key=p.join(',');if(seen.has(key))continue;seen.add(key);
+   const blockers=obstacles.filter(b=>overlaps(p,b));if(!blockers.length){result=p;break;}
+   for(const b of blockers)for(const candidate of [[b.pos[0]-item.size[0]-gap,p[1]],[b.pos[0]+b.size[0]+gap,p[1]],[p[0],b.pos[1]-item.size[1]-gap],[p[0],b.pos[1]+b.size[1]+gap]])if(candidate.every(n=>n>=0)&&!seen.has(candidate.join(',')))queue.push(candidate);
+  }
+  if(!result)throw new Error('No nearby free placement found. Reduce the selection or move blocking items.');
+  item.pos=result;positions.set(item.id,result);
+ }
+ return moveComponents(document,positions);
+}
 
 export const arrangements = {
   left: "Align left",
@@ -179,3 +199,4 @@ export function snapResize(document, id, rect, settings) {
   }
   return { rect: next, guides };
 }
+
