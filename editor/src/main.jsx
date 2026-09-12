@@ -484,6 +484,7 @@ function App() {
       );
     }
   }
+  const [layoutSettings,setLayoutSettings]=useState({mode:'grid',direction:'right',gap:60});
   const [gridSize, setGridSize] = useState(10),
     [smartSnap, setSmartSnap] = useState(false),
     [guides, setGuides] = useState([]);
@@ -2282,7 +2283,7 @@ function App() {
               </fieldset>
             ) : panel === "layout" ? (
               <fieldset disabled={working || !!draft}>
-                <AutoLayoutPanel
+                <AutoLayoutPanel settings={{...layoutSettings,gridSize,snap,smartSnap}} onSettings={value=>{setLayoutSettings({mode:value.mode,direction:value.direction,gap:value.gap});setGridSize(value.gridSize);setSnap(value.snap);setSmartSnap(value.smartSnap);}}
                   key={`${presentText}:${selection.join(",")}:${locked.join(",")}`}
                   document={state.present}
                   selection={selection}
@@ -3157,6 +3158,7 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+
 
 
 

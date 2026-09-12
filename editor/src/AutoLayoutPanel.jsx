@@ -1,10 +1,11 @@
+import LayoutPresets from './LayoutPresets.jsx';
 import React, { useState } from "react";
 import {resolveOverlaps} from './arrangement.mjs';
 import { autoLayout } from "./auto-layout.mjs";
 import { components } from "./document.mjs";
 
 export default function AutoLayoutPanel({
-  document,
+  document, settings, onSettings,
   selection,
   locked,
   onApply,
@@ -12,13 +13,11 @@ export default function AutoLayoutPanel({
   onPreview,
 }) {
   const [error, setError] = useState("");
-  const [mode, setMode] = useState("grid"),
-    [direction, setDirection] = useState("right"),
-    [gap, setGap] = useState(60);
+  const {mode,direction,gap}=settings;
   const boxes = preview ? components(preview) : [];
   return (
     <div className="properties">
-      <h2>Auto-arrange selection</h2>
+      <h2>Auto-arrange selection</h2><LayoutPresets settings={settings} onApply={onSettings} disabled={!!preview} />
       <p>
         Arrange unlocked selected architecture components, avoiding other
         components. Directed layout follows connections and orders layers to
@@ -34,7 +33,7 @@ export default function AutoLayoutPanel({
         <>
           <label className="field">
             Layout method
-            <select value={mode} onChange={(e) => setMode(e.target.value)}>
+            <select value={mode} onChange={(e) => onSettings({...settings,mode:e.target.value})}>
               <option value="grid">Grid</option><option value="resolve">Resolve overlaps</option>
               <option value="directed">Follow connections</option>
               <option value="anchored">Around fixed neighbors</option>
@@ -44,7 +43,7 @@ export default function AutoLayoutPanel({
             Layout direction
             <select
               value={direction}
-              onChange={(e) => setDirection(e.target.value)}
+              onChange={(e) => onSettings({...settings,direction:e.target.value})}
               disabled={mode === "grid" || mode === "resolve"}
             >
               <option value="right">Left to right</option>
@@ -58,7 +57,7 @@ export default function AutoLayoutPanel({
               min="16"
               max="500"
               value={gap}
-              onChange={(e) => setGap(Number(e.target.value))}
+              onChange={(e) => onSettings({...settings,gap:Number(e.target.value)})}
             />
           </label>
         </>
@@ -115,4 +114,5 @@ export default function AutoLayoutPanel({
     </div>
   );
 }
+
 
