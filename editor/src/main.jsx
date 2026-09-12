@@ -44,6 +44,7 @@ import {
 } from "./document.mjs";
 import "./style.css";
 import { watchSource } from "./source-watch.mjs";
+import InlineLabel from './InlineLabel.jsx';
 import RouteTools from "./RouteTools.jsx";
 import AttachmentControls from "./AttachmentControls.jsx";
 import AutoLayoutPanel from "./AutoLayoutPanel.jsx";
@@ -166,7 +167,7 @@ function ComponentNode({ data, selected }) {
         {kinds[data.type] || "•"}
       </span>
       <div className="node-copy">
-        <strong>{data.label}</strong>
+        <InlineLabel label={data.label} enabled={editing.enabled&&!data.locked} onApply={label=>editing.rename(data.id,label)} />
         {data.locked && <span aria-label="Locked">Locked</span>}
         {data.sublabel && <span>{data.sublabel}</span>}
       </div>
@@ -1359,6 +1360,7 @@ function App() {
     <Editing.Provider
       value={{
         enabled: !busy && !rawDirty,
+        rename: (id,label)=>{if(!busy&&!rawDirty&&!draft&&!locked.includes(id))change(patchComponent(state.present,id,{label}));},
         connecting:
           drawConnections && documentModel?.diagram_type === "architecture",
         minSize: options.minSize,
@@ -3135,4 +3137,5 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+
 

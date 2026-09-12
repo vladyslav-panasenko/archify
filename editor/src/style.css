@@ -1289,3 +1289,4 @@ button {
     width: 100%;
   }
 }
+.inline-label {width:100%;min-width:40px;font:inherit;padding:2px!important;background:#fff;color:#263640;}
