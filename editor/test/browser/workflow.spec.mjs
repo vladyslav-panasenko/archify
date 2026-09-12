@@ -6,3 +6,7 @@ test('interrupted drag and route preview cancel without committing geometry',asy
 test('inline canvas labels apply with Enter and cancel with Escape',async({page})=>{
  await page.goto('/');const label=page.locator('[data-id="c:users"] strong');await label.dblclick();await page.getByLabel('Edit canvas label',{exact:true}).fill('Customers');await page.getByLabel('Edit canvas label',{exact:true}).press('Enter');await expect(label).toHaveText('Customers');await label.dblclick();await page.getByLabel('Edit canvas label',{exact:true}).fill('Cancelled');await page.getByLabel('Edit canvas label',{exact:true}).press('Escape');await expect(label).toHaveText('Customers');await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(label).toHaveText('Users');
 });
+
+test('context actions duplicate with undo and open by keyboard',async({page})=>{
+ await page.goto('/');const node=page.locator('[data-id="c:users"]');await node.click({button:'right'});await expect(page.getByRole('dialog',{name:'Component actions'})).toBeVisible();await page.getByRole('button',{name:'Duplicate selection',exact:true}).click();await expect(page.locator('.react-flow__node-component')).toHaveCount(11);await page.getByRole('button',{name:'Undo',exact:true}).click();await expect(page.locator('.react-flow__node-component')).toHaveCount(10);await node.focus();await page.keyboard.press('Shift+F10');await expect(page.getByRole('dialog',{name:'Component actions'})).toBeVisible();await page.keyboard.press('Escape');await expect(node).toBeFocused();
+});

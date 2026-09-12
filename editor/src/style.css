@@ -1290,3 +1290,4 @@ button {
   }
 }
 .inline-label {width:100%;min-width:40px;font:inherit;padding:2px!important;background:#fff;color:#263640;}
+.context-actions {position:fixed;margin:0;width:240px;max-width:calc(100vw - 16px);max-height:80vh;overflow:auto;padding:12px;border:1px solid #cad5dc;border-radius:4px;} .context-actions[open] {display:grid;gap:6px;} .context-actions button{text-align:left;}

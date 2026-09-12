@@ -44,6 +44,7 @@ import {
 } from "./document.mjs";
 import "./style.css";
 import { watchSource } from "./source-watch.mjs";
+import ContextActions from './ContextActions.jsx';
 import InlineLabel from './InlineLabel.jsx';
 import RouteTools from "./RouteTools.jsx";
 import AttachmentControls from "./AttachmentControls.jsx";
@@ -431,6 +432,7 @@ function App() {
   const [diagnostics, setDiagnostics] = useState([]);
   const [compilerReport, setCompilerReport] = useState(null),
     [activeProblemKey, setActiveProblemKey] = useState(null);
+  const [contextMenu,setContextMenu]=useState(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [creation, setCreation] = useState(null);
   const [recovery, setRecovery] = useState(null);
@@ -1253,7 +1255,14 @@ function App() {
       run: () => setCreation("diagram"),
     },
   ];
+  function openContext(event,id) {
+    if(busy||rawDirty||draft||!id)return;
+    event.preventDefault();const ids=selection.includes(id)?selection:[id];setSelection(ids);setEdgeIndex(null);
+    const rect=event.target.getBoundingClientRect();setContextMenu({ids,x:event.clientX||rect.left,y:event.clientY||rect.top});
+  }
   function onKeys(event) {
+    if(contextMenu)return;
+    if(event.key==='F10'&&event.shiftKey){const node=event.target.closest('.react-flow__node');if(node)openContext(event,node.getAttribute('data-id')?.slice(2));return;}
     if (dialog.current?.open) return;
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
       event.preventDefault();
@@ -1398,6 +1407,13 @@ function App() {
       }}
     >
       <div className="app">
+        {contextMenu&&<ContextActions position={contextMenu} onClose={()=>setContextMenu(null)} actions={[
+          {label:'Duplicate selection',disabled:busy||rawDirty||state.present.diagram_type!=='architecture',run:()=>paste(copySelection(state.present,contextMenu.ids))},
+          {label:contextMenu.ids.every(id=>locked.includes(id))?'Unlock selection':'Lock selection',disabled:busy||rawDirty,run:()=>updateLocks(contextMenu.ids.every(id=>locked.includes(id))?locked.filter(id=>!contextMenu.ids.includes(id)):[...new Set([...locked,...contextMenu.ids])])},
+          {label:'Connect components',disabled:busy||rawDirty||state.present.diagram_type!=='architecture',run:()=>setDrawConnections(true)},
+          {label:'Arrange selection',disabled:busy||rawDirty||state.present.diagram_type!=='architecture',run:()=>openPanel('layout')},
+          {label:'Delete selection',disabled:busy||rawDirty||state.present.diagram_type!=='architecture'||contextMenu.ids.some(id=>locked.includes(id))||contextMenu.ids.length>=sourceNodes(state.present).length,run:()=>{if(window.confirm('Delete selected components and their connections?')){change(removeSelection(state.present,contextMenu.ids));setSelection([]);}}},
+        ]}/>}
         <a className="skip-link" href="#diagram-canvas">
           Skip to diagram canvas
         </a>
@@ -1915,6 +1931,7 @@ function App() {
                       ),
                     );
                 }}
+                onNodeContextMenu={(event,node)=>openContext(event,node.id.startsWith('c:')?node.id.slice(2):null)}
                 onNodeClick={(_, node) => {
                   if (node.id.startsWith("c:")) setEdgeIndex(null);
                 }}
@@ -3137,5 +3154,6 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+
 
 
