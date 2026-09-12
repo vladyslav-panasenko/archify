@@ -626,6 +626,9 @@ function App() {
   });
 
   function load(data) {
+    cancelled.current = true;
+    dragBase.current = null;
+    setGuides([]);
     rememberView();
     flow.current = null;
     const view = readView(
@@ -671,6 +674,7 @@ function App() {
     setCanvasVersion((version) => version + 1);
   }
   async function switchWorkspace(id) {
+    if (busy || draft || dragBase.current) return;
     if (!id || (id === session.workspaceId && session.writable)) return;
     if (
       !session.writable &&
@@ -3131,3 +3135,4 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+
