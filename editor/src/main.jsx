@@ -44,6 +44,7 @@ import {
 } from "./document.mjs";
 import "./style.css";
 import { watchSource } from "./source-watch.mjs";
+import PanelControls,{readPanels} from './PanelControls.jsx';
 import ContextActions from './ContextActions.jsx';
 import InlineLabel from './InlineLabel.jsx';
 import RouteTools from "./RouteTools.jsx";
@@ -432,6 +433,7 @@ function App() {
   const [diagnostics, setDiagnostics] = useState([]);
   const [compilerReport, setCompilerReport] = useState(null),
     [activeProblemKey, setActiveProblemKey] = useState(null);
+  const [panelSizes,setPanelSizes]=useState(readPanels),[focusMode,setFocusMode]=useState(false);
   const [contextMenu,setContextMenu]=useState(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [creation, setCreation] = useState(null);
@@ -1463,6 +1465,7 @@ function App() {
             </span>
           </div>
           <nav aria-label="Document actions">
+            <PanelControls value={panelSizes} focus={focusMode} onFocus={setFocusMode} onChange={value=>{setPanelSizes(value);try{localStorage.setItem('archify-panels:v1',JSON.stringify(value));}catch{}}} />
             <button
               aria-keyshortcuts="Control+k Meta+k"
               onClick={() => setCommandOpen(true)}
@@ -1622,7 +1625,7 @@ function App() {
             </button>
           </div>
         )}
-        <div className="workspace">
+        <div className={"workspace "+(focusMode?'focus-mode':'')} style={{'--outline-width':panelSizes.outline+'px','--inspector-width':panelSizes.inspector+'px'}}>
           <aside
             id="component-outline"
             className={`outline ${outlineOpen ? "open" : ""}`}
@@ -3154,6 +3157,7 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+
 
 
 
