@@ -44,6 +44,7 @@ import {
 } from "./document.mjs";
 import "./style.css";
 import { watchSource } from "./source-watch.mjs";
+import {packHistory,restoreHistory} from './recovery-history.mjs';
 import PanelControls,{readPanels} from './PanelControls.jsx';
 import ContextActions from './ContextActions.jsx';
 import InlineLabel from './InlineLabel.jsx';
@@ -591,6 +592,7 @@ function App() {
           key,
           JSON.stringify({
             version: 1,
+            historyData: packHistory(state),
             document: state.present,
             rawText: rawDirty ? jsonText : null,
             saved,
@@ -1602,7 +1604,7 @@ function App() {
                     writable: Boolean(recovery.writable && !changedSource),
                   }));
                   recoveredText.current = recovery.rawText;
-                  setState(history(recovery.document));
+                  setState(await restoreHistory(recovery,snapshot=>request('validate',snapshot)));
                   setSaved(recovery.saved);
                   setPanel(recovery.rawText ? "json" : "inspector");
                   setRecovery(null);
@@ -3158,6 +3160,7 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+
 
 
 

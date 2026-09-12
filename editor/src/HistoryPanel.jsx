@@ -7,7 +7,7 @@ export default function HistoryPanel({ state, disabled, onJump }) {
       <h2>Edit history</h2>
       <p className="muted">
         Up to 100 edits in this session. Jump backward or forward; a new edit
-        replaces future states. Reloading clears history.
+        replaces future states. Recovered drafts can retain up to 20 history states.
       </p>
       <ol className="history-list">
         {entries.map((entry) => (
@@ -28,3 +28,4 @@ export default function HistoryPanel({ state, disabled, onJump }) {
     </div>
   );
 }
+
