@@ -2085,7 +2085,7 @@ function App() {
                     index={routePreview?.index ?? edgeIndex}
                     preview={routePreview}
                     disabled={working || rawDirty || !!draft || !!layoutPreview}
-                    onPreview={setRoutePreview}
+                    onPreview={next=>{if(next?.kind==='insert'){void act(async()=>{await request('validate',next.document);setRoutePreview(next);});}else setRoutePreview(next);}}
                     onApply={(next) => {
                       change(next);
                       setRoutePreview(null);
@@ -3157,6 +3157,7 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
+
 
 
 
