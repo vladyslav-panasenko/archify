@@ -85,6 +85,26 @@ test("schema-invalid documents cannot be saved; drafts with overlaps can be save
     await new Promise((resolve) => server.close(resolve));
   }
 });
+test("unsupported source opens read-only without losing its original text", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "archify-unsupported-"));
+  const file = path.join(directory, "future.json");
+  const text = '{\n  "schema_version": 999,\n  "diagram_type": "architecture",\n  "future": true\n}\n';
+  await fs.writeFile(file, text);
+  const server = await createEditorServer({ file });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/document`);
+    const data = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(data.rawOnly, true);
+    assert.equal(data.sourceText, text);
+    assert.match(data.limitation, /schema|version|additional|unexpected|required/i);
+    assert.equal(data.document, undefined);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
 test("Archify renders original JSON and strictly rejects overlapping output", async () => {
   const html = await render(example);
   assert.match(html, /<svg/);

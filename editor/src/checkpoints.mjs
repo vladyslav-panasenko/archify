@@ -33,3 +33,20 @@ export function readCheckpoints(storage, key) {
     );
   return value;
 }
+export function exportCheckpointBundle(entries) {
+  return { format: "archify-recovery", version: 1, exportedAt: new Date().toISOString(), checkpoints: structuredClone(entries) };
+}
+export function importCheckpointBundle(existing, bundle, replace = false) {
+  if (bundle?.format !== "archify-recovery" || bundle.version !== 1 || !Array.isArray(bundle.checkpoints))
+    throw new Error("Choose an Archify recovery bundle version 1.");
+  const incoming = bundle.checkpoints;
+  readCheckpoints({ getItem: () => JSON.stringify(incoming) }, "bundle");
+  const ids = new Set(existing.map((entry) => entry.id));
+  const collisions = incoming.filter((entry) => ids.has(entry.id));
+  if (collisions.length && !replace)
+    throw Object.assign(new Error(`${collisions.length} checkpoint IDs already exist. Choose replace to continue.`), { collisions: collisions.map((entry) => entry.id) });
+  const next = [...existing.filter((entry) => !incoming.some((value) => value.id === entry.id)), ...structuredClone(incoming)];
+  if (next.length > checkpointLimit || JSON.stringify(next).length * 2 > checkpointBytes)
+    throw new Error("Imported recovery exceeds the 10 checkpoint / 2 MB limit.");
+  return next;
+}

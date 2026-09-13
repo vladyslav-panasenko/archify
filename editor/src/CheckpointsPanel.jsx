@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { addCheckpoint, readCheckpoints } from "./checkpoints.mjs";
+import { addCheckpoint, readCheckpoints, exportCheckpointBundle, importCheckpointBundle } from "./checkpoints.mjs";
 export default function CheckpointsPanel({
   document,
   storageKey,
@@ -38,6 +38,10 @@ export default function CheckpointsPanel({
         browser storage removes them. Export checkpoints you want to keep.
       </p>
       {error && <p role="alert">{error}</p>}
+      <div className="button-row">
+        <button disabled={!entries.length} onClick={() => onExport(exportCheckpointBundle(entries), "archify-recovery.json")}>Export all recovery</button>
+        <label className="button-like">Import recovery<input hidden type="file" accept=".json,application/json" onChange={async (e) => { const file=e.target.files[0];e.target.value="";if(!file)return;try{if(file.size>2*1024*1024)throw new Error("Recovery bundle exceeds 2 MB.");const bundle=JSON.parse(await file.text());let next;try{next=importCheckpointBundle(entries,bundle);}catch(error){if(!error.collisions||!window.confirm(`${error.message} Replace matching checkpoints?`))throw error;next=importCheckpointBundle(entries,bundle,true);}write(next);}catch(error){setError(error.message);}}}/></label>
+      </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();

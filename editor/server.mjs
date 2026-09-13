@@ -12,6 +12,7 @@ import { assertDocument, serialize } from "./src/document.mjs";
 import { supportedTypes, sourceNodes } from "./src/adapters/index.mjs";
 import { createWorkspace } from "./workspace.mjs";
 import { assertResourceLimits } from "./src/resource-limits.mjs";
+import { migrateWorkflowToV2 } from "../archify/renderers/workflow/workflow-compiler.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const execute = promisify(execFile);
@@ -170,9 +171,17 @@ export async function createEditorServer({
               path.join(root, "../archify/examples/web-app.architecture.json"),
             "utf8",
           );
-          const document = validate(JSON.parse(text));
+          const parsed = JSON.parse(text);
+          let document, limitation;
+          try {
+            document = validate(parsed);
+          } catch (error) {
+            limitation = error.message;
+          }
           return send(200, {
-            document,
+            ...(document
+              ? { document }
+              : { rawOnly: true, sourceText: text, limitation }),
             token,
             revision: hash(text),
             writable: Boolean(readPath),
@@ -197,6 +206,11 @@ export async function createEditorServer({
         validate(body.document);
         if (req.method === "POST" && url.pathname === "/api/validate")
           return send(200, { valid: true });
+        if (req.method === "POST" && url.pathname === "/api/migrate") {
+          const migration = migrateWorkflowToV2(body.document);
+          validate(migration.document);
+          return send(200, migration);
+        }
         if (req.method === "POST" && url.pathname === "/api/save-as") {
           if (!workspace)
             return send(403, {

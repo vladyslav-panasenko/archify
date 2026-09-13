@@ -151,7 +151,7 @@ test("edit, undo, download, reopen and render a real architecture document", asy
   expect(errors).toEqual([]);
 });
 
-test("invalid JSON stays available and unsupported files do not replace the diagram", async ({
+test("invalid JSON stays available and unsupported files open lossless read-only", async ({
   page,
 }) => {
   await page.goto("/");
@@ -176,8 +176,10 @@ test("invalid JSON stays available and unsupported files do not replace the diag
   });
   await expect(page.getByRole("alert")).toContainText("architecture");
   await expect(
-    page.getByRole("heading", { name: "Sample Web App" }),
+    page.getByRole("heading", { name: "Source opened read-only" }),
   ).toBeVisible();
+  await expect(page.getByLabel("Unsupported diagram JSON")).toHaveValue('{"diagram_type":"unsupported"}');
+  await expect(page.getByRole("button", { name: "Download original JSON" })).toBeEnabled();
 });
 
 test("narrow viewport contains the editor and preserves keyboard editing", async ({

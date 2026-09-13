@@ -4398,3 +4398,46 @@ function compileWorkflowWithFeedback({ workflow, qualityProfile, discoverFixes =
 export function compileWorkflow({ workflow, qualityProfile } = {}) {
   return compileWorkflowWithFeedback({ workflow, qualityProfile });
 }
+
+// Migration is deliberately an explicit editor/CLI operation. Ordinary
+// compilation and serialization continue to preserve schema_version.
+export function migrateWorkflowToV2(workflow) {
+  if (workflow?.schema_version !== 1)
+    throw new Error("Only workflow schema_version 1 can migrate to version 2.");
+  let planned = compileWorkflowWithFeedback({
+    workflow: intrinsicWorkflow(workflow),
+    qualityProfile: workflow.meta?.quality_profile,
+    discoverFixes: false,
+  });
+  if (!planned.ok)
+    planned = compileWorkflowWithFeedback({
+      workflow: planningWorkflow(workflow),
+      qualityProfile: workflow.meta?.quality_profile,
+      discoverFixes: false,
+    });
+  if (!planned.ok || !Array.isArray(planned.receipt?.columns))
+    throw new Error("A readable version 2 layout could not be planned for this workflow.");
+  const candidate = createMappedWorkflowCandidate(
+    workflow,
+    LEGACY_COLUMN_CENTERS,
+    planned.receipt.columns,
+  );
+  let compiled = compileWorkflowWithFeedback({
+    workflow: candidate.document,
+    qualityProfile: workflow.meta?.quality_profile,
+    discoverFixes: false,
+  });
+  const capacity = compiled.diagnostics?.length && compiled.diagnostics.every(({ code }) => code === "workflow/viewbox-capacity")
+    ? compiled.diagnostics.find(({ evidence }) => Array.isArray(evidence?.requiredViewBox))?.evidence.requiredViewBox
+    : null;
+  if (!compiled.ok && Array.isArray(candidate.document.meta?.viewBox) && capacity) {
+    candidate.document.meta.viewBox = [
+      Math.max(candidate.document.meta.viewBox[0], capacity[0]),
+      Math.max(candidate.document.meta.viewBox[1], capacity[1]),
+    ];
+    compiled = compileWorkflowWithFeedback({ workflow: candidate.document, qualityProfile: workflow.meta?.quality_profile, discoverFixes: false });
+  }
+  if (!compiled.ok)
+    throw new Error(compiled.diagnostics?.map((item) => item.message).join(" ") || "The migrated workflow did not compile.");
+  return { document: candidate.document, changedCoordinates: candidate.changedCoordinates };
+}

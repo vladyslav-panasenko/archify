@@ -4,6 +4,7 @@ export const panelGroups = [
     label: "Edit",
     panels: {
       inspector: "Properties",
+      samples: "Starters",
       structure: "Structure",
       layout: "Auto-arrange",
       templates: "Templates",
@@ -25,6 +26,9 @@ export const panelGroups = [
       history: "History",
       settings: "Settings",
       checkpoints: "Checkpoints",
+      migration: "Migration",
+      help: "Help",
+      shortcuts: "Shortcuts",
       saveas: "Save As",
     },
   },

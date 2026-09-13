@@ -12,7 +12,11 @@
     "start": "node server.mjs",
     "test": "node --test test/*.test.mjs",
     "test:browser": "playwright test",
-    "bench": "node bench/large-diagram.mjs"
+    "bench": "node bench/large-diagram.mjs",
+    "inventory": "node scripts/generate-capability-inventory.mjs",
+    "check:release": "node scripts/release-check.mjs",
+    "check:release:browser": "node scripts/release-check.mjs --browser",
+    "package:release": "npm run build && node scripts/package-release.mjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.8.0",

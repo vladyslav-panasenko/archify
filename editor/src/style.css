@@ -877,6 +877,22 @@ legend {
     font-size: 10px;
   }
 }
+.unsupported-document main { max-width: 960px; margin: 48px auto; padding: 0 24px; }
+.unsupported-document textarea { width: 100%; margin-top: 8px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.unsupported-document [role="alert"] { color: var(--danger, #9f2d2d); font-weight: 700; }
+.migration-diff { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.migration-diff pre { max-height: 360px; overflow: auto; white-space: pre-wrap; font-size: 11px; }
+.sample-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.sample-gallery button { display: grid; gap: 3px; text-align: left; }
+.sample-gallery small { color: var(--muted, #526570); }
+.inline-label-trigger { color: inherit; font: inherit; font-weight: 700; }
+.inline-label-trigger:focus-visible { outline: 2px solid #087b72; outline-offset: 2px; }
+.inline-label-editor { display: grid; gap: 2px; }
+.inline-label-editor small { font-size: 9px; font-weight: 400; }
+.visibility-filter { position: absolute; z-index: 5; top: 76px; left: 12px; width: min(420px, calc(100% - 24px)); padding: 7px 9px; background: rgba(255,255,255,.96); border: 1px solid #cdd7dc; }
+.visibility-filter > div, .visibility-filter > label, .visibility-filter > button, .visibility-filter > small { margin-top: 7px; }
+@media (max-width: 720px) { .migration-diff { grid-template-columns: 1fr; } }
+
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;

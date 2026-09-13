@@ -18,6 +18,7 @@ import {
   Handle,
   Position,
   BaseEdge,
+  MiniMap,
   getSmoothStepPath,
   getStraightPath,
 } from "@xyflow/react";
@@ -63,6 +64,12 @@ import ProblemsPanel from "./ProblemsPanel.jsx";
 import EditorNavigation, { panelLabels } from "./EditorNavigation.jsx";
 import CommandMenu from "./CommandMenu.jsx";
 import SaveAsPanel from "./SaveAsPanel.jsx";
+import MigrationPanel from "./MigrationPanel.jsx";
+import SamplesPanel from "./SamplesPanel.jsx";
+import HelpPanel from "./HelpPanel.jsx";
+import { visibleNodeIds } from "./visibility.mjs";
+import ShortcutsPanel from "./ShortcutsPanel.jsx";
+import { readShortcuts, matchesShortcut } from "./shortcuts.mjs";
 import { readView, writeView, viewKey } from "./document-view.mjs";
 const JsonEditor = React.lazy(() => import("./JsonEditor.jsx"));
 import {
@@ -430,6 +437,7 @@ function download(content, name, type) {
 function App() {
   const [state, setState] = useState(null),
     [draft, setDraft] = useState(null);
+  const [unsupportedSource, setUnsupportedSource] = useState(null);
   // React Flow measurements are presentation state, never diagram JSON. Keep
   // them across coordinate updates or React Flow hides and remeasures each node.
   const [measurements, setMeasurements] = useState({});
@@ -507,6 +515,12 @@ function App() {
     [query, setQuery] = useState("");
   const [jsonText, setJsonText] = useState(""),
     [html, setHtml] = useState(null);
+  const [minimap, setMinimap] = useState(() => {
+    try { return localStorage.getItem("archify-minimap:v1") === "true"; }
+    catch { return false; }
+  });
+  const [visibility, setVisibility] = useState({ text: "", type: "", neighbors: false });
+  const [shortcuts, setShortcuts] = useState(() => readShortcuts(localStorage));
   const flow = useRef(),
     picker = useRef(),
     dragBase = useRef(),
@@ -549,7 +563,8 @@ function App() {
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
-        load(data);
+        if (data.rawOnly) loadUnsupported(data);
+        else load(data);
         try {
           const stored = localStorage.getItem(
             `archify-draft:${data.recoveryKey}`,
@@ -644,6 +659,7 @@ function App() {
   function load(data) {
     renderGeneration.current.invalidate();
     renderController.current?.abort();
+    setUnsupportedSource(null);
     cancelled.current = true;
     dragBase.current = null;
     setGuides([]);
@@ -690,6 +706,22 @@ function App() {
     // Fit once after React Flow measures a newly opened document. A delayed
     // second fit can move a resize handle out from under the user's pointer.
     setCanvasVersion((version) => version + 1);
+  }
+  function loadUnsupported(data) {
+    renderGeneration.current.invalidate();
+    renderController.current?.abort();
+    setState(null);
+    setDraft(null);
+    setSession(data);
+    setUnsupportedSource({ text: data.sourceText, reason: data.limitation });
+    setJsonText(data.sourceText);
+    setHtml(null);
+    setDiagnostics([]);
+    setSelection([]);
+    setEdgeIndex(null);
+    setPanel("json");
+    setError("");
+    setNotice("Opened read-only source. Visual editing and saving are blocked because this document is unsupported.");
   }
   async function switchWorkspace(id) {
     if (busy || draft || dragBase.current) return;
@@ -930,12 +962,18 @@ function App() {
     await act(async () => {
       if (file.size > 5 * 1024 * 1024)
         throw new Error("JSON exceeds the 5 MB limit.");
-      const document = JSON.parse(await file.text());
-      assertDocument(document);
-      await request("validate", document);
-      load(importedSession(session, document, file.name));
+      const sourceText = await file.text();
+      const document = JSON.parse(sourceText);
+      const imported = importedSession(session, document, file.name);
+      try {
+        assertDocument(document);
+        await request("validate", document);
+        load(imported);
+        setNotice("JSON imported. Changes can be downloaded.");
+      } catch (e) {
+        loadUnsupported({ ...imported, sourceText, limitation: e.message });
+      }
       setRecovery(null);
-      setNotice("JSON imported. Changes can be downloaded.");
     });
   }
   async function reloadSource() {
@@ -1110,6 +1148,7 @@ function App() {
   }
 
   const items = documentModel ? components(documentModel) : [];
+  const visibleIds = useMemo(() => visibleNodeIds(documentModel, visibility, selection), [documentModel, visibility, selection]);
   const nodes = useMemo(() => {
     if (!documentModel) return [];
     const cs = components(documentModel),
@@ -1165,6 +1204,7 @@ function App() {
         selected: selection.includes(c.id),
         style: { width: c.size[0], height: c.size[1] },
         ariaLabel: `${c.label}, ${c.type}`,
+        hidden: !visibleIds.has(c.id),
       })),
     ];
   }, [
@@ -1175,6 +1215,7 @@ function App() {
     busy,
     rawDirty,
     drawConnections,
+    visibleIds,
   ]);
   const edges = useMemo(
     () =>
@@ -1193,8 +1234,9 @@ function App() {
         selected: index === edgeIndex,
         markerEnd: { type: "arrowclosed", color: "#82929c" },
         ariaLabel: `Connection ${e.from} to ${e.to}${e.label ? `, ${e.label}` : ""}`,
+        hidden: !visibleIds.has(e.from) || !visibleIds.has(e.to),
       })),
-    [documentModel, edgeIndex],
+    [documentModel, edgeIndex, visibleIds],
   );
   // Overlap diagnostics describe committed edits; dragging must not run the
   // quadratic all-pairs check on every pointer event.
@@ -1226,6 +1268,24 @@ function App() {
   }
   const selected = items.find((c) => c.id === selection[0]),
     edge = connections(documentModel)[edgeIndex];
+
+  if (unsupportedSource)
+    return (
+      <div className="unsupported-document">
+        <header className="toolbar">
+          <div className="brand"><span className="brand-mark" aria-hidden="true">A</span><strong>Archify Editor</strong></div>
+          <button onClick={() => picker.current?.click()}>Open another JSON</button>
+          <button className="primary" onClick={() => download(unsupportedSource.text, session.name, "application/json")}>Download original JSON</button>
+        </header>
+        <main>
+          <h1>Source opened read-only</h1>
+          <p role="alert">{unsupportedSource.reason}</p>
+          <p>The original source is preserved exactly. Visual editing, migration, rendering, and direct saving are blocked because this schema or construct is not supported safely.</p>
+          <label className="field">Original JSON<textarea aria-label="Unsupported diagram JSON" readOnly value={unsupportedSource.text} rows="28" /></label>
+          <input ref={picker} hidden type="file" accept=".json,application/json" onChange={(e) => { void importFile(e.target.files[0]); e.target.value = ""; }} />
+        </main>
+      </div>
+    );
 
   const panelDisabled = (key) =>
     !state ||
@@ -1305,7 +1365,7 @@ function App() {
     if(contextMenu)return;
     if(event.key==='F10'&&event.shiftKey){const node=event.target.closest('.react-flow__node');if(node)openContext(event,node.getAttribute('data-id')?.slice(2));return;}
     if (dialog.current?.open) return;
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+    if (matchesShortcut(event, shortcuts.commands)) {
       event.preventDefault();
       setCommandOpen((value) => !value);
       return;
@@ -1346,10 +1406,22 @@ function App() {
       event.stopPropagation();
       return;
     }
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+    if (matchesShortcut(event, shortcuts.save)) {
       event.preventDefault();
       if (rawDirty) setError("Apply or discard the JSON text before saving.");
       else if (state && !busy && !draft) void saveJson(session.writable);
+      return;
+    }
+    if (matchesShortcut(event, shortcuts.selectAll)) {
+      event.preventDefault();
+      setSelection(items.filter((item) => visibleIds.has(item.id)).map((item) => item.id));
+      setEdgeIndex(null);
+      return;
+    }
+    if (event.key === "]" && selection.length) {
+      const current = items.find((item) => item.id === selection.at(-1));
+      const overlapping = current ? items.filter((item) => item.id !== current.id && visibleIds.has(item.id) && current.pos[0] < item.pos[0] + item.size[0] && current.pos[0] + current.size[0] > item.pos[0] && current.pos[1] < item.pos[1] + item.size[1] && current.pos[1] + current.size[1] > item.pos[1]) : [];
+      if (overlapping.length) { event.preventDefault(); setSelection([overlapping[0].id]); setEdgeIndex(null); }
       return;
     }
     if (
@@ -1362,8 +1434,7 @@ function App() {
     )
       return;
     if (
-      (event.ctrlKey || event.metaKey) &&
-      event.key.toLowerCase() === "d" &&
+      matchesShortcut(event, shortcuts.duplicate) &&
       selection.length &&
       state.present.diagram_type === "architecture"
     ) {
@@ -1372,12 +1443,11 @@ function App() {
       return;
     }
     if (
-      (event.ctrlKey || event.metaKey) &&
-      ["z", "y"].includes(event.key.toLowerCase())
+      (matchesShortcut(event, shortcuts.undo) || matchesShortcut(event, shortcuts.redo) || ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "y"))
     ) {
       event.preventDefault();
       setState((s) =>
-        event.shiftKey || event.key.toLowerCase() === "y" ? redo(s) : undo(s),
+        matchesShortcut(event, shortcuts.redo) || event.key.toLowerCase() === "y" ? redo(s) : undo(s),
       );
     }
     const delta = {
@@ -1815,7 +1885,28 @@ function App() {
                 />
                 Snap to grid
               </label>
+              <label className="snap">
+                <input
+                  type="checkbox"
+                  checked={minimap}
+                  onChange={(e) => {
+                    setMinimap(e.target.checked);
+                    try { localStorage.setItem("archify-minimap:v1", String(e.target.checked)); } catch {}
+                  }}
+                />
+                Overview map
+              </label>
             </div>
+            <details className="visibility-filter">
+              <summary>Visibility · {visibleIds.size}/{items.length} items</summary>
+              <div className="field-grid">
+                <label className="field">Text<input type="search" value={visibility.text} onChange={(e) => { const next = { ...visibility, text: e.target.value }; setVisibility(next); const ids = visibleNodeIds(documentModel, next, selection); setSelection((current) => current.filter((id) => ids.has(id))); }} /></label>
+                <label className="field">Type<select value={visibility.type} onChange={(e) => { const next = { ...visibility, type: e.target.value }; setVisibility(next); const ids = visibleNodeIds(documentModel, next, selection); setSelection((current) => current.filter((id) => ids.has(id))); }}><option value="">All types</option>{[...new Set(items.map((item) => item.type))].map((type) => <option key={type}>{type}</option>)}</select></label>
+              </div>
+              <label><input type="checkbox" checked={visibility.neighbors} disabled={!selection.length} onChange={(e) => setVisibility({ ...visibility, neighbors: e.target.checked })} /> Selected connection neighborhood</label>
+              <button disabled={!visibility.text && !visibility.type && !visibility.neighbors} onClick={() => setVisibility({ text: "", type: "", neighbors: false })}>Reset visibility</button>
+              <small>Filters never change JSON. Hidden items are removed from selection. Ctrl/Cmd+A selects all visible items; ] cycles an overlapping item.</small>
+            </details>
             {layoutPreview && (
               <div className="canvas-preview" aria-label="Arrangement preview">
                 Arrangement preview · Pan and zoom to inspect · Apply or cancel
@@ -2060,6 +2151,14 @@ function App() {
               >
                 <Background gap={20} size={1} color="#cdd7dc" />
                 <Controls showInteractive={false} />
+                {minimap && (
+                  <MiniMap
+                    pannable
+                    zoomable
+                    ariaLabel="Diagram overview map"
+                    nodeColor={(node) => node.selected ? "#087b72" : "#82929c"}
+                  />
+                )}
                 <ViewportPortal>
                   {panel === "problems" &&
                     activeProblem &&
@@ -2319,7 +2418,7 @@ function App() {
                     setEdgeIndex(null);
                   }}
                   onExport={(value, name) =>
-                    download(serialize(value), name, "application/json")
+                    download(typeof value?.format === "string" ? JSON.stringify(value, null, 2) + "\n" : serialize(value), name, "application/json")
                   }
                 />
               </fieldset>
@@ -2367,7 +2466,7 @@ function App() {
                     })
                   }
                   onExport={(snapshot, name) =>
-                    download(serialize(snapshot), name, "application/json")
+                    download(typeof snapshot?.format === "string" ? JSON.stringify(snapshot, null, 2) + "\n" : serialize(snapshot), name, "application/json")
                   }
                 />
               </fieldset>
@@ -2452,6 +2551,21 @@ function App() {
                   }}
                 />
               </fieldset>
+            ) : panel === "samples" ? (
+              <SamplesPanel onOpen={(type) => {
+                if (hasUnsaved && !window.confirm("Keep this draft in recovery and open a new starter?")) return;
+                const value = createDiagram(type, `Untitled ${type} diagram`);
+                load(importedSession(session, value, `untitled.${type}.json`));
+                setSaved("");
+                setRecovery(null);
+                setNotice(`${type} starter opened as a new draft.`);
+              }} />
+            ) : panel === "help" ? (
+              <HelpPanel session={session} document={state.present} errors={[error, ...diagnostics.map((item) => item.message)].filter(Boolean)} notice={notice} onDownload={(text, name) => download(text, name, "application/json")} />
+            ) : panel === "shortcuts" ? (
+              <ShortcutsPanel value={shortcuts} onChange={setShortcuts} />
+            ) : panel === "migration" ? (
+              <MigrationPanel document={state.present} onPreview={async (value) => (await (await request("migrate", value)).json())} onApply={(next) => { change(next); setNotice("Migration applied as one undoable draft change. Review and save when ready."); }} onDownload={(value, name) => download(serialize(value), name, "application/json")} />
             ) : panel === "json" ? (
               <React.Suspense fallback={<p>Loading JSON editor…</p>}>
                 <JsonEditor

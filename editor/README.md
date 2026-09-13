@@ -38,6 +38,8 @@ For development, use `npm run dev` (also accepts `-- --file ...` and `-- --port 
 
 Layout edits patch the original document. Existing metadata, sources, views, component IDs, connection IDs, array ordering and authored routes remain intact. Saving normalizes whitespace to two-space indentation and a trailing newline. Pointer coordinates are rounded to two decimals. Grid items gain `pos` overrides and keep their original row/column hints; **Reset to grid position** removes the override.
 
+Unsupported diagram types, future schema versions, unknown fields, and invalid constructs open in a read-only source view. The exact original text remains downloadable; visual editing, migration, direct saving and rendering stay blocked. Supported migrations are separate previews: workflow v1→v2 shows original and proposed JSON, offers an original download, and applies as one undoable draft edit.
+
 ## Creating diagrams
 
 The architecture option in **New diagram** creates a document with one initial component. **Add component** chooses a label and type; **Add connection** chooses its endpoints and optional label. IDs are generated without collisions. Delete a component from its inspector to remove it, its incident connections, and its references in boundaries and guided views. Undo restores the complete edit. A diagram must retain at least one component.
@@ -57,8 +59,12 @@ For sequence diagrams, **Structure** edits participants, messages, activations a
 - Architecture **Structure** edits boundaries and guided views. Select boundary members to drag them together, or move them by an explicit offset. Guided views support up to five named focus sets, which Archify renders in the final HTML.
 - **Settings** exposes supported metadata, visual presets, animation, canvas dimensions and type-specific layout options. These affect exported JSON; editor preferences remain local.
 - **Search** finds component and connection IDs and labels. Arrow keys navigate results, Enter selects and fits a result, and **Fit selection** centers the current selection without changing JSON.
+- **Visibility** filters the canvas temporarily by text, type, or the selected connection neighborhood. Hidden items leave the selection; Reset restores all items. Ctrl/Cmd+A selects visible items and `]` cycles overlapping items.
+- **Overview map** adds a pannable, zoomable minimap with selected-item color. The standard zoom, fit and keyboard controls remain available.
 - **Review** compares the current draft with the last opened or saved version, grouping layout, topology and content changes by item. Review is optional; its save/download buttons use the same validation and revision checks as the toolbar.
 - **Checkpoints** stores up to ten named snapshots and 2 MB per document in browser storage. Restoring is undoable and never writes the source file. Export a checkpoint to keep an independent JSON copy; older checkpoints are never silently evicted.
+- **Starters** opens a validated editable draft for every diagram type. **Shortcuts** customizes conflict-checked Mod-key commands and restores defaults. Both preferences and starter state stay outside exported JSON.
+- **Help** searches file, conflict, route, schema, keyboard and recovery guidance. Its support bundle is reviewable before download and excludes diagram content, metadata, paths, tokens, revisions and recovery records.
 
 ## Diagram types
 
@@ -105,6 +111,8 @@ Auto-arrange: select architecture components, open Auto-arrange and preview the 
 
 Templates: select architecture components and use Templates to save a named fragment, including internal connections. Import/export template JSON, rename or delete entries, and insert with fresh IDs. Templates use browser storage (20 entries / 2 MB); export important fragments. Inserts are validated and undoable.
 
+Layout presets can be exported and imported as a versioned bundle. Duplicate names require an explicit replacement choice; invalid, oversized, or over-limit bundles leave stored presets unchanged. Checkpoints can likewise be exported/imported as a versioned recovery bundle with explicit collision handling.
+
 JSON editor: place the caret on an object to suggest missing fields, or on an enum/boolean value to suggest allowed values. Insert suggestion changes only unapplied text. Validation errors link to their source line. Locate canvas selection jumps to JSON; Focus item on canvas follows stable IDs back to the diagram. Apply checks schema and references. The schema editor loads on demand.
 
 Project workspace: launch `npm start -- --directory "D:\Diagrams"` (or use `--file`, not both). The Project diagram picker lists valid JSON below that directory. Refresh discovers changes; symbolic links and dependency/Git folders are skipped, files above 5 MB are excluded, and enumeration stops at 10,000 entries. Switching preserves each file's undo history, draft and unapplied text for this session. A reminder counts inactive unsaved drafts; browser recovery remains per file. Save file checks the selected file's revision. Disk changes are reconciled through the existing conflict flow. Imported documents still use downloads and cannot overwrite a project file.
@@ -136,5 +144,7 @@ In Structure, set a boundary's padding and use **Fit boundary to contents** to a
 Writable source files are checked every ten seconds and when the window regains focus. A changed source offers comparison/merge or explicit reload. Unapplied JSON must be applied or discarded first; reloading an applied draft asks before discarding it.
 
 Performance measurements and the repeatable benchmark are documented in [editor-performance.md](../docs/editor-performance.md). Round-trip tests cover all five schemas alongside the existing feature-specific tests.
+
+The generated [schema capability inventory](../docs/editor-schema-capabilities.md) maps every field to visual or JSON editing. The [release contract](../docs/editor-release.md) records canonical export, platform evidence, compatibility, packaging, security boundaries and human-owned acceptance.
 
 Undo recovery: restoring an unsaved draft also restores up to 20 retained past/future states, bounded to 1,048,576 serialized characters of history metadata. Snapshots are validated before restoration. Legacy drafts and invalid history restore the applied document without history; unapplied text and source-revision protections still apply. Saved documents do not retain history across reloads.

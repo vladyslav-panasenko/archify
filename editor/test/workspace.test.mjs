@@ -76,9 +76,11 @@ test("workspace IDs scope reads and writes, preserve per-file revisions and reje
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
     const list = await (await fetch(`${base}/api/workspace`)).json();
-    assert.equal(list.files.length, 2);
-    assert.equal(list.skipped, 1);
-    const [a, b] = list.files;
+    assert.equal(list.files.length, 3);
+    assert.equal(list.skipped, 0);
+    assert.equal(list.files.find((file) => file.name === "invalid.json").type, "unsupported");
+    const a = list.files.find((file) => file.name === "a.json"),
+      b = list.files.find((file) => file.name === "nested/b.json");
     const load = (id) =>
       fetch(`${base}/api/document?id=${encodeURIComponent(id)}`);
     const sa = await (await load(a.id)).json(),

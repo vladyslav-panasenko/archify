@@ -31,4 +31,8 @@ For each batch: write behavior tests for the failure/acceptance boundary; run th
 
 ## Status
 
-Implementation in progress. The backlog is the acceptance checklist; this plan is not evidence that its rows are complete.
+Implementation remains in progress. Completed in this batch: stable import identity; read-only future/unsupported source; validation severity/path alignment; bounded document/render work; stale/cancellable render results; generated five-schema inventory; canonical export/release contract; explicit workflow migration; five starters; searchable help and redacted support bundle; reproducible release checks/package; independently verified clean install/render; overview minimap; temporary visibility and visible selection; overlap cycling/select-visible shortcut; conflict-checked customizable shortcuts; versioned preset and recovery portability. Existing regression evidence covers native type authoring, conflict-safe writes, accessibility, preview rules, lossless round trips and measured label optimization.
+
+Latest automated evidence: 75 Node tests and 71 Playwright tests passed; Vite production build passed; the deterministic 1,000-node benchmark reported 1.095 ms projection, 0.846 ms diagnostics and 12.580 ms for 20 label placements. The extracted `0.1.0` archive clean-installed 40 locked packages and rendered a 715,216-byte architecture HTML file.
+
+Human-owned acceptance F122, F126, F140 and F149 remains pending by definition. Unimplemented Next rows must not be marked complete from this batch.

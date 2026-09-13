@@ -40,12 +40,19 @@ export async function createWorkspace(directory, validate) {
           try {
             if ((await fs.stat(file)).size > 5 * 1024 * 1024)
               throw new Error("Too large");
-            const document = validate(
-              JSON.parse(await fs.readFile(file, "utf8")),
-            );
+            const document = JSON.parse(await fs.readFile(file, "utf8"));
+            let type = "unsupported";
+            try {
+              validate(document);
+              type = document.diagram_type;
+            } catch {
+              // Keep parseable future/invalid Archify sources discoverable so
+              // the editor can open their lossless read-only source view.
+              if (typeof document?.diagram_type === "string") type = `${document.diagram_type} (read-only)`;
+            }
             const name = path.relative(root, file).split(path.sep).join("/");
             const id = createHash("sha256").update(name).digest("hex");
-            next.set(id, { id, name, type: document.diagram_type, file });
+            next.set(id, { id, name, type, file });
           } catch {
             rejected++;
           }
