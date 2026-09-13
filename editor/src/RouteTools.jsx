@@ -1,6 +1,7 @@
 import React,{useState} from "react";
 import {insertConnection} from './insert-connection.mjs';
 import { simplifyRoute } from "./segments.mjs";
+import { routeAroundObstacles } from "./obstacle-routing.mjs";
 export default function RouteTools({
   document,
   index,
@@ -30,6 +31,9 @@ export default function RouteTools({
             }
           >
             Preview simplified route
+          </button>
+          <button onClick={() => onPreview({ index, kind: "obstacle", document: routeAroundObstacles(document, index) })}>
+            Preview route around boxes
           </button>
           <button
             onClick={() =>

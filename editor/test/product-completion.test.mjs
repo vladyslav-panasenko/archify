@@ -11,7 +11,7 @@ import { supportBundle } from "../src/support-bundle.mjs";
 import { exportPresets, importPresets } from "../src/layout-presets.mjs";
 import { visibleNodeIds } from "../src/visibility.mjs";
 import { defaultShortcuts, validateShortcuts, matchesShortcut } from "../src/shortcuts.mjs";
-import { exportCheckpointBundle, importCheckpointBundle } from "../src/checkpoints.mjs";
+import { exportCheckpointBundle, exportRecoveryBundle, importCheckpointBundle } from "../src/checkpoints.mjs";
 
 test("imports receive stable independent recovery identities", () => {
   const base = { token: "secret", workspace: true, recoveryKey: "file-a" };
@@ -30,7 +30,11 @@ test("portable recovery bundles validate versions, limits and collisions", () =>
   assert.deepEqual(importCheckpointBundle([], bundle), [entry]);
   assert.throws(() => importCheckpointBundle([entry], bundle), /already exist/);
   assert.deepEqual(importCheckpointBundle([entry], bundle, true), [entry]);
-  assert.throws(() => importCheckpointBundle([], { ...bundle, version: 2 }), /version 1/);
+  assert.throws(() => importCheckpointBundle([], { ...bundle, version: 3 }), /version 1 or 2/);
+  const portable = exportRecoveryBundle({ document: entry.document, historyData: { past: [], future: [] }, checkpoints: [entry] });
+  assert.equal(portable.version, 2);
+  assert.deepEqual(importCheckpointBundle([], portable), [entry]);
+  assert.match(portable.privacy, /diagram content/);
 });
 
 test("custom shortcuts reject conflicts, reset cleanly and match cross-platform Mod keys", () => {

@@ -1,11 +1,13 @@
 export const checkpointLimit = 10,
   checkpointBytes = 2 * 1024 * 1024;
-export function addCheckpoint(existing, name, document) {
+export function addCheckpoint(existing, name, document, limit = checkpointLimit) {
   if (!name.trim() || name.trim().length > 80)
     throw new Error("Use a checkpoint name between 1 and 80 characters.");
-  if (existing.length >= checkpointLimit)
+  if (!Number.isInteger(limit) || limit < 1 || limit > checkpointLimit)
+    throw new Error("Checkpoint retention must be between 1 and 10.");
+  if (existing.length >= limit)
     throw new Error(
-      "Ten checkpoints already exist. Export and delete one before adding another.",
+      `${limit} checkpoints already exist. Export and delete one before adding another.`,
     );
   const next = [
     ...existing,
@@ -36,9 +38,22 @@ export function readCheckpoints(storage, key) {
 export function exportCheckpointBundle(entries) {
   return { format: "archify-recovery", version: 1, exportedAt: new Date().toISOString(), checkpoints: structuredClone(entries) };
 }
+export function exportRecoveryBundle({ document, historyData, checkpoints, includeHistory = true }) {
+  const bundle = {
+    format: "archify-recovery",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    privacy: "Contains diagram content and local checkpoint labels. Review before sharing.",
+    draft: { document: structuredClone(document), ...(includeHistory && historyData ? { historyData: structuredClone(historyData) } : {}) },
+    checkpoints: structuredClone(checkpoints),
+  };
+  if (JSON.stringify(bundle).length * 2 > checkpointBytes)
+    throw new Error("Portable recovery bundle exceeds 2 MB. Export fewer checkpoints or omit history.");
+  return bundle;
+}
 export function importCheckpointBundle(existing, bundle, replace = false) {
-  if (bundle?.format !== "archify-recovery" || bundle.version !== 1 || !Array.isArray(bundle.checkpoints))
-    throw new Error("Choose an Archify recovery bundle version 1.");
+  if (bundle?.format !== "archify-recovery" || ![1, 2].includes(bundle.version) || !Array.isArray(bundle.checkpoints))
+    throw new Error("Choose an Archify recovery bundle version 1 or 2.");
   const incoming = bundle.checkpoints;
   readCheckpoints({ getItem: () => JSON.stringify(incoming) }, "bundle");
   const ids = new Set(existing.map((entry) => entry.id));

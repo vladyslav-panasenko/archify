@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { addNode, deleteNode, componentKinds } from "./topology.mjs";
 import {
   saveMessage,
   removeMessage,
   saveRange,
   removeRange,
+  planSequenceRange,
 } from "./sequence-structure.mjs";
 function Participants({ document, name, value, label }) {
   return (
@@ -21,6 +22,7 @@ function Participants({ document, name, value, label }) {
   );
 }
 export default function SequencePanel({ document, onChange, onSelect }) {
+  const [rangePreview, setRangePreview] = useState(null), [rangeError, setRangeError] = useState("");
   return (
     <div className="properties">
       <h2>Sequence structure</h2>
@@ -176,6 +178,23 @@ export default function SequencePanel({ document, onChange, onSelect }) {
             </form>
           </details>
         ))}
+      </details>
+      <details>
+        <summary>Shift or duplicate a message range</summary>
+        <p className="muted">The preview includes only activations and segments fully contained by the chosen range. A partial dependency cancels the operation.</p>
+        <form onSubmit={(event) => {
+          event.preventDefault();
+          try { setRangePreview(planSequenceRange(document, Object.fromEntries(new FormData(event.currentTarget)))); setRangeError(""); }
+          catch (error) { setRangePreview(null); setRangeError(error.message); }
+        }}>
+          <label className="field">From Y<input name="from" type="number" defaultValue={Math.min(...document.messages.map((message) => message.y))} /></label>
+          <label className="field">To Y<input name="to" type="number" defaultValue={Math.max(...document.messages.map((message) => message.y))} /></label>
+          <label className="field">Offset in pixels<input name="delta" type="number" defaultValue="60" /></label>
+          <label className="field">Operation<select name="mode"><option value="shift">Shift range</option><option value="duplicate">Duplicate range</option></select></label>
+          <button>Preview range operation</button>
+        </form>
+        {rangeError && <p role="alert">{rangeError}</p>}
+        {rangePreview && <div className="preview-card"><p>{rangePreview.summary} Source JSON remains unchanged until Apply.</p><button onClick={() => setRangePreview(null)}>Cancel preview</button><button onClick={() => { onChange(() => rangePreview.document); setRangePreview(null); }}>Apply range operation</button></div>}
       </details>
       {["activations", "segments"].map((collection) => (
         <details key={collection}>

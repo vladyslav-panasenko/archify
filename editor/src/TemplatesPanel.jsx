@@ -8,7 +8,7 @@ import {
   importTemplate,
 } from "./templates.mjs";
 import { pasteSelection } from "./clipboard.mjs";
-import { newDocument } from "./document.mjs";
+import { createDiagram } from "./topology.mjs";
 
 export default function TemplatesPanel({
   document,
@@ -51,7 +51,7 @@ export default function TemplatesPanel({
     <div className="properties">
       <h2>Reusable templates</h2>
       <p>
-        Save selected architecture components and their internal connections. Up
+        Save selected items and their internal connections for any supported diagram type. Up
         to 20 templates and 2 MB in this browser. Export a copy before clearing
         browser data.
       </p>
@@ -63,7 +63,7 @@ export default function TemplatesPanel({
             run(async () => {
               const next = saveTemplate(entries, name, document, selection);
               await onValidate(
-                pasteSelection(newDocument(), next.at(-1).fragment).document,
+                pasteSelection(createDiagram(document.diagram_type, "Template validation"), next.at(-1).fragment).document,
               );
               write(next);
               setName("");
@@ -80,9 +80,7 @@ export default function TemplatesPanel({
             />
           </label>
           <button
-            disabled={
-              !selection.length || document.diagram_type !== "architecture"
-            }
+            disabled={!selection.length}
           >
             Save selection as template
           </button>
@@ -104,7 +102,7 @@ export default function TemplatesPanel({
                     JSON.parse(await file.text()),
                   );
                   await onValidate(
-                    pasteSelection(newDocument(), next.at(-1).fragment)
+                    pasteSelection(createDiagram(next.at(-1).fragment.diagram_type, "Template validation"), next.at(-1).fragment)
                       .document,
                   );
                   write(next);
@@ -116,12 +114,12 @@ export default function TemplatesPanel({
           <section className="checkpoint" key={entry.id}>
             <h3>{entry.name}</h3>
             <p>
-              {entry.fragment.components.length} components ·{" "}
+              {entry.fragment.components.length} items ·{" "}
               {entry.fragment.connections.length} connections
             </p>
             <div className="review-actions">
               <button
-                disabled={document.diagram_type !== "architecture"}
+                disabled={document.diagram_type !== entry.fragment.diagram_type}
                 onClick={() =>
                   run(async () => {
                     const result = pasteSelection(document, entry.fragment);

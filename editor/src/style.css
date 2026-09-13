@@ -1063,7 +1063,23 @@ legend {
 .workspace-picker {
   padding: 12px;
   border-bottom: 1px solid #dbe2e6;
+  display: grid;
+  gap: 10px;
 }
+.workspace-picker h2 { margin: 0; font-size: 14px; }
+.workspace-picker form { display: grid; gap: 6px; }
+.workspace-recents { display: flex; flex-wrap: wrap; gap: 4px; }
+.workspace-recents span { flex-basis: 100%; font-size: 11px; color: #637681; }
+.workspace-recents button { padding: 4px 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.workspace-results { display: grid; gap: 5px; max-height: 220px; overflow: auto; }
+.workspace-results > button { display: grid; gap: 2px; text-align: left; }
+.workspace-results small { color: #637681; overflow-wrap: anywhere; }
+.document-tabs { display: flex; gap: 2px; padding: 5px 12px 0; overflow-x: auto; background: #17212b; border-top: 1px solid #34414e; }
+.document-tabs > div { display: flex; flex: 0 0 auto; border: 1px solid #41505f; border-bottom: 0; border-radius: 5px 5px 0 0; overflow: hidden; }
+.document-tabs > div.active { background: #f7f9fa; border-color: #dbe2e6; }
+.document-tabs button { border: 0; border-radius: 0; background: transparent; color: #dbe5ec; padding: 7px 9px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.document-tabs > div.active button { color: #24343e; }
+.document-tabs .close-tab { padding-inline: 7px; font-size: 17px; }
 .workspace-picker p {
   font-size: 12px;
   overflow-wrap: anywhere;
@@ -1159,6 +1175,14 @@ button {
 }
 .workspace {
   position: relative;
+}
+.panel-divider { display: none; }
+@media (min-width: 1100px) {
+  .panel-divider { display: block; position: absolute; z-index: 30; top: 0; bottom: 0; width: 9px; padding: 0; border: 0; border-radius: 0; background: transparent; cursor: col-resize; touch-action: none; }
+  .panel-divider::after { content: ""; position: absolute; inset: 0 3px; background: transparent; }
+  .panel-divider:hover::after, .panel-divider:focus-visible::after { background: #07877a; }
+  .outline-divider { left: calc(var(--outline-width, 220px) - 4px); }
+  .inspector-divider { right: calc(var(--inspector-width, 290px) - 4px); }
 }
 .button-row {
   flex-wrap: wrap;

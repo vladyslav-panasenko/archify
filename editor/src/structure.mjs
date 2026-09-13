@@ -98,3 +98,28 @@ export function moveBoundary(document, index, dx, dy) {
     ),
   );
 }
+
+export function previewBoundaryMembership(document, movedDocument, ids) {
+  if (document.diagram_type !== "architecture" || !document.boundaries?.length)
+    return { document: movedDocument, changes: [] };
+  const before = new Map(components(document).map((item) => [item.id, item]));
+  const after = new Map(components(movedDocument).map((item) => [item.id, item]));
+  const next = clone(movedDocument), changes = [];
+  for (const [index, boundary] of document.boundaries.entries()) {
+    const originalMembers = boundary.wraps.map((id) => before.get(id)).filter(Boolean), pad = boundary.pad ?? 30;
+    const bounds = {
+      left: Math.min(...originalMembers.map((item) => item.pos[0])) - pad,
+      top: Math.min(...originalMembers.map((item) => item.pos[1])) - pad,
+      right: Math.max(...originalMembers.map((item) => item.pos[0] + item.size[0])) + pad,
+      bottom: Math.max(...originalMembers.map((item) => item.pos[1] + item.size[1])) + pad,
+    };
+    for (const id of ids) {
+      const item = after.get(id); if (!item) continue;
+      const inside = item.pos[0] + item.size[0] / 2 >= bounds.left && item.pos[0] + item.size[0] / 2 <= bounds.right && item.pos[1] + item.size[1] / 2 >= bounds.top && item.pos[1] + item.size[1] / 2 <= bounds.bottom;
+      const member = boundary.wraps.includes(id);
+      if (inside && !member) { next.boundaries[index].wraps.push(id); changes.push({ id, boundary: boundary.label, action: "add" }); }
+      else if (!inside && member && next.boundaries[index].wraps.length > 1) { next.boundaries[index].wraps = next.boundaries[index].wraps.filter((value) => value !== id); changes.push({ id, boundary: boundary.label, action: "remove" }); }
+    }
+  }
+  return { document: next, changes };
+}

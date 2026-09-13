@@ -1,5 +1,5 @@
 import { copySelection, pasteSelection } from "./clipboard.mjs";
-import { newDocument } from "./document.mjs";
+import { createDiagram } from "./topology.mjs";
 export const templateKey = "archify-templates:v1";
 export function checkTemplates(entries) {
   if (
@@ -24,7 +24,7 @@ export function checkTemplates(entries) {
         "Invalid template names or IDs. Existing storage has been preserved.",
       );
     ids.add(e.id);
-    pasteSelection(newDocument(), e.fragment);
+    pasteSelection(createDiagram(e.fragment.diagram_type, "Template validation"), e.fragment);
   }
   return entries;
 }

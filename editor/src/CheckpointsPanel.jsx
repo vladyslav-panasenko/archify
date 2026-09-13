@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { addCheckpoint, readCheckpoints, exportCheckpointBundle, importCheckpointBundle } from "./checkpoints.mjs";
+import { addCheckpoint, readCheckpoints, exportRecoveryBundle, importCheckpointBundle } from "./checkpoints.mjs";
 export default function CheckpointsPanel({
   document,
+  historyData,
   storageKey,
   onRestore,
+  onImportDraft,
   onExport,
 }) {
   const key = `archify-checkpoints:${storageKey}`;
@@ -16,7 +18,8 @@ export default function CheckpointsPanel({
   });
   const [entries, setEntries] = useState(initial.entries),
     [error, setError] = useState(initial.error || ""),
-    [name, setName] = useState("");
+    [name, setName] = useState(""), [selected, setSelected] = useState([]),
+    [retention, setRetention] = useState(10), [includeHistory, setIncludeHistory] = useState(true);
   const write = (next) => {
     try {
       localStorage.setItem(key, JSON.stringify(next));
@@ -34,19 +37,22 @@ export default function CheckpointsPanel({
     <div className="properties">
       <h2>Local checkpoints</h2>
       <p className="muted">
-        Up to 10 snapshots and 2 MB per document in this browser. Clearing
+        Up to the chosen retention limit and 2 MB per document in this browser. Clearing
         browser storage removes them. Export checkpoints you want to keep.
       </p>
       {error && <p role="alert">{error}</p>}
       <div className="button-row">
-        <button disabled={!entries.length} onClick={() => onExport(exportCheckpointBundle(entries), "archify-recovery.json")}>Export all recovery</button>
-        <label className="button-like">Import recovery<input hidden type="file" accept=".json,application/json" onChange={async (e) => { const file=e.target.files[0];e.target.value="";if(!file)return;try{if(file.size>2*1024*1024)throw new Error("Recovery bundle exceeds 2 MB.");const bundle=JSON.parse(await file.text());let next;try{next=importCheckpointBundle(entries,bundle);}catch(error){if(!error.collisions||!window.confirm(`${error.message} Replace matching checkpoints?`))throw error;next=importCheckpointBundle(entries,bundle,true);}write(next);}catch(error){setError(error.message);}}}/></label>
+        <button onClick={() => { try { const chosen = selected.length ? entries.filter((entry) => selected.includes(entry.id)) : entries; onExport(exportRecoveryBundle({ document, historyData, checkpoints: chosen, includeHistory }), "archify-recovery.json"); } catch (cause) { setError(cause.message); } }}>Export recovery bundle</button>
+        <button disabled={!selected.length} onClick={() => { if (window.confirm(`Delete ${selected.length} selected local checkpoints?`)) { write(entries.filter((entry) => !selected.includes(entry.id))); setSelected([]); } }}>Delete selected</button>
+        <label className="button-like">Import recovery<input hidden type="file" accept=".json,application/json" onChange={async (e) => { const file=e.target.files[0];e.target.value="";if(!file)return;try{if(file.size>2*1024*1024)throw new Error("Recovery bundle exceeds 2 MB.");const bundle=JSON.parse(await file.text());let next;try{next=importCheckpointBundle(entries,bundle);}catch(error){if(!error.collisions||!window.confirm(`${error.message} Replace matching checkpoints?`))throw error;next=importCheckpointBundle(entries,bundle,true);}write(next);if(bundle.version===2&&bundle.draft?.document&&window.confirm("This bundle contains a draft. Restore it with any included history?"))await onImportDraft(bundle.draft);}catch(error){setError(error.message);}}}/></label>
       </div>
+      <label className="field">Checkpoint retention · {retention}<input type="range" min="1" max="10" value={retention} onChange={(event) => setRetention(Number(event.target.value))} /></label>
+      <label><input type="checkbox" checked={includeHistory} onChange={(event) => setIncludeHistory(event.target.checked)} /> Include up to 20 undo/redo states in exports</label>
       <form
         onSubmit={(e) => {
           e.preventDefault();
           try {
-            if (write(addCheckpoint(entries, name, document))) setName("");
+            if (write(addCheckpoint(entries, name, document, retention))) setName("");
           } catch (error) {
             setError(error.message);
           }
@@ -65,10 +71,11 @@ export default function CheckpointsPanel({
       </form>
       {entries.map((entry) => (
         <section className="checkpoint" key={entry.id}>
-          <h3>{entry.name}</h3>
+          <h3><label><input type="checkbox" checked={selected.includes(entry.id)} onChange={(event) => setSelected(event.target.checked ? [...selected, entry.id] : selected.filter((id) => id !== entry.id))} /> {entry.name}</label></h3>
           <time dateTime={entry.created}>
             {new Date(entry.created).toLocaleString()}
           </time>
+          <small>{new Blob([JSON.stringify(entry)]).size.toLocaleString()} bytes</small>
           <div className="review-actions">
             <button
               onClick={() => {

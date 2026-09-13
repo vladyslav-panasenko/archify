@@ -130,3 +130,26 @@ test("workspace IDs scope reads and writes, preserve per-file revisions and reje
     await fs.rm(external, { recursive: true, force: true });
   }
 });
+
+test("workspace folders, content search, and revision-checked moves stay confined", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "archify-manage-"));
+  try {
+    const ws = await createWorkspace(directory, validate);
+    await ws.createFolder("Systems/Payments");
+    assert.deepEqual(ws.list().folders, ["Systems", "Systems/Payments"]);
+    await assert.rejects(() => ws.createFolder("../escape"));
+    const created = await ws.saveAs("source.json", newDocument("Unique ledger label"));
+    const matches = await ws.search("ledger");
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0].name, "source.json");
+    await assert.rejects(() => ws.rename(created.id, "Systems/Payments/moved.json", "stale"), (error) => error.status === 409);
+    const moved = await ws.rename(created.id, "Systems/Payments/moved.json", created.revision);
+    assert.equal(moved.name, "Systems/Payments/moved.json");
+    assert.equal(await fs.stat(path.join(directory, "Systems", "Payments", "moved.json")).then((stat) => stat.isFile()), true);
+    await assert.rejects(() => ws.resolve(created.id), (error) => error.status === 404);
+    await ws.saveAs("occupied.json", newDocument("Occupied"));
+    await assert.rejects(() => ws.rename(moved.id, "occupied.json", moved.revision), (error) => error.status === 409);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});

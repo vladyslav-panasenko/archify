@@ -155,6 +155,10 @@ export async function createEditorServer({
           await workspace.refresh();
           return send(200, { ...workspace.list(), enabled: true });
         }
+        if (req.method === "GET" && url.pathname === "/api/workspace/search") {
+          if (!workspace) return send(200, { results: [], enabled: false });
+          return send(200, { results: await workspace.search(url.searchParams.get("q") || ""), enabled: true });
+        }
         if (req.method === "GET" && url.pathname === "/api/document") {
           const workspaceId = workspace
             ? url.searchParams.get("id") || workspace.list().files[0]?.id
@@ -203,7 +207,24 @@ export async function createEditorServer({
         )
           return send(415, { error: "Send a JSON request." });
         const body = await readBody(req);
-        validate(body.document);
+        if (body.document !== undefined) validate(body.document);
+        if (req.method === "POST" && url.pathname === "/api/workspace/folder") {
+          if (!workspace) return send(403, { error: "Start with --directory to manage project folders." });
+          return send(200, await workspace.createFolder(body.name));
+        }
+        if (req.method === "POST" && url.pathname === "/api/workspace/rename") {
+          if (!workspace) return send(403, { error: "Start with --directory to move project files." });
+          const result = await workspace.rename(body.id, body.name, body.revision);
+          return send(200, {
+            token,
+            revision: result.revision,
+            writable: true,
+            recoveryKey: hash(result.file),
+            name: result.name,
+            workspace: true,
+            workspaceId: result.id,
+          });
+        }
         if (req.method === "POST" && url.pathname === "/api/validate")
           return send(200, { valid: true });
         if (req.method === "POST" && url.pathname === "/api/migrate") {

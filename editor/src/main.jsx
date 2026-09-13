@@ -97,13 +97,14 @@ import {
   resetFields,
 } from "./selection.mjs";
 import StructurePanel from "./StructurePanel.jsx";
-import { createDiagram, authoringTypes } from "./topology.mjs";
+import { createDiagram, authoringTypes, deleteEdge } from "./topology.mjs";
 import SettingsPanel from "./SettingsPanel.jsx";
 import SearchPanel from "./SearchPanel.jsx";
 import ReviewPanel from "./ReviewPanel.jsx";
 import ConflictPanel from "./ConflictPanel.jsx";
 import HistoryPanel from "./HistoryPanel.jsx";
 import { jumpHistory } from "./history-labels.mjs";
+import { previewBoundaryMembership, deleteBoundary } from "./structure.mjs";
 import CheckpointsPanel from "./CheckpointsPanel.jsx";
 
 const sides = {
@@ -460,6 +461,7 @@ function App() {
   const [routePreview, setRoutePreview] = useState(null);
   const [layoutPreview, setLayoutPreview] = useState(null);
   const workspaceDrafts = useRef(new Map());
+  const [tabsVersion, setTabsVersion] = useState(0);
   const [sourceAlert, setSourceAlert] = useState(null);
   useEffect(() => {
     setSourceAlert(null);
@@ -782,7 +784,62 @@ function App() {
       setNotice(
         "Project diagram opened. Other file drafts remain in this session.",
       );
+      setTabsVersion((version) => version + 1);
     });
+  }
+  async function renameWorkspace(data) {
+    const previousId = session.workspaceId, previousRecoveryKey = session.recoveryKey;
+    const nextSession = { ...session, ...data };
+    for (const prefix of ["archify-draft:", "archify-view:", "archify-locks:"]) {
+      for (let index = 0; index < localStorage.length; index++) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith(`${prefix}${previousRecoveryKey}`)) continue;
+        const suffix = key.slice(`${prefix}${previousRecoveryKey}`.length);
+        localStorage.setItem(`${prefix}${data.recoveryKey}${suffix}`, localStorage.getItem(key));
+        localStorage.removeItem(key);
+        index--;
+      }
+    }
+    workspaceDrafts.current.delete(previousId);
+    setSession(nextSession);
+    setNotice(`Moved project file to ${data.name}. Recovery and view state followed the file.`);
+    setTabsVersion((version) => version + 1);
+  }
+  async function closeWorkspaceTab(id) {
+    const active = id === session.workspaceId;
+    const cached = active ? null : workspaceDrafts.current.get(id);
+    const unsaved = active
+      ? hasUnsaved
+      : cached && (cached.saved !== serialize(cached.state.present) || cached.rawText !== null);
+    if (unsaved && !window.confirm("Discard the unsaved changes in this tab?")) return;
+    if (active) {
+      const nextId = workspaceDrafts.current.keys().next().value;
+      if (!nextId) return;
+      await switchWorkspace(nextId);
+      workspaceDrafts.current.delete(id);
+    } else workspaceDrafts.current.delete(id);
+    setTabsVersion((version) => version + 1);
+  }
+  function setPanelWidth(key, value) {
+    const limits = key === "outline" ? [160, 360] : [240, 480];
+    const next = { ...panelSizes, [key]: Math.max(limits[0], Math.min(limits[1], Math.round(value))) };
+    setPanelSizes(next);
+    try { localStorage.setItem("archify-panels:v1", JSON.stringify(next)); } catch { /* optional preference */ }
+  }
+  function beginPanelResize(key, event) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    const start = event.clientX, width = panelSizes[key], direction = key === "outline" ? 1 : -1;
+    const move = (next) => setPanelWidth(key, width + (next.clientX - start) * direction);
+    const stop = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", stop); };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop, { once: true });
+  }
+  function panelResizeKey(key, event) {
+    if (!["ArrowLeft", "ArrowRight", "Home"].includes(event.key)) return;
+    event.preventDefault();
+    const direction = key === "outline" ? 1 : -1;
+    setPanelWidth(key, event.key === "Home" ? (key === "outline" ? 220 : 290) : panelSizes[key] + (event.key === "ArrowRight" ? 16 : -16) * direction);
   }
   async function saveAsProject(name, revision) {
     const targetDraft = [...workspaceDrafts.current.values()].find(
@@ -1059,8 +1116,7 @@ function App() {
         !selection.length ||
         !state ||
         busy ||
-        rawDirty ||
-        state.present.diagram_type !== "architecture"
+        rawDirty
       )
         return;
       try {
@@ -1268,6 +1324,17 @@ function App() {
   }
   const selected = items.find((c) => c.id === selection[0]),
     edge = connections(documentModel)[edgeIndex];
+  const documentTabs = session?.workspace
+    ? [
+        ...(session.workspaceId ? [{ id: session.workspaceId, name: session.name, dirty: hasUnsaved }] : []),
+        ...[...workspaceDrafts.current.entries()].map(([id, cached]) => ({
+          id,
+          name: cached.session.name,
+          dirty: cached.saved !== serialize(cached.state.present) || cached.rawText !== null,
+        })),
+      ]
+    : [];
+  void tabsVersion;
 
   if (unsupportedSource)
     return (
@@ -1435,8 +1502,7 @@ function App() {
       return;
     if (
       matchesShortcut(event, shortcuts.duplicate) &&
-      selection.length &&
-      state.present.diagram_type === "architecture"
+      selection.length
     ) {
       event.preventDefault();
       paste(copySelection(state.present, selection));
@@ -1518,13 +1584,24 @@ function App() {
       }}
     >
       <div className="app">
-        {contextMenu&&<ContextActions position={contextMenu} onClose={()=>setContextMenu(null)} actions={[
-          {label:'Duplicate selection',disabled:busy||rawDirty||state.present.diagram_type!=='architecture',run:()=>paste(copySelection(state.present,contextMenu.ids))},
+        {contextMenu&&<ContextActions position={contextMenu} onClose={()=>setContextMenu(null)} title={contextMenu.edgeIndex != null ? "Connection actions" : contextMenu.boundaryIndex != null ? "Boundary actions" : contextMenu.background ? "Canvas actions" : "Selection actions"} actions={contextMenu.edgeIndex != null ? [
+          {label:"Edit connection",run:()=>{setEdgeIndex(contextMenu.edgeIndex);openPanel("inspector");}},
+          {label:"Reset route and label position",disabled:!connections(state.present)[contextMenu.edgeIndex]?.via&&!connections(state.present)[contextMenu.edgeIndex]?.labelAt,reason:"This connection already uses automatic geometry.",run:()=>reset("route",contextMenu.edgeIndex)},
+          {label:"Delete connection",disabled:busy||rawDirty,reason:"Finish the current edit before deleting.",run:()=>{change(deleteEdge(state.present,contextMenu.edgeIndex));setEdgeIndex(null);}},
+        ] : contextMenu.boundaryIndex != null ? [
+          {label:"Edit boundaries",run:()=>openPanel("structure")},
+          {label:"Delete boundary",disabled:busy||rawDirty,reason:"Finish the current edit before deleting.",run:()=>change(deleteBoundary(state.present,contextMenu.boundaryIndex))},
+        ] : contextMenu.background ? [
+          {label:"Fit diagram",run:()=>flow.current?.fitView({padding:0.2})},
+          {label:minimap?"Hide overview map":"Show overview map",run:()=>setMinimap(!minimap)},
+          {label:"Create new diagram",disabled:hasUnsaved,reason:"Save or recover the current draft first.",run:()=>setCreation("diagram")},
+        ] : [
+          {label:'Duplicate selection',disabled:busy||rawDirty,run:()=>paste(copySelection(state.present,contextMenu.ids))},
           {label:contextMenu.ids.every(id=>locked.includes(id))?'Unlock selection':'Lock selection',disabled:busy||rawDirty,run:()=>updateLocks(contextMenu.ids.every(id=>locked.includes(id))?locked.filter(id=>!contextMenu.ids.includes(id)):[...new Set([...locked,...contextMenu.ids])])},
-          {label:'Connect components',disabled:busy||rawDirty||state.present.diagram_type!=='architecture',run:()=>setDrawConnections(true)},
-          {label:'Arrange selection',disabled:busy||rawDirty||state.present.diagram_type!=='architecture',run:()=>openPanel('layout')},
-          {label:'Delete selection',disabled:busy||rawDirty||state.present.diagram_type!=='architecture'||contextMenu.ids.some(id=>locked.includes(id))||contextMenu.ids.length>=sourceNodes(state.present).length,run:()=>{if(window.confirm('Delete selected components and their connections?')){change(removeSelection(state.present,contextMenu.ids));setSelection([]);}}},
-        ]}/>}
+          {label:'Connect components',disabled:busy||rawDirty||state.present.diagram_type!=='architecture',reason:"Direct canvas connection authoring is available for architecture diagrams.",run:()=>setDrawConnections(true)},
+          {label:'Arrange selection',disabled:busy||rawDirty||state.present.diagram_type!=='architecture',reason:"Free-coordinate arrangement is available for architecture diagrams.",run:()=>openPanel('layout')},
+          {label:'Delete selection',disabled:busy||rawDirty||state.present.diagram_type!=='architecture'||contextMenu.ids.some(id=>locked.includes(id))||contextMenu.ids.length>=sourceNodes(state.present).length,reason:"Unlock items and keep at least one supported component.",run:()=>{if(window.confirm('Delete selected components and their connections?')){change(removeSelection(state.present,contextMenu.ids));setSelection([]);}}},
+        ]}/>} 
         <a className="skip-link" href="#diagram-canvas">
           Skip to diagram canvas
         </a>
@@ -1695,6 +1772,23 @@ function App() {
             }}
           />
         </header>
+        {documentTabs.length > 0 && (
+          <nav className="document-tabs" aria-label="Open project documents">
+            {documentTabs.map((tab) => (
+              <div key={tab.id} className={tab.id === session.workspaceId ? "active" : ""}>
+                <button disabled={busy || tab.id === session.workspaceId} onClick={() => switchWorkspace(tab.id)}>
+                  {tab.name}{tab.dirty ? " •" : ""}
+                </button>
+                <button
+                  className="close-tab"
+                  aria-label={`Close ${tab.name}`}
+                  disabled={busy || (tab.id === session.workspaceId && documentTabs.length === 1)}
+                  onClick={() => closeWorkspaceTab(tab.id)}
+                >×</button>
+              </div>
+            ))}
+          </nav>
+        )}
         {recovery && (
           <div className="recovery-banner" role="status">
             <span>
@@ -1740,6 +1834,10 @@ function App() {
           </div>
         )}
         <div className={"workspace "+(focusMode?'focus-mode':'')} style={{'--outline-width':panelSizes.outline+'px','--inspector-width':panelSizes.inspector+'px'}}>
+          {!focusMode && <>
+            <button className="panel-divider outline-divider" role="separator" aria-orientation="vertical" aria-label="Resize component outline" aria-valuemin="160" aria-valuemax="360" aria-valuenow={panelSizes.outline} onPointerDown={(event) => beginPanelResize("outline", event)} onKeyDown={(event) => panelResizeKey("outline", event)} />
+            <button className="panel-divider inspector-divider" role="separator" aria-orientation="vertical" aria-label="Resize inspector" aria-valuemin="240" aria-valuemax="480" aria-valuenow={panelSizes.inspector} onPointerDown={(event) => beginPanelResize("inspector", event)} onKeyDown={(event) => panelResizeKey("inspector", event)} />
+          </>}
           <aside
             id="component-outline"
             className={`outline ${outlineOpen ? "open" : ""}`}
@@ -1757,6 +1855,9 @@ function App() {
                 id={session.writable ? session.workspaceId : null}
                 disabled={busy || !!draft || !!conflict}
                 onSwitch={switchWorkspace}
+                onRename={renameWorkspace}
+                token={session.token}
+                revision={session.revision}
               />
             )}
             <div className="section-heading">
@@ -2069,7 +2170,9 @@ function App() {
                       ),
                     );
                 }}
-                onNodeContextMenu={(event,node)=>openContext(event,node.id.startsWith('c:')?node.id.slice(2):null)}
+                onNodeContextMenu={(event,node)=>{if(node.id.startsWith('c:'))openContext(event,node.id.slice(2));else if(node.id.startsWith('b:')){event.preventDefault();setContextMenu({boundaryIndex:Number(node.id.slice(2)),x:event.clientX,y:event.clientY});}}}
+                onEdgeContextMenu={(event,edge)=>{event.preventDefault();const index=Number(edge.id.slice(2));setEdgeIndex(index);setSelection([]);setContextMenu({edgeIndex:index,x:event.clientX,y:event.clientY});}}
+                onPaneContextMenu={(event)=>{event.preventDefault();setContextMenu({background:true,x:event.clientX,y:event.clientY});}}
                 onNodeClick={(_, node) => {
                   if (node.id.startsWith("c:")) setEdgeIndex(null);
                 }}
@@ -2117,9 +2220,9 @@ function App() {
                   setDraft(moveComponents(dragBase.current, result.positions));
                 }}
                 onNodeDragStop={(event, node, draggedNodes) => {
-                  if (!cancelled.current && dragBase.current)
-                    change(
-                      moveComponents(
+                  if (!cancelled.current && dragBase.current) {
+                    const movedIds = (draggedNodes?.length ? draggedNodes : [node]).filter((item) => item.id.startsWith("c:") && !locked.includes(item.id.slice(2))).map((item) => item.id.slice(2));
+                    const moved = moveComponents(
                         dragBase.current,
                         snapPositions(
                           dragBase.current,
@@ -2142,8 +2245,11 @@ function App() {
                             bypass: event.altKey,
                           },
                         ).positions,
-                      ),
-                    );
+                      );
+                    const membership = previewBoundaryMembership(dragBase.current, moved, movedIds);
+                    if (!membership.changes.length || window.confirm(`${membership.changes.map((item) => `${item.action === "add" ? "Add" : "Remove"} ${item.id} ${item.action === "add" ? "to" : "from"} ${item.boundary}`).join("\n")}\n\nBoundary outlines will refit around their members. Apply membership changes?`)) change(membership.document);
+                    else change(moved);
+                  }
                   dragBase.current = null;
                   setDraft(null);
                   setGuides([]);
@@ -2455,6 +2561,7 @@ function App() {
                 <CheckpointsPanel
                   key={`${session.recoveryKey}:${session.name}`}
                   document={documentModel}
+                  historyData={packHistory(state)}
                   storageKey={`${session.recoveryKey}:${session.name}`}
                   onRestore={(snapshot) =>
                     act(async () => {
@@ -2465,6 +2572,15 @@ function App() {
                       setNotice("Checkpoint restored as an undoable draft.");
                     })
                   }
+                  onImportDraft={(draftData) => act(async () => {
+                    assertDocument(draftData.document);
+                    await request("validate", draftData.document);
+                    const restored = await restoreHistory(draftData, (snapshot) => request("validate", snapshot));
+                    setState(restored);
+                    setSelection([]);
+                    setEdgeIndex(null);
+                    setNotice("Portable draft restored. Review and save when ready.");
+                  })}
                   onExport={(snapshot, name) =>
                     download(typeof snapshot?.format === "string" ? JSON.stringify(snapshot, null, 2) + "\n" : serialize(snapshot), name, "application/json")
                   }

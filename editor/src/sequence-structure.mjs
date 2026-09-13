@@ -78,3 +78,43 @@ export function removeRange(document, collection, index) {
   next[collection].splice(index, 1);
   return next;
 }
+
+export function planSequenceRange(document, { from, to, delta, mode }) {
+  if (document.diagram_type !== "sequence" || !["shift", "duplicate"].includes(mode))
+    throw new Error("Choose a sequence range operation.");
+  [from, to, delta] = [from, to, delta].map(Number);
+  if (![from, to, delta].every(Number.isFinite) || from > to || delta === 0)
+    throw new Error("Use a valid inclusive range and a non-zero shift.");
+  const selected = document.messages.filter((message) => message.y >= from && message.y <= to);
+  if (!selected.length) throw new Error("The selected range contains no messages.");
+  const rangeEntries = ["activations", "segments"].flatMap((collection) =>
+    (document[collection] || []).map((entry, index) => ({ collection, index, entry })),
+  );
+  const partial = rangeEntries.find(({ entry }) => entry.to >= from && entry.from <= to && !(entry.from >= from && entry.to <= to));
+  if (partial)
+    throw new Error(`The range cuts through a ${partial.collection.slice(0, -1)}. Expand the range to include it completely.`);
+  const contained = rangeEntries.filter(({ entry }) => entry.from >= from && entry.to <= to);
+  const height = document.meta.viewBox?.[1] || 760;
+  const movedYs = selected.map((message) => message.y + delta);
+  if (movedYs.some((y) => y < 160 || y > height - 83))
+    throw new Error("The result would place messages outside the readable timeline.");
+  const selectedIds = new Set(selected.map((message) => message.id));
+  const outsideYs = new Set(document.messages.filter((message) => !selectedIds.has(message.id)).map((message) => message.y));
+  if (movedYs.some((y) => outsideYs.has(y)) || (mode === "duplicate" && movedYs.some((y) => document.messages.some((message) => message.y === y))))
+    throw new Error("The result would overlap an existing message time.");
+  const next = clone(document);
+  if (mode === "shift") {
+    for (const message of next.messages) if (selectedIds.has(message.id)) message.y += delta;
+    for (const { collection, index } of contained) {
+      next[collection][index].from += delta; next[collection][index].to += delta;
+    }
+  } else {
+    for (const message of selected) next.messages.push({ ...clone(message), id: freshId(next.messages, "message"), y: message.y + delta });
+    for (const { collection, entry } of contained) {
+      next[collection] ||= [];
+      next[collection].push({ ...clone(entry), from: entry.from + delta, to: entry.to + delta });
+    }
+  }
+  next.messages.sort((a, b) => a.y - b.y);
+  return { document: next, summary: `${mode === "shift" ? "Move" : "Duplicate"} ${selected.length} messages and ${contained.length} complete dependent ranges by ${delta}px.` };
+}

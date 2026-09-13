@@ -21,6 +21,7 @@ import {
   saveMessage,
   removeMessage,
   saveRange,
+  planSequenceRange,
 } from "../src/sequence-structure.mjs";
 import { patchSettings, settingFields } from "../src/settings.mjs";
 import { searchDiagram } from "../src/search.mjs";
@@ -404,4 +405,25 @@ test("alignment and equal-gap distribution preserve unrelated JSON", () => {
   assert.throws(() =>
     arrange({ ...doc, diagram_type: "sequence" }, ids, "left"),
   );
+});
+
+test("clipboard remaps compatible structures across every diagram type", () => {
+  for (const type of ["architecture", "workflow", "dataflow", "lifecycle", "sequence"]) {
+    const source = createDiagram(type, `Source ${type}`), ids = type === "architecture" ? ["component-1"] : source[type === "lifecycle" ? "states" : type === "sequence" ? "participants" : "nodes"].map((node) => node.id);
+    const payload = copySelection(source, ids), target = createDiagram(type, `Target ${type}`), result = pasteSelection(target, payload);
+    assert.equal(result.ids.length, ids.length);
+    assert.equal(new Set(result.ids).size, ids.length);
+    validate(result.document);
+  }
+});
+
+test("sequence range plans shift complete dependencies and reject partial ranges atomically", () => {
+  const source = createDiagram("sequence", "Ranges");
+  source.messages.push({ id: "message-2", from: "node-2", to: "node-1", y: 300, label: "Reply" });
+  source.activations = [{ participant: "node-2", from: 180, to: 240 }];
+  const planned = planSequenceRange(source, { from: 160, to: 250, delta: 30, mode: "shift" });
+  assert.equal(planned.document.messages[0].y, 230);
+  assert.deepEqual(planned.document.activations[0], { participant: "node-2", from: 210, to: 270 });
+  assert.equal(source.messages[0].y, 200);
+  assert.throws(() => planSequenceRange(source, { from: 200, to: 220, delta: 30, mode: "duplicate" }), /cuts through/);
 });

@@ -410,6 +410,19 @@ export function layoutProblems(document) {
           kind: "overlap",
         });
   }
+  const labels = connections(document)
+    .map((edge, edgeIndex) => edge.label && edge.labelAt ? {
+      edge, edgeIndex,
+      box: { x: edge.labelAt[0] - Math.max(20, edge.label.length * 2.8 + 7), y: edge.labelAt[1] - 10, w: Math.max(40, edge.label.length * 5.6 + 14), h: 20 },
+    } : null)
+    .filter(Boolean);
+  const intersects = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  for (const [index, label] of labels.entries()) {
+    const component = items.find((item) => intersects(label.box, { x: item.pos[0], y: item.pos[1], w: item.size[0], h: item.size[1] }));
+    if (component) warnings.push({ key: `label-node:${label.edgeIndex}:${component.id}`, ids: [component.id], edgeIndex: label.edgeIndex, kind: "label-overlap", message: `Connection label “${label.edge.label}” overlaps ${component.label}. Drag only the selected label to preview another position.` });
+    for (const other of labels.slice(index + 1))
+      if (intersects(label.box, other.box)) warnings.push({ key: `label-label:${label.edgeIndex}:${other.edgeIndex}`, ids: [], edgeIndex: label.edgeIndex, kind: "label-overlap", message: `Connection labels “${label.edge.label}” and “${other.edge.label}” overlap.` });
+  }
   return warnings;
 }
 export function layoutWarnings(document) {

@@ -9,6 +9,7 @@ export async function createWorkspace(directory, validate) {
   if (!(await fs.stat(root)).isDirectory())
     throw new Error("Workspace must be a directory.");
   let files = new Map(),
+    folders = [],
     skipped = 0;
   async function checkRoot() {
     if ((await fs.realpath(root)) !== root)
@@ -19,6 +20,7 @@ export async function createWorkspace(directory, validate) {
     const next = new Map();
     let visited = 0,
       rejected = 0;
+    const nextFolders = [];
     async function walk(folder) {
       for (const entry of (
         await fs.readdir(folder, { withFileTypes: true })
@@ -35,7 +37,10 @@ export async function createWorkspace(directory, validate) {
         const file = path.join(folder, entry.name);
         // A replaced parent directory must not redirect enumeration outside root.
         if ((await fs.realpath(file)) !== file) continue;
-        if (entry.isDirectory()) await walk(file);
+        if (entry.isDirectory()) {
+          nextFolders.push(path.relative(root, file).split(path.sep).join("/"));
+          await walk(file);
+        }
         else if (entry.isFile() && /\.json$/i.test(entry.name)) {
           try {
             if ((await fs.stat(file)).size > 5 * 1024 * 1024)
@@ -61,6 +66,7 @@ export async function createWorkspace(directory, validate) {
     }
     await walk(root);
     files = next;
+    folders = nextFolders;
     skipped = rejected;
   }
   async function resolve(id) {
@@ -75,13 +81,10 @@ export async function createWorkspace(directory, validate) {
       throw new Error("Document location changed. Refresh the workspace.");
     return entry.file;
   }
-  async function target(name) {
-    await checkRoot();
-    if (
-      typeof name !== "string" ||
-      name.length > 240 ||
-      !name.endsWith(".json")
-    )
+  function safeParts(name, requireJson = false) {
+    if (typeof name !== "string" || name.length > 240)
+      throw new Error(requireJson ? "Use a relative filename ending in .json." : "Use a relative workspace path.");
+    if (requireJson && !name.endsWith(".json"))
       throw new Error("Use a relative filename ending in .json.");
     const parts = name.split(/[\\/]/);
     if (
@@ -96,7 +99,12 @@ export async function createWorkspace(directory, validate) {
           [".git", "node_modules"].includes(p.toLowerCase()),
       )
     )
-      throw new Error("Use a safe filename within the opened workspace.");
+      throw new Error("Use a safe path within the opened workspace.");
+    return parts;
+  }
+  async function target(name) {
+    await checkRoot();
+    const parts = safeParts(name, true);
     const file = path.join(root, ...parts),
       parent = path.dirname(file);
     if ((await fs.realpath(parent)) !== parent)
@@ -117,6 +125,65 @@ export async function createWorkspace(directory, validate) {
     )
       throw new Error("The target must be a regular workspace file.");
     return { file, stat, name: parts.join("/") };
+  }
+  async function createFolder(name) {
+    await checkRoot();
+    const parts = safeParts(name);
+    let folder = root;
+    for (const [index, part] of parts.entries()) {
+      folder = path.join(folder, part);
+      let stat;
+      try { stat = await fs.lstat(folder); }
+      catch (error) { if (error.code !== "ENOENT") throw error; }
+      if (stat) {
+        if (!stat.isDirectory() || stat.isSymbolicLink() || (await fs.realpath(folder)) !== folder)
+          throw new Error("Workspace folders must be regular directories without symbolic links.");
+        if (index === parts.length - 1)
+          throw Object.assign(new Error("That workspace folder already exists."), { status: 409 });
+      } else {
+        await fs.mkdir(folder);
+        if ((await fs.realpath(folder)) !== folder)
+          throw new Error("The created folder did not remain inside the workspace.");
+      }
+    }
+    await refresh();
+    return { name: parts.join("/") };
+  }
+  async function rename(id, name, revision) {
+    const source = files.get(id);
+    if (!source) throw Object.assign(new Error("Unknown workspace document. Refresh the file list."), { status: 404 });
+    const sourceFile = await resolve(id), sourceText = await fs.readFile(sourceFile, "utf8");
+    if (digest(sourceText) !== revision)
+      throw Object.assign(new Error("The source changed outside the editor. Reload it before moving."), { status: 409 });
+    const destination = await target(name);
+    if (destination.stat)
+      throw Object.assign(new Error("The destination already exists. Choose another path."), { status: 409, conflict: { name: destination.name, exists: true } });
+    await fs.rename(sourceFile, destination.file);
+    await refresh();
+    const nextId = digest(destination.name);
+    return { id: nextId, name: destination.name, file: destination.file, revision: digest(sourceText) };
+  }
+  async function search(query) {
+    if (typeof query !== "string" || !query.trim() || query.length > 120)
+      throw new Error("Enter between 1 and 120 characters to search.");
+    const needle = query.trim().toLocaleLowerCase();
+    const results = [];
+    for (const entry of files.values()) {
+      if (results.length >= 100) break;
+      const text = await fs.readFile(entry.file, "utf8");
+      const normalized = text.toLocaleLowerCase();
+      const nameMatch = entry.name.toLocaleLowerCase().includes(needle);
+      const index = normalized.indexOf(needle);
+      if (!nameMatch && index < 0) continue;
+      const start = Math.max(0, index - 50), end = Math.min(text.length, index + needle.length + 90);
+      results.push({
+        id: entry.id,
+        name: entry.name,
+        type: entry.type,
+        match: nameMatch && index < 0 ? "File path" : text.slice(start, end).replace(/\s+/g, " ").trim(),
+      });
+    }
+    return results;
   }
   async function saveAs(name, document, revision) {
     validate(document);
@@ -181,8 +248,12 @@ export async function createWorkspace(directory, validate) {
     refresh,
     resolve,
     saveAs,
+    createFolder,
+    rename,
+    search,
     list: () => ({
       files: [...files.values()].map(({ file, ...entry }) => entry),
+      folders,
       skipped,
     }),
   };
