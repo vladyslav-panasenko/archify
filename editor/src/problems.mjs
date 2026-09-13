@@ -42,10 +42,11 @@ export function compilerProblems(document, diagnostics) {
     return {
       key: `compiler:${issue.code || "error"}:${i}`,
       kind: "compiler",
+      severity: ["warning", "info"].includes(issue.severity) ? issue.severity : "error",
       message: issue.message,
       ids,
       edgeIndex,
-      path: subject.path,
+      path: subject.path ?? (collection && Number.isInteger(index) ? `/${collection}/${index}` : ""),
       fixes: issue.supportedFixes || [],
     };
   });

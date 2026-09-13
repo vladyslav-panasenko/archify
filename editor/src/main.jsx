@@ -44,6 +44,8 @@ import {
 } from "./document.mjs";
 import "./style.css";
 import { watchSource } from "./source-watch.mjs";
+import { importedSession } from "./session-identity.mjs";
+import { createRequestGeneration } from "./request-generation.mjs";
 import {packHistory,restoreHistory} from './recovery-history.mjs';
 import PanelControls,{readPanels} from './PanelControls.jsx';
 import ContextActions from './ContextActions.jsx';
@@ -472,6 +474,11 @@ function App() {
   const [sourceBase, setSourceBase] = useState(null),
     [conflict, setConflict] = useState(null);
   const [clipboard, setClipboard] = useState(null);
+  const renderGeneration = useRef(createRequestGeneration());
+  const renderController = useRef(null);
+  const latestDraft = useRef(null);
+  const [renderPending, setRenderPending] = useState(false);
+  const [renderReceipt, setRenderReceipt] = useState(null);
   const [drawConnections, setDrawConnections] = useState(false);
   const [locked, setLocked] = useState([]);
   const lockKey = (data) => `archify-locks:${data.recoveryKey}:${data.name}`;
@@ -513,6 +520,7 @@ function App() {
     [state?.present],
   );
   const dirty = Boolean(state && presentText !== saved);
+  latestDraft.current = { identity: session?.recoveryKey, text: presentText };
   const rawDirty = Boolean(
     state && panel === "json" && jsonText !== presentText,
   );
@@ -634,6 +642,8 @@ function App() {
   });
 
   function load(data) {
+    renderGeneration.current.invalidate();
+    renderController.current?.abort();
     cancelled.current = true;
     dragBase.current = null;
     setGuides([]);
@@ -803,10 +813,20 @@ function App() {
     setNotice("Layout updated.");
   }
   async function request(endpoint, document, method = "POST") {
+    const rendering = endpoint === "render";
+    const ticket = rendering ? renderGeneration.current.begin(session.recoveryKey, serialize(document)) : null;
+    const controller = rendering ? new AbortController() : null;
+    if (rendering) {
+      renderController.current?.abort();
+      renderController.current = controller;
+      setRenderPending(true);
+    }
+    try {
     const response = await fetch(
       `/api/${endpoint}${session.workspaceId ? `?id=${encodeURIComponent(session.workspaceId)}` : ""}`,
       {
         method,
+        signal: controller?.signal,
         headers: {
           "Content-Type": "application/json",
           "X-Editor-Token": session.token,
@@ -814,8 +834,13 @@ function App() {
         body: JSON.stringify({ document, revision: session.revision }),
       },
     );
+    // Consume the response before checking freshness; response headers alone do
+    // not mean the compiler output finished downloading.
+    const renderText = rendering ? await response.text() : null;
+    if (rendering && !renderGeneration.current.current(ticket, latestDraft.current.identity, latestDraft.current.text))
+      throw new Error("Render discarded because the document changed. Render the current draft again.");
     if (!response.ok) {
-      const data = await response.json();
+      const data = rendering ? JSON.parse(renderText) : await response.json();
       if (endpoint === "render")
         setCompilerReport({
           document,
@@ -831,8 +856,18 @@ function App() {
         status: response.status,
       });
     }
-    if (endpoint === "render") setCompilerReport({ document, issues: [] });
+    if (rendering) {
+      setCompilerReport({ document, issues: [] });
+      setRenderReceipt({ name: session.name, revision: session.revision, draft: ticket.text, renderedAt: new Date().toISOString() });
+      return new Response(renderText, { headers: { "Content-Type": "text/html" } });
+    }
     return response;
+    } finally {
+      if (rendering && renderController.current === controller) {
+        renderController.current = null;
+        setRenderPending(false);
+      }
+    }
   }
   async function act(action) {
     setBusy(true);
@@ -898,7 +933,8 @@ function App() {
       const document = JSON.parse(await file.text());
       assertDocument(document);
       await request("validate", document);
-      load({ ...session, document, name: file.name, writable: false });
+      load(importedSession(session, document, file.name));
+      setRecovery(null);
       setNotice("JSON imported. Changes can be downloaded.");
     });
   }
@@ -1560,6 +1596,11 @@ function App() {
             >
               {working ? "Working…" : "Render HTML"}
             </button>
+            {renderPending && <button onClick={() => {
+              renderGeneration.current.invalidate();
+              renderController.current?.abort();
+              setNotice("Render cancelled. Your draft is unchanged.");
+            }}>Cancel render</button>}
             <button
               disabled={!state || busy || rawDirty || !!draft}
               onClick={() =>
@@ -2140,15 +2181,14 @@ function App() {
                         )
                       )
                         return;
-                      load({
-                        ...session,
-                        document: createDiagram(
+                      load(importedSession(session,
+                        createDiagram(
                           fields.diagramType,
                           fields.label,
                         ),
-                        name: `untitled.${fields.diagramType}.json`,
-                        writable: false,
-                      });
+                        `untitled.${fields.diagramType}.json`,
+                      ));
+                      setRecovery(null);
                       setSaved("");
                     } else if (creation === "component") {
                       const next = addComponent(state.present, fields);
@@ -3126,6 +3166,7 @@ function App() {
         >
           <div className="preview-toolbar">
             <h2>Archify output</h2>
+            {renderReceipt && <p>{renderReceipt.name} · {renderReceipt.draft === presentText ? "Current draft" : "Stale draft"} · {new Date(renderReceipt.renderedAt).toLocaleTimeString()}</p>}
             <button
               onClick={() =>
                 download(

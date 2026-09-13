@@ -11,12 +11,14 @@ import { validateGuidedViews } from "../archify/renderers/shared/cli.mjs";
 import { assertDocument, serialize } from "./src/document.mjs";
 import { supportedTypes, sourceNodes } from "./src/adapters/index.mjs";
 import { createWorkspace } from "./workspace.mjs";
+import { assertResourceLimits } from "./src/resource-limits.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const execute = promisify(execFile);
 const hash = (text) => createHash("sha256").update(text).digest("hex");
 const MAX_BYTES = 5 * 1024 * 1024;
 export function validate(document) {
+  assertResourceLimits(document);
   if (!supportedTypes.includes(document?.diagram_type))
     throw new Error("Unsupported diagram type.");
   validateSchema(document.diagram_type, document);
@@ -38,7 +40,7 @@ async function readBody(req) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
-export async function render(document) {
+export async function render(document, { signal } = {}) {
   validate(document);
   if (
     sourceNodes(document).some(
@@ -69,6 +71,7 @@ export async function render(document) {
         {
           cwd: directory,
           timeout: 30000,
+          signal,
           maxBuffer: 2 * MAX_BYTES,
           env: {
             ...process.env,
@@ -97,6 +100,8 @@ export async function render(document) {
         stderr;
       throw new Error(message.trim());
     }
+    if ((await fs.stat(output)).size > 20 * MAX_BYTES)
+      throw new Error("Rendered HTML exceeds the 100 MB limit. Split this diagram before rendering.");
     return await fs.readFile(output, "utf8");
   } finally {
     await fs.rm(directory, { recursive: true, force: true });
@@ -267,13 +272,17 @@ export async function createEditorServer({
               error: "A render is already running. Try again shortly.",
             });
           rendering = true;
+          const controller = new AbortController();
+          const cancel = () => { if (!res.writableEnded) controller.abort(); };
+          res.on("close", cancel);
           try {
             return send(
               200,
-              await render(body.document),
+              await render(body.document, { signal: controller.signal }),
               "text/html; charset=utf-8",
             );
           } finally {
+            res.off("close", cancel);
             rendering = false;
           }
         }

@@ -54,7 +54,8 @@ export default function ProblemsPanel({
             {p.message}
           </button>
           <small>
-            {p.kind}
+            {p.severity || "warning"} · {p.kind}
+            {p.path ? ` · ${p.path}` : " · document"}
             {p.kind === "compiler" && stale ? " · stale" : ""}
           </small>
           {!p.ids.length && (

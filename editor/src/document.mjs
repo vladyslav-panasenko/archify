@@ -11,7 +11,8 @@ import {
   edgeKey,
 } from "./adapters/index.mjs";
 
-export const serialize = (document) => JSON.stringify(document, null, 2) + "\n";
+import { assertResourceLimits } from "./resource-limits.mjs";
+export const serialize = (document) => JSON.stringify(assertResourceLimits(document), null, 2) + "\n";
 export const clone = (document) => structuredClone(document);
 const point = (value) =>
   Array.isArray(value) && value.length === 2 && value.every(Number.isFinite);
@@ -118,6 +119,7 @@ export function reconnectConnection(
 }
 
 export function assertDocument(document) {
+  assertResourceLimits(document);
   if (!supportedTypes.includes(document?.diagram_type))
     throw new Error(
       `Unsupported diagram type. Supported: ${supportedTypes.join(", ")}.`,
