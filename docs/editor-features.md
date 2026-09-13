@@ -1,5 +1,7 @@
 # Editor feature backlog
 
+For the remaining path to a finished product, see the [product completion backlog](editor-product-backlog.md): F61–F166, release scope, acceptance criteria, and GPT-5.6 Sol implementation suitability. These are proposed items only; this file preserves the completed feature history.
+
 The editor edits Archify JSON. Archify owns final HTML rendering. Both feature batches are implemented. No feature requires visual parity with Archify's HTML.
 
 ## Completed batch
