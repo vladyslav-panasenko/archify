@@ -289,4 +289,4 @@ Issues, pull requests, and real-world diagrams are welcome. Start with the [cont
 
 The editor remembers each document's zoom, pan, selected components and inspector panel locally. Views are bounded to 50 recent documents and stay outside exported JSON; recovered unapplied text takes precedence.
 
-Use Document > History to see readable edit descriptions and jump through up to 100 retained edits. Jumping preserves redo; making a new edit replaces future states. History stays in the current editor session.
+Use Document > History to see readable edit descriptions and jump through up to 100 retained edits. Jumping preserves redo; making a new edit replaces future states. Recovered unsaved drafts can retain up to 20 past/future states within a bounded local history budget.

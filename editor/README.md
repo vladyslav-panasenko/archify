@@ -136,3 +136,5 @@ In Structure, set a boundary's padding and use **Fit boundary to contents** to a
 Writable source files are checked every ten seconds and when the window regains focus. A changed source offers comparison/merge or explicit reload. Unapplied JSON must be applied or discarded first; reloading an applied draft asks before discarding it.
 
 Performance measurements and the repeatable benchmark are documented in [editor-performance.md](../docs/editor-performance.md). Round-trip tests cover all five schemas alongside the existing feature-specific tests.
+
+Undo recovery: restoring an unsaved draft also restores up to 20 retained past/future states, bounded to 1,048,576 serialized characters of history metadata. Snapshots are validated before restoration. Legacy drafts and invalid history restore the applied document without history; unapplied text and source-revision protections still apply. Saved documents do not retain history across reloads.
