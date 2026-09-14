@@ -31,4 +31,6 @@ Export uses UTF-8 JSON, two-space indentation, LF newlines, and one final newlin
 
 Manual screen-reader acceptance (F122), representative-user/product sign-off (F126), independent security/legal acceptance (F140), and release ownership/support policy (F149) require named people. Record the person, date, build/package hash, tested workflows, observed barriers, accepted residual risks, distribution channel, support window and incident contact. Until those records exist, engineering checks may pass but the product must not be described as fully signed off.
 
+Use the [0.1.0 acceptance record](editor-release-acceptance-2026-09-14.md) for the candidate identity, exact reviewer workflows, residual-risk review, recommended support policy, and sign-off fields.
+
 For support, open Help → Support bundle, review every field, then download it. The bundle excludes diagram labels/content, metadata, paths, tokens, revisions and recovery data. Attach the diagram separately only when the user chooses to disclose it. File conflicts, storage failures and recovery actions are described in `editor/README.md`.
