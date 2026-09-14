@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { historyEntries } from "./history-labels.mjs";
-export default function HistoryPanel({ state, disabled, onJump }) {
+export default function HistoryPanel({ state, disabled, onJump, persist, onPersist }) {
   const entries = useMemo(() => historyEntries(state), [state]);
   return (
     <div className="properties">
@@ -9,6 +9,7 @@ export default function HistoryPanel({ state, disabled, onJump }) {
         Up to 100 edits in this session. Jump backward or forward; a new edit
         replaces future states. Recovered drafts can retain up to 20 history states.
       </p>
+      <label><input type="checkbox" checked={persist} onChange={(event) => onPersist(event.target.checked)} /> Keep up to 20 clean saved-history states for seven days on this machine</label>
       <ol className="history-list">
         {entries.map((entry) => (
           <li key={entry.index}>

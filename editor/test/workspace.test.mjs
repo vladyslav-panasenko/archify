@@ -149,7 +149,39 @@ test("workspace folders, content search, and revision-checked moves stay confine
     await assert.rejects(() => ws.resolve(created.id), (error) => error.status === 404);
     await ws.saveAs("occupied.json", newDocument("Occupied"));
     await assert.rejects(() => ws.rename(moved.id, "occupied.json", moved.revision), (error) => error.status === 409);
+    assert.deepEqual(await ws.readPreferences(), { preferences: null, revision: null });
+    const preferences = { gridSize: 16, smartSnap: true, minimap: true, layout: { mode: "directed", direction: "right", gap: 60 } };
+    const savedPreferences = await ws.savePreferences(preferences, null);
+    assert.deepEqual((await ws.readPreferences()).preferences, preferences);
+    await assert.rejects(() => ws.savePreferences(preferences, null), (error) => error.status === 409);
+    const output = await ws.writeOutput("Systems", "source.json", "<html>ok</html>");
+    assert.equal(output, "Systems/source.html");
+    await assert.rejects(() => ws.writeOutput("Systems", "source.json", "replace"), (error) => error.status === 409);
+    assert.equal(await fs.readFile(path.join(directory, output), "utf8"), "<html>ok</html>");
   } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("batch validation and export report each confined workspace file", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "archify-batch-"));
+  await fs.mkdir(path.join(directory, "exports"));
+  await fs.writeFile(path.join(directory, "valid.json"), JSON.stringify(newDocument("Batch valid")));
+  await fs.writeFile(path.join(directory, "invalid.json"), "{}");
+  const server = await createEditorServer({ directory });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const list = await (await fetch(`${base}/api/workspace`)).json(), session = await (await fetch(`${base}/api/document?id=${list.files.find((file) => file.name === "valid.json").id}`)).json();
+    const run = (operation) => fetch(`${base}/api/batch`, { method: "POST", headers: { "Content-Type": "application/json", "X-Editor-Token": session.token }, body: JSON.stringify({ ids: list.files.map((file) => file.id), operation, destination: "exports", overwrite: false }) });
+    const validation = await (await run("validate")).json();
+    assert.equal(validation.results.filter((result) => result.status === "ok").length, 1);
+    assert.equal(validation.results.filter((result) => result.status === "error").length, 1);
+    const exported = await (await run("export")).json();
+    assert.equal(exported.results.find((result) => result.name === "valid.json").output, "exports/valid.html");
+    assert.match(await fs.readFile(path.join(directory, "exports", "valid.html"), "utf8"), /<svg/);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
     await fs.rm(directory, { recursive: true, force: true });
   }
 });

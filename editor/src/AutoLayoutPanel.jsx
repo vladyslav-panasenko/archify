@@ -78,7 +78,8 @@ export default function AutoLayoutPanel({
               );
               setError("");
             } catch (e) {
-              setError(e.message);
+              const pinned = selection.filter((id) => locked.includes(id)).length;
+              setError(`${e.message}${pinned ? ` ${pinned} selected item(s) are pinned and remain obstacles.` : ""} No positions were written. Try a smaller selection, reduce spacing, unlock an obstacle, or use Resolve overlaps.`);
             }
           }}
         >

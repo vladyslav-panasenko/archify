@@ -4,6 +4,10 @@ For the remaining path to a finished product, see the [product completion backlo
 
 The editor edits Archify JSON. Archify owns final HTML rendering. Both feature batches are implemented. No feature requires visual parity with Archify's HTML.
 
+## Product-completion scopes
+
+The engineering work in the Release and Next scopes of the product-completion backlog is implemented as of 2026-09-14. Detailed contracts and verification are recorded in the [product completion plan](plans/2026-09-13-product-completion.md), [schema capability inventory](editor-schema-capabilities.md), [performance evidence](editor-performance.md), and [release contract](editor-release.md). Human-owned acceptance F122, F126, F140, and F149 remains open until named reviewers record their evidence.
+
 ## Completed batch
 
 | ID  | Feature                     | Done when                                                                                                                   | Status      |

@@ -25,7 +25,7 @@ export function routeAroundObstacles(document, index) {
     [[(start[0] + end[0]) / 2, start[1]], [(start[0] + end[0]) / 2, end[1]]],
     [[start[0], (start[1] + end[1]) / 2], [end[0], (start[1] + end[1]) / 2]],
     ...ys.sort((a, b) => a - b).map((y) => [[start[0], y], [end[0], y]]),
-    ...xs.sort((a, b) => a - b).map((x) => [[x, start[1]], [x, end[1]]),
+    ...xs.sort((a, b) => a - b).map((x) => [[x, start[1]], [x, end[1]]]),
   ];
   const scored = candidates.map((via) => {
     const points = [start, ...via, end], segments = points.slice(1).map((point, i) => [points[i], point]);

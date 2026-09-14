@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { supportBundle } from "./support-bundle.mjs";
+import { rtlLimitation } from "./localization.mjs";
 const topics = [
   ["Files and drafts", "Open JSON creates a downloadable draft. --file enables one direct save target; --directory confines workspace operations. Recovery is local and is not a backup."],
   ["Save conflicts", "Save checks the opened revision before and during replacement. Compare external changes, resolve every conflict, then review and save."],
@@ -8,6 +9,7 @@ const topics = [
   ["Keyboard", "Ctrl/Cmd+K commands; Ctrl/Cmd+S save; Ctrl/Cmd+Z undo; Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y redo; arrows nudge; Shift+arrows move ten; Escape cancels."],
   ["Canvas and compiler", "The canvas is an editing projection. Render HTML is the final reference for routing, typography, themes and delivery exports."],
   ["Recovery storage", "Export important checkpoints before clearing browser data. Storage failures preserve existing records and ask you to save or download JSON."],
+  ["Language and text direction", rtlLimitation],
 ];
 export default function HelpPanel({ session, document, errors, notice, onDownload }) {
   const [query, setQuery] = useState("");

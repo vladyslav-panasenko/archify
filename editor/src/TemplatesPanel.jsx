@@ -6,9 +6,11 @@ import {
   renameTemplate,
   exportTemplate,
   importTemplate,
+  exportTemplateLibrary,
+  importTemplateLibrary,
+  templateValidationDocument,
 } from "./templates.mjs";
 import { pasteSelection } from "./clipboard.mjs";
-import { createDiagram } from "./topology.mjs";
 
 export default function TemplatesPanel({
   document,
@@ -30,6 +32,7 @@ export default function TemplatesPanel({
   });
   const [entries, setEntries] = useState(initial.entries),
     [name, setName] = useState(""),
+    [category, setCategory] = useState(""),
     [error, setError] = useState(initial.error || ""),
     [pending, setPending] = useState(false);
   const run = async (fn) => {
@@ -61,12 +64,13 @@ export default function TemplatesPanel({
           onSubmit={(e) => {
             e.preventDefault();
             run(async () => {
-              const next = saveTemplate(entries, name, document, selection);
+              const next = saveTemplate(entries, name, document, selection, category);
               await onValidate(
-                pasteSelection(createDiagram(document.diagram_type, "Template validation"), next.at(-1).fragment).document,
+                templateValidationDocument(next.at(-1).fragment),
               );
               write(next);
               setName("");
+              setCategory("");
             });
           }}
         >
@@ -79,13 +83,14 @@ export default function TemplatesPanel({
               maxLength={80}
             />
           </label>
+          <label className="field">Category<input value={category} maxLength={40} placeholder="Services" onChange={(event) => setCategory(event.target.value)} /></label>
           <button
             disabled={!selection.length}
           >
             Save selection as template
           </button>
         </form>
-        <label className="field">
+      <label className="field">
           Import template
           <input
             type="file"
@@ -97,22 +102,21 @@ export default function TemplatesPanel({
                 run(async () => {
                   if (file.size > 2 * 1024 * 1024)
                     throw new Error("Template exceeds 2 MB.");
-                  const next = importTemplate(
-                    entries,
-                    JSON.parse(await file.text()),
-                  );
-                  await onValidate(
-                    pasteSelection(createDiagram(next.at(-1).fragment.diagram_type, "Template validation"), next.at(-1).fragment)
-                      .document,
-                  );
+                  const payload = JSON.parse(await file.text());
+                  let next;
+                  try { next = payload.format === "archify-template-library" ? importTemplateLibrary(entries, payload) : importTemplate(entries, payload); }
+                  catch (error) { if (!(error.collision || /already exists/.test(error.message)) || !window.confirm(`${error.message} Replace matching templates?`)) throw error; next = payload.format === "archify-template-library" ? importTemplateLibrary(entries, payload, true) : importTemplate(entries, payload, true); }
+                  for (const entry of next) await onValidate(templateValidationDocument(entry.fragment));
                   write(next);
                 });
             }}
           />
-        </label>
+      </label>
+        <button disabled={!entries.length} onClick={() => onExport(exportTemplateLibrary(entries), "archify-template-library.json")}>Export template library</button>
         {entries.map((entry) => (
           <section className="checkpoint" key={entry.id}>
             <h3>{entry.name}</h3>
+            {entry.category && <p>{entry.category}</p>}
             <p>
               {entry.fragment.components.length} items ·{" "}
               {entry.fragment.connections.length} connections

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { addCheckpoint, readCheckpoints, exportRecoveryBundle, importCheckpointBundle } from "./checkpoints.mjs";
+import { formatLocalDate, formatLocalNumber } from "./localization.mjs";
 export default function CheckpointsPanel({
   document,
   historyData,
@@ -73,9 +74,9 @@ export default function CheckpointsPanel({
         <section className="checkpoint" key={entry.id}>
           <h3><label><input type="checkbox" checked={selected.includes(entry.id)} onChange={(event) => setSelected(event.target.checked ? [...selected, entry.id] : selected.filter((id) => id !== entry.id))} /> {entry.name}</label></h3>
           <time dateTime={entry.created}>
-            {new Date(entry.created).toLocaleString()}
+            {formatLocalDate(entry.created, document.meta.locale)}
           </time>
-          <small>{new Blob([JSON.stringify(entry)]).size.toLocaleString()} bytes</small>
+          <small>{formatLocalNumber(new Blob([JSON.stringify(entry)]).size, document.meta.locale)} bytes</small>
           <div className="review-actions">
             <button
               onClick={() => {

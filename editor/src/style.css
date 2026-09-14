@@ -1080,6 +1080,16 @@ legend {
 .document-tabs button { border: 0; border-radius: 0; background: transparent; color: #dbe5ec; padding: 7px 9px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .document-tabs > div.active button { color: #24343e; }
 .document-tabs .close-tab { padding-inline: 7px; font-size: 17px; }
+.batch-files { display: grid; gap: 6px; max-height: 260px; overflow: auto; padding: 8px; border: 1px solid #dbe2e6; }
+.batch-files label { overflow-wrap: anywhere; }
+.properties table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.properties th, .properties td { padding: 6px; border-bottom: 1px solid #dbe2e6; text-align: left; vertical-align: top; }
+.react-flow__pane { touch-action: none; }
+.react-flow__node, .canvas-drag-point { touch-action: none; }
+@media (pointer: coarse) {
+  button, select, input[type="checkbox"] { min-height: 40px; }
+  .canvas-drag-point { min-width: 30px; min-height: 30px; }
+}
 .workspace-picker p {
   font-size: 12px;
   overflow-wrap: anywhere;

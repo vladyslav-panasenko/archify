@@ -44,3 +44,21 @@ test("shortcut preferences reject conflicts and update commands without editing 
   await page.getByRole("button", { name: "JSON", exact: true }).click();
   await expect(page.getByLabel("Diagram JSON")).toHaveValue(before);
 });
+
+test("panel dividers, complete context actions and delivery formats are discoverable", async ({ page }) => {
+  await page.goto("/");
+  const divider = page.getByRole("separator", { name: "Resize component outline" });
+  await divider.focus(); await divider.press("ArrowRight");
+  await expect(divider).toHaveAttribute("aria-valuenow", "236");
+  await page.locator(".react-flow__node-component").first().click({ button: "right" });
+  await expect(page.getByRole("dialog", { name: "Component actions" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Duplicate selection" })).toBeEnabled();
+  await page.getByRole("button", { name: "Close actions" }).click();
+  await page.getByRole("button", { name: "Render HTML", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Download PNG" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Print / save PDF" })).toBeVisible();
+  await expect(page.getByLabel("PNG scale")).toHaveValue("1");
+  const png = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download PNG" }).click();
+  await expect((await png).suggestedFilename()).toMatch(/-1x\.png$/);
+});

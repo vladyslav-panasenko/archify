@@ -30,6 +30,7 @@ export const panelGroups = [
       help: "Help",
       shortcuts: "Shortcuts",
       saveas: "Save As",
+      batch: "Batch",
     },
   },
 ];

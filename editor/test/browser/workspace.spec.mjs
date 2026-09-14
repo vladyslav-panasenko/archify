@@ -161,3 +161,38 @@ test("external source notification preserves raw text and supports explicit relo
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("workspace tabs, search, folders, moves, project defaults and batch validation work together", async ({ page }) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "archify-next-workspace-"));
+  for (const name of ["A", "B"]) await fs.writeFile(path.join(directory, `${name}.json`), JSON.stringify(newDocument(`${name} searchable ledger`)));
+  const server = await createEditorServer({ directory });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    await page.goto(`http://127.0.0.1:${server.address().port}`);
+    await page.locator(".workspace-picker select").first().evaluate((select) => {
+      select.value = [...select.options].find((option) => option.text === "B.json").value;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await expect(page.getByRole("heading", { name: "B searchable ledger" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Open project documents" })).toContainText("A.json");
+    await expect(page.getByRole("navigation", { name: "Open project documents" })).toContainText("B.json");
+    await page.getByLabel("Find files and content").fill("ledger");
+    await page.getByRole("button", { name: "Search content" }).click();
+    await expect(page.getByText("2 project matches")).toBeVisible();
+    await page.getByLabel("New folder").fill("Moved");
+    await page.getByRole("button", { name: "Create folder" }).click();
+    await page.getByLabel("Rename or move current file").fill("Moved/B.json");
+    await page.getByRole("button", { name: "Move file" }).click();
+    await expect(page.getByRole("navigation", { name: "Open project documents" })).toContainText("Moved/B.json");
+    await page.getByText("Shared project defaults", { exact: true }).click();
+    await page.getByRole("button", { name: "Save current canvas defaults to project" }).click();
+    await expect.poll(async () => fs.readFile(path.join(directory, ".archify-editor.json"), "utf8")).toContain('"version": 1');
+    await page.getByRole("button", { name: "Batch", exact: true }).click();
+    await page.getByRole("button", { name: "Select all" }).click();
+    await page.getByRole("button", { name: "Run validate" }).click();
+    await expect(page.locator("tbody tr")).toHaveCount(2);
+    await expect(page.locator("tbody")).toContainText("Valid");
+  } finally {
+    await page.close(); await new Promise((resolve) => server.close(resolve)); await fs.rm(directory, { recursive: true, force: true });
+  }
+});

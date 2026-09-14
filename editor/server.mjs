@@ -159,6 +159,10 @@ export async function createEditorServer({
           if (!workspace) return send(200, { results: [], enabled: false });
           return send(200, { results: await workspace.search(url.searchParams.get("q") || ""), enabled: true });
         }
+        if (req.method === "GET" && url.pathname === "/api/project-preferences") {
+          if (!workspace) return send(200, { preferences: null, revision: null, enabled: false });
+          return send(200, { ...(await workspace.readPreferences()), enabled: true });
+        }
         if (req.method === "GET" && url.pathname === "/api/document") {
           const workspaceId = workspace
             ? url.searchParams.get("id") || workspace.list().files[0]?.id
@@ -224,6 +228,32 @@ export async function createEditorServer({
             workspace: true,
             workspaceId: result.id,
           });
+        }
+        if (req.method === "POST" && url.pathname === "/api/project-preferences") {
+          if (!workspace) return send(403, { error: "Start with --directory to save project preferences." });
+          return send(200, await workspace.savePreferences(body.preferences, body.revision));
+        }
+        if (req.method === "POST" && url.pathname === "/api/batch") {
+          if (!workspace) return send(403, { error: "Start with --directory to process project files." });
+          if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 100 || body.ids.some((id) => typeof id !== "string"))
+            throw new Error("Choose between 1 and 100 workspace files.");
+          if (!["validate", "export"].includes(body.operation)) throw new Error("Choose validation or HTML export.");
+          if (rendering) return send(409, { error: "A render is already running. Try again shortly." });
+          const controller = new AbortController(), cancel = () => controller.abort(), results = [];
+          res.on("close", cancel); rendering = body.operation === "export";
+          try {
+            for (const id of body.ids) {
+              if (controller.signal.aborted) break;
+              const entry = workspace.list().files.find((file) => file.id === id);
+              try {
+                const text = await fs.readFile(await workspace.resolve(id), "utf8"), document = validate(JSON.parse(text));
+                let output;
+                if (body.operation === "export") output = await workspace.writeOutput(body.destination || "", entry.name, await render(document, { signal: controller.signal }), body.overwrite === true);
+                results.push({ id, name: entry.name, status: "ok", ...(output ? { output } : {}) });
+              } catch (error) { results.push({ id, name: entry?.name || id, status: "error", error: error.message }); }
+            }
+            return send(200, { results, cancelled: controller.signal.aborted });
+          } finally { res.off("close", cancel); rendering = false; }
         }
         if (req.method === "POST" && url.pathname === "/api/validate")
           return send(200, { valid: true });

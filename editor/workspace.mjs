@@ -41,7 +41,7 @@ export async function createWorkspace(directory, validate) {
           nextFolders.push(path.relative(root, file).split(path.sep).join("/"));
           await walk(file);
         }
-        else if (entry.isFile() && /\.json$/i.test(entry.name)) {
+        else if (entry.isFile() && /\.json$/i.test(entry.name) && entry.name !== ".archify-editor.json") {
           try {
             if ((await fs.stat(file)).size > 5 * 1024 * 1024)
               throw new Error("Too large");
@@ -185,6 +185,53 @@ export async function createWorkspace(directory, validate) {
     }
     return results;
   }
+  async function readPreferences() {
+    const file = path.join(root, ".archify-editor.json");
+    let text;
+    try { text = await fs.readFile(file, "utf8"); }
+    catch (error) { if (error.code === "ENOENT") return { preferences: null, revision: null }; throw error; }
+    if ((await fs.realpath(file)) !== file || (await fs.stat(file)).size > 64 * 1024)
+      throw new Error("Project preferences must be a regular file smaller than 64 KB.");
+    const value = JSON.parse(text);
+    if (value?.version !== 1 || !value.preferences || typeof value.preferences !== "object" || Array.isArray(value.preferences))
+      throw new Error("Project preferences use an unsupported format.");
+    return { preferences: value.preferences, revision: digest(text) };
+  }
+  async function savePreferences(preferences, revision) {
+    const allowed = new Set(["gridSize", "smartSnap", "minimap", "layout"]);
+    const layout = preferences?.layout;
+    if (!preferences || typeof preferences !== "object" || Array.isArray(preferences) || Object.keys(preferences).some((key) => !allowed.has(key)) || !Number.isInteger(preferences.gridSize) || preferences.gridSize < 4 || preferences.gridSize > 100 || typeof preferences.smartSnap !== "boolean" || typeof preferences.minimap !== "boolean" || (layout !== undefined && (!layout || typeof layout !== "object" || !["grid", "resolve", "directed", "anchored"].includes(layout.mode) || !["right", "down"].includes(layout.direction) || !Number.isFinite(layout.gap) || layout.gap < 16 || layout.gap > 500)))
+      throw new Error("Project preferences contain unsupported defaults.");
+    const file = path.join(root, ".archify-editor.json");
+    let current = null;
+    try { current = await fs.readFile(file, "utf8"); }
+    catch (error) { if (error.code !== "ENOENT") throw error; }
+    if ((current ? digest(current) : null) !== (revision ?? null))
+      throw Object.assign(new Error("Project preferences changed. Reload them before saving."), { status: 409 });
+    const text = JSON.stringify({ version: 1, preferences }, null, 2) + "\n", temporary = `${file}.${randomBytes(8).toString("hex")}.tmp`;
+    try {
+      await fs.writeFile(temporary, text, { flag: "wx" });
+      let latest = null; try { latest = await fs.readFile(file, "utf8"); } catch (error) { if (error.code !== "ENOENT") throw error; }
+      if ((latest ? digest(latest) : null) !== (revision ?? null)) throw Object.assign(new Error("Project preferences changed during saving. Reload them before retrying."), { status: 409 });
+      await fs.rename(temporary, file);
+    }
+    finally { await fs.rm(temporary, { force: true }); }
+    return { preferences, revision: digest(text) };
+  }
+  async function writeOutput(directoryName, sourceName, text, overwrite = false) {
+    await checkRoot();
+    const directoryParts = directoryName ? safeParts(directoryName) : [], folder = path.join(root, ...directoryParts);
+    if ((await fs.realpath(folder)) !== folder) throw new Error("Export destination must be an existing regular workspace folder.");
+    const outputName = path.basename(sourceName).replace(/\.json$/i, ".html"), file = path.join(folder, outputName);
+    let stat;
+    try { stat = await fs.lstat(file); } catch (error) { if (error.code !== "ENOENT") throw error; }
+    if (stat && (!stat.isFile() || stat.isSymbolicLink() || !overwrite))
+      throw Object.assign(new Error(stat?.isFile() ? "Export already exists. Enable overwrite to replace it." : "Export target is not a regular file."), { status: 409 });
+    const temporary = `${file}.${randomBytes(8).toString("hex")}.tmp`;
+    try { await fs.writeFile(temporary, text, { flag: "wx" }); await fs.rename(temporary, file); }
+    finally { await fs.rm(temporary, { force: true }); }
+    return path.relative(root, file).split(path.sep).join("/");
+  }
   async function saveAs(name, document, revision) {
     validate(document);
     const entry = await target(name),
@@ -251,6 +298,9 @@ export async function createWorkspace(directory, validate) {
     createFolder,
     rename,
     search,
+    readPreferences,
+    savePreferences,
+    writeOutput,
     list: () => ({
       files: [...files.values()].map(({ file, ...entry }) => entry),
       folders,

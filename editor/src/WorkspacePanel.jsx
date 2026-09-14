@@ -15,23 +15,25 @@ function rememberRecent(file) {
   } catch { /* Optional machine-local convenience state. */ }
 }
 
-export default function WorkspacePanel({ id, disabled, onSwitch, onRename, pendingCount, token, revision }) {
+export default function WorkspacePanel({ id, disabled, onSwitch, onRename, pendingCount, token, revision, projectPreferences, onApplyProjectPreferences }) {
   const [files, setFiles] = useState([]), [folders, setFolders] = useState([]),
     [error, setError] = useState(""), [skipped, setSkipped] = useState(0),
     [loading, setLoading] = useState(false), [filter, setFilter] = useState(""),
     [results, setResults] = useState(null), [folderName, setFolderName] = useState(""),
-    [moveName, setMoveName] = useState("");
+    [moveName, setMoveName] = useState(""), [sharedPreferences, setSharedPreferences] = useState(null), [preferencesRevision, setPreferencesRevision] = useState(null);
   const recent = useMemo(() => readRecent().filter((item) => files.some((file) => file.id === item.id)), [files, id]);
   const visible = files.filter((file) => file.name.toLocaleLowerCase().includes(filter.toLocaleLowerCase()));
 
   async function refresh() {
     setLoading(true);
     try {
-      const response = await fetch("/api/workspace"), data = await response.json();
+      const [response, preferencesResponse] = await Promise.all([fetch("/api/workspace"), fetch("/api/project-preferences")]), data = await response.json(), preferencesData = await preferencesResponse.json();
       if (!response.ok) throw new Error(data.error);
+      if (!preferencesResponse.ok) throw new Error(preferencesData.error);
       setFiles(data.files); setFolders(data.folders || []); setSkipped(data.skipped); setError("");
+      setSharedPreferences(preferencesData.preferences); setPreferencesRevision(preferencesData.revision);
       const current = data.files.find((file) => file.id === id);
-      if (current) { rememberRecent(current); setMoveName(current.name); }
+      if (current) { rememberRecent(current); setMoveName((value) => value || current.name); }
     } catch (cause) { setError(cause.message); }
     finally { setLoading(false); }
   }
@@ -68,8 +70,14 @@ export default function WorkspacePanel({ id, disabled, onSwitch, onRename, pendi
     } catch (cause) { setError(cause.message); }
     finally { setLoading(false); }
   }
+  async function saveProjectPreferences() {
+    const data = await post("/api/project-preferences", { preferences: projectPreferences, revision: preferencesRevision });
+    if (data) { setSharedPreferences(data.preferences); setPreferencesRevision(data.revision); }
+  }
   function choose(nextId) {
-    rememberRecent(files.find((item) => item.id === nextId));
+    const file = files.find((item) => item.id === nextId);
+    rememberRecent(file);
+    if (file) setMoveName(file.name);
     onSwitch(nextId);
   }
 
@@ -84,7 +92,7 @@ export default function WorkspacePanel({ id, disabled, onSwitch, onRename, pendi
       </form>
       {recent.length > 0 && <div className="workspace-recents"><span>Recent</span>{recent.map((file) => <button key={file.id} disabled={disabled || file.id === id} onClick={() => choose(file.id)}>{file.name}</button>)}</div>}
       <label className="field">Project diagram
-        <select value={id || ""} disabled={disabled || loading} onChange={(event) => choose(event.target.value)}>
+        <select value={id || ""} disabled={disabled} onChange={(event) => choose(event.target.value)}>
           <option value="" disabled>Choose a diagram</option>
           {visible.map((file) => <option key={file.id} value={file.id}>{file.name}</option>)}
         </select>
@@ -103,6 +111,12 @@ export default function WorkspacePanel({ id, disabled, onSwitch, onRename, pendi
         <button disabled={disabled || loading || !moveName || moveName === files.find((file) => file.id === id)?.name}>Move file</button>
       </form>}
       <datalist id="workspace-folders">{folders.map((folder) => <option key={folder} value={`${folder}/`} />)}</datalist>
+      <details>
+        <summary>Shared project defaults</summary>
+        <p>Opt-in versioned defaults live in <code>.archify-editor.json</code>. Diagram JSON and machine-only history remain separate.</p>
+        {sharedPreferences ? <button disabled={disabled} onClick={() => onApplyProjectPreferences(sharedPreferences)}>Apply project defaults</button> : <p>No shared project defaults.</p>}
+        <button disabled={disabled || loading} onClick={saveProjectPreferences}>Save current canvas defaults to project</button>
+      </details>
       <button disabled={disabled || loading} onClick={refresh}>Refresh files</button>
       {pendingCount > 0 && <p>{pendingCount} other file drafts have unsaved changes.</p>}
       {skipped > 0 && <p>{skipped} malformed or oversized JSON files were skipped.</p>}

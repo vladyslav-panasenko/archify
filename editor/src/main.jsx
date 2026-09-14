@@ -31,10 +31,8 @@ import {
   patchComponent,
   patchConnection,
   history,
-  commit,
   undo,
   redo,
-  layoutWarnings,
   layoutProblems,
   newDocument,
   addComponent,
@@ -106,6 +104,11 @@ import HistoryPanel from "./HistoryPanel.jsx";
 import { jumpHistory } from "./history-labels.mjs";
 import { previewBoundaryMembership, deleteBoundary } from "./structure.mjs";
 import CheckpointsPanel from "./CheckpointsPanel.jsx";
+import { readSavedHistory, writeSavedHistory, savedHistoryPreferenceKey } from "./saved-history.mjs";
+import BatchPanel from "./BatchPanel.jsx";
+import { internalConnectionIndices, commonConnectionValue, bulkPatchConnections } from "./connection-bulk.mjs";
+import { commitEditingTransaction } from "./editing-transaction.mjs";
+import { actionCapabilities } from "./action-capabilities.mjs";
 
 const sides = {
   top: Position.Top,
@@ -434,6 +437,28 @@ function download(content, name, type) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+async function downloadRenderedPng(html, name, scale) {
+  const svg = new DOMParser().parseFromString(html, "text/html").querySelector("svg");
+  if (!svg) throw new Error("Rendered output does not contain an SVG diagram.");
+  const viewBox = svg.viewBox.baseVal, width = viewBox?.width || Number(svg.getAttribute("width")), height = viewBox?.height || Number(svg.getAttribute("height"));
+  if (![width, height].every((value) => Number.isFinite(value) && value > 0)) throw new Error("Rendered SVG has no exportable dimensions.");
+  const pixels = width * height * scale * scale;
+  if (pixels > 40_000_000) throw new Error("PNG exceeds the 40 megapixel export limit. Reduce scale or canvas size.");
+  const source = new XMLSerializer().serializeToString(svg), url = URL.createObjectURL(new Blob([source], { type: "image/svg+xml" })), image = new Image();
+  try {
+    await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = () => reject(new Error("The browser could not rasterize this SVG. Download HTML instead.")); image.src = url; });
+    const canvas = document.createElement("canvas"); canvas.width = Math.ceil(width * scale); canvas.height = Math.ceil(height * scale);
+    const context = canvas.getContext("2d"); context.fillStyle = "white"; context.fillRect(0, 0, canvas.width, canvas.height); context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) throw new Error("The browser could not create a PNG.");
+    const pngUrl = URL.createObjectURL(blob), link = document.createElement("a"); link.href = pngUrl; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+  } finally { URL.revokeObjectURL(url); }
+}
+function printRenderedHtml(html, pageSize) {
+  const printable = html.replace(/<\/head>/i, `<style>@page{size:${pageSize};margin:10mm}svg{max-width:100%;height:auto}body{overflow:visible}</style></head>`);
+  const url = URL.createObjectURL(new Blob([printable], { type: "text/html" })), frame = document.createElement("iframe");
+  frame.hidden = true; frame.src = url; frame.onload = () => { frame.contentWindow.focus(); frame.contentWindow.print(); setTimeout(() => { frame.remove(); URL.revokeObjectURL(url); }, 1000); }; document.body.append(frame);
+}
 
 function App() {
   const [state, setState] = useState(null),
@@ -462,6 +487,8 @@ function App() {
   const [layoutPreview, setLayoutPreview] = useState(null);
   const workspaceDrafts = useRef(new Map());
   const [tabsVersion, setTabsVersion] = useState(0);
+  const [persistSavedHistory, setPersistSavedHistory] = useState(() => localStorage.getItem(savedHistoryPreferenceKey) === "true");
+  const [exportScale, setExportScale] = useState(1), [pageSize, setPageSize] = useState("A4 landscape");
   const [sourceAlert, setSourceAlert] = useState(null);
   useEffect(() => {
     setSourceAlert(null);
@@ -693,7 +720,8 @@ function App() {
     }
     setMeasurements({});
     assertDocument(data.document);
-    setState(history(data.document));
+    const retained = persistSavedHistory && data.writable ? readSavedHistory(localStorage, data.recoveryKey, data.revision, assertDocument) : null;
+    setState(retained ? { past: retained.past, present: data.document, future: retained.future } : history(data.document));
     setDraft(null);
     setSession(data);
     setSaved(serialize(data.document));
@@ -896,7 +924,9 @@ function App() {
       );
       return;
     }
-    setState((previous) => commit(previous, next));
+    try { assertDocument(next); }
+    catch (cause) { setError(cause.message); return; }
+    setState((previous) => commitEditingTransaction(previous, next));
     setDraft(null);
     setError("");
     setNotice("Layout updated.");
@@ -998,6 +1028,7 @@ function App() {
         }
         setSourceBase(snapshot);
         setSession((s) => ({ ...s, revision: data.revision }));
+        if (persistSavedHistory) writeSavedHistory(localStorage, session.recoveryKey, data.revision, packHistory(state));
       } else {
         await request("validate", snapshot);
         download(serialize(snapshot), session.name, "application/json");
@@ -1105,6 +1136,7 @@ function App() {
       change(result.document);
       setSelection(result.ids);
       setEdgeIndex(null);
+      setNotice(result.omittedExternalConnections ? `Pasted selection. ${result.omittedExternalConnections} connection(s) to unselected external items were omitted.` : "Selection pasted with fresh IDs.");
     } catch (e) {
       setError(e.message);
     }
@@ -1148,6 +1180,7 @@ function App() {
         change(result.document);
         setSelection(result.ids);
         setEdgeIndex(null);
+        setNotice(result.omittedExternalConnections ? `Pasted selection. ${result.omittedExternalConnections} external connection(s) were omitted.` : "Selection pasted with fresh IDs.");
       });
     };
     window.addEventListener("copy", onCopy);
@@ -1324,6 +1357,8 @@ function App() {
   }
   const selected = items.find((c) => c.id === selection[0]),
     edge = connections(documentModel)[edgeIndex];
+  const internalEdges = selection.length > 1 ? internalConnectionIndices(documentModel, selection) : [];
+  const actionCaps = actionCapabilities({ document: documentModel, selection, locked, busy, rawDirty });
   const documentTabs = session?.workspace
     ? [
         ...(session.workspaceId ? [{ id: session.workspaceId, name: session.name, dirty: hasUnsaved }] : []),
@@ -1584,10 +1619,10 @@ function App() {
       }}
     >
       <div className="app">
-        {contextMenu&&<ContextActions position={contextMenu} onClose={()=>setContextMenu(null)} title={contextMenu.edgeIndex != null ? "Connection actions" : contextMenu.boundaryIndex != null ? "Boundary actions" : contextMenu.background ? "Canvas actions" : "Selection actions"} actions={contextMenu.edgeIndex != null ? [
+        {contextMenu&&<ContextActions position={contextMenu} onClose={()=>setContextMenu(null)} title={contextMenu.edgeIndex != null ? "Connection actions" : contextMenu.boundaryIndex != null ? "Boundary actions" : contextMenu.background ? "Canvas actions" : contextMenu.ids?.length === 1 ? "Component actions" : "Selection actions"} actions={contextMenu.edgeIndex != null ? [
           {label:"Edit connection",run:()=>{setEdgeIndex(contextMenu.edgeIndex);openPanel("inspector");}},
           {label:"Reset route and label position",disabled:!connections(state.present)[contextMenu.edgeIndex]?.via&&!connections(state.present)[contextMenu.edgeIndex]?.labelAt,reason:"This connection already uses automatic geometry.",run:()=>reset("route",contextMenu.edgeIndex)},
-          {label:"Delete connection",disabled:busy||rawDirty,reason:"Finish the current edit before deleting.",run:()=>{change(deleteEdge(state.present,contextMenu.edgeIndex));setEdgeIndex(null);}},
+          {label:"Delete connection",disabled:busy||rawDirty||(state.present.diagram_type==="sequence"&&connections(state.present).length<=1),reason:state.present.diagram_type==="sequence"&&connections(state.present).length<=1?"A sequence must retain one message.":"Finish the current edit before deleting.",run:()=>{change(deleteEdge(state.present,contextMenu.edgeIndex));setEdgeIndex(null);}},
         ] : contextMenu.boundaryIndex != null ? [
           {label:"Edit boundaries",run:()=>openPanel("structure")},
           {label:"Delete boundary",disabled:busy||rawDirty,reason:"Finish the current edit before deleting.",run:()=>change(deleteBoundary(state.present,contextMenu.boundaryIndex))},
@@ -1596,11 +1631,11 @@ function App() {
           {label:minimap?"Hide overview map":"Show overview map",run:()=>setMinimap(!minimap)},
           {label:"Create new diagram",disabled:hasUnsaved,reason:"Save or recover the current draft first.",run:()=>setCreation("diagram")},
         ] : [
-          {label:'Duplicate selection',disabled:busy||rawDirty,run:()=>paste(copySelection(state.present,contextMenu.ids))},
+          {label:'Duplicate selection',disabled:!actionCaps.duplicate.enabled,reason:actionCaps.duplicate.reason,run:()=>paste(copySelection(state.present,contextMenu.ids))},
           {label:contextMenu.ids.every(id=>locked.includes(id))?'Unlock selection':'Lock selection',disabled:busy||rawDirty,run:()=>updateLocks(contextMenu.ids.every(id=>locked.includes(id))?locked.filter(id=>!contextMenu.ids.includes(id)):[...new Set([...locked,...contextMenu.ids])])},
-          {label:'Connect components',disabled:busy||rawDirty||state.present.diagram_type!=='architecture',reason:"Direct canvas connection authoring is available for architecture diagrams.",run:()=>setDrawConnections(true)},
-          {label:'Arrange selection',disabled:busy||rawDirty||state.present.diagram_type!=='architecture',reason:"Free-coordinate arrangement is available for architecture diagrams.",run:()=>openPanel('layout')},
-          {label:'Delete selection',disabled:busy||rawDirty||state.present.diagram_type!=='architecture'||contextMenu.ids.some(id=>locked.includes(id))||contextMenu.ids.length>=sourceNodes(state.present).length,reason:"Unlock items and keep at least one supported component.",run:()=>{if(window.confirm('Delete selected components and their connections?')){change(removeSelection(state.present,contextMenu.ids));setSelection([]);}}},
+          {label:'Connect components',disabled:!actionCaps.connect.enabled,reason:actionCaps.connect.reason,run:()=>setDrawConnections(true)},
+          {label:'Arrange selection',disabled:!actionCaps.arrange.enabled,reason:actionCaps.arrange.reason,run:()=>openPanel('layout')},
+          {label:'Delete selection',disabled:!actionCaps.deleteSelection.enabled,reason:actionCaps.deleteSelection.reason,run:()=>{if(window.confirm('Delete selected components and their connections?')){change(removeSelection(state.present,contextMenu.ids));setSelection([]);}}},
         ]}/>} 
         <a className="skip-link" href="#diagram-canvas">
           Skip to diagram canvas
@@ -1858,6 +1893,14 @@ function App() {
                 onRename={renameWorkspace}
                 token={session.token}
                 revision={session.revision}
+                projectPreferences={{ gridSize, smartSnap, minimap, layout: layoutSettings }}
+                onApplyProjectPreferences={(preferences) => {
+                  setGridSize(preferences.gridSize);
+                  setSmartSnap(preferences.smartSnap);
+                  setMinimap(preferences.minimap);
+                  if (preferences.layout) setLayoutSettings(preferences.layout);
+                  setNotice("Shared project defaults applied to this editor session.");
+                }}
               />
             )}
             <div className="section-heading">
@@ -2548,6 +2591,8 @@ function App() {
               <HistoryPanel
                 state={state}
                 disabled={busy || rawDirty || !!draft}
+                persist={persistSavedHistory}
+                onPersist={(enabled) => { setPersistSavedHistory(enabled); localStorage.setItem(savedHistoryPreferenceKey, String(enabled)); if (!enabled) localStorage.removeItem(`archify-saved-history:${session.recoveryKey}`); }}
                 onJump={(index) => {
                   if (busy || rawDirty || draft) return;
                   setState((current) => jumpHistory(current, index));
@@ -2682,6 +2727,8 @@ function App() {
               <ShortcutsPanel value={shortcuts} onChange={setShortcuts} />
             ) : panel === "migration" ? (
               <MigrationPanel document={state.present} onPreview={async (value) => (await (await request("migrate", value)).json())} onApply={(next) => { change(next); setNotice("Migration applied as one undoable draft change. Review and save when ready."); }} onDownload={(value, name) => download(serialize(value), name, "application/json")} />
+            ) : panel === "batch" ? (
+              <BatchPanel token={session.token} />
             ) : panel === "json" ? (
               <React.Suspense fallback={<p>Loading JSON editor…</p>}>
                 <JsonEditor
@@ -2738,7 +2785,7 @@ function App() {
                           const next = JSON.parse(jsonText);
                           assertDocument(next);
                           await request("validate", next);
-                          setState((s) => commit(s, next));
+                          setState((s) => commitEditingTransaction(s, next));
                           setJsonText(serialize(next));
                           setSelection([]);
                           setEdgeIndex(null);
@@ -2879,9 +2926,15 @@ function App() {
                               />
                             );
                           })}
+                          {internalEdges.length > 0 && <details>
+                            <summary>Batch connection properties · {internalEdges.length}</summary>
+                            <p className="muted">Only connections whose two endpoints are selected are changed. The complete batch validates and commits as one undo step.</p>
+                            <Field label="Connection labels" value={commonConnectionValue(documentModel, internalEdges, "label")} mixed={commonConnectionValue(documentModel, internalEdges, "label") === undefined} onCommit={(label) => { try { change(bulkPatchConnections(state.present, internalEdges, { label })); } catch (cause) { setError(cause.message); } }} />
+                            {documentModel.diagram_type !== "sequence" && <label className="field">Routes<select value={commonConnectionValue(documentModel, internalEdges, "route") || ""} onChange={(event) => { try { change(bulkPatchConnections(state.present, internalEdges, { route: event.target.value })); } catch (cause) { setError(cause.message); } }}><option value="">Mixed / automatic</option>{options.routes.map((route) => <option key={route}>{route}</option>)}</select></label>}
+                          </details>}
                         </>
                       )}
-                      {documentModel.diagram_type === "architecture" && (
+                      {(
                         <details>
                           <summary>Copy and duplicate</summary>
                           <div className="button-row">
@@ -3408,6 +3461,11 @@ function App() {
             >
               Download HTML
             </button>
+            <label>PNG scale<select value={exportScale} onChange={(event) => setExportScale(Number(event.target.value))}><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select></label>
+            <button onClick={() => act(() => downloadRenderedPng(html, session.name.replace(/\.json$/i, "") + `-${exportScale}x.png`, exportScale))}>Download PNG</button>
+            <label>PDF page<select value={pageSize} onChange={(event) => setPageSize(event.target.value)}><option>A4 landscape</option><option>A4 portrait</option><option>Letter landscape</option><option>Letter portrait</option></select></label>
+            <button onClick={() => printRenderedHtml(html, pageSize)}>Print / save PDF</button>
+            <small>PNG uses browser fonts and a white background. PDF fits the SVG to the chosen page; very wide diagrams may be scaled down.</small>
             <button
               onClick={() => {
                 dialog.current.close();
