@@ -341,6 +341,16 @@ function validateArchitecture() {
   }
   const requiresNestedBoundaryMembership = arch.meta?.engineering_profile === 'deployment-ownership';
   if (components.size !== asArray(arch.components).length) problems.push('Component ids must be unique.');
+  const portOwners = new Map();
+  for (const component of components.values()) for (const port of asArray(component.ports)) {
+    if (arch.schema_version !== 2) problems.push(`Component "${component.id}" uses persisted ports, which require architecture schema_version 2.`);
+    if (portOwners.has(port.id)) problems.push(`Port ids must be unique; "${port.id}" is repeated.`);
+    else portOwners.set(port.id, component.id);
+  }
+  for (const connection of asArray(arch.connections)) for (const [field, endpoint] of [['fromPort', 'from'], ['toPort', 'to']]) {
+    if (connection[field] && arch.schema_version !== 2) problems.push(`Connection "${connection.id || connection.from}" uses ${field}, which requires architecture schema_version 2.`);
+    if (connection[field] && portOwners.get(connection[field]) !== connection[endpoint]) problems.push(`Connection "${connection.id || connection.from}" ${field} "${connection[field]}" does not belong to component "${connection[endpoint]}".`);
+  }
   if (grid) {
     validateGridPlacement(arch, grid, problems);
   } else {
@@ -907,12 +917,26 @@ function routeVia(conn, from, to, start, end, fromSide, toSide) {
 
 const pathCache = new Map();
 const automaticPorts = automaticPortSpread(arch.connections, components);
+const authoredPorts = new Map();
+for (const component of components.values()) for (const port of asArray(component.ports)) authoredPorts.set(port.id, { component, port });
+function authoredPort(conn, endpoint) {
+  const field = endpoint === 'source' ? 'fromPort' : 'toPort';
+  const expected = endpoint === 'source' ? conn.from : conn.to;
+  const value = conn[field] ? authoredPorts.get(conn[field]) : null;
+  if (!value || value.component.id !== expected) return null;
+  const { component, port } = value, offset = Math.max(0, Math.min(1, port.offset));
+  if (port.side === 'top') return { side: port.side, point: [component.x + component.width * offset, component.y] };
+  if (port.side === 'bottom') return { side: port.side, point: [component.x + component.width * offset, component.y + component.height] };
+  if (port.side === 'left') return { side: port.side, point: [component.x, component.y + component.height * offset] };
+  return { side: port.side, point: [component.x + component.width, component.y + component.height * offset] };
+}
 function connectionSides(conn) {
   const from = components.get(conn.from);
   const to = components.get(conn.to);
+  const fromPort = authoredPort(conn, 'source'), toPort = authoredPort(conn, 'target');
   return {
-    fromSide: chosenSide(conn.fromSide, defaultFromSide(from, to)),
-    toSide: chosenSide(conn.toSide, defaultToSide(from, to)),
+    fromSide: fromPort?.side || chosenSide(conn.fromSide, defaultFromSide(from, to)),
+    toSide: toPort?.side || chosenSide(conn.toSide, defaultToSide(from, to)),
   };
 }
 
@@ -927,9 +951,10 @@ function pathFor(conn) {
   const from = components.get(conn.from);
   const to = components.get(conn.to);
   const ports = automaticPorts.get(conn);
+  const authoredFrom = authoredPort(conn, 'source'), authoredTo = authoredPort(conn, 'target');
   const { fromSide, toSide } = connectionSides(conn);
-  const baseStart = ports?.from || anchor(from, fromSide);
-  const baseEnd = ports?.to || anchor(to, toSide);
+  const baseStart = authoredFrom?.point || ports?.from || anchor(from, fromSide);
+  const baseEnd = authoredTo?.point || ports?.to || anchor(to, toSide);
   const { start, end } = alignFacingPorts(
     conn,
     from,
@@ -938,7 +963,7 @@ function pathFor(conn) {
     baseEnd,
     fromSide,
     toSide,
-    ports,
+    authoredFrom || authoredTo ? null : ports,
   );
   const points = [start, ...routeVia(conn, from, to, start, end, fromSide, toSide), end];
   const routed = { d: roundedPath(points, 8), points };
@@ -993,12 +1018,17 @@ function renderComponent(c) {
   const brand = renderBrandMark(c, { x: c.x + c.width - 22, y: c.y + 6 });
   const labelFontSize = fittedNodeFontSize(c.label, brandLabelFitWidth(c, c.width), 11, 8);
   const passport = { kind: c.type, sublabel: c.sublabel, tag: c.tag, context: componentContext(c), ...brandMetadataFor(c) };
+  const portMarks = asArray(c.ports).map((port) => {
+    const resolved = authoredPorts.get(port.id); if (!resolved) return '';
+    const point = authoredPort({ from: c.id, fromPort: port.id }, 'source')?.point; if (!point) return '';
+    return `<circle data-port-id="${esc(port.id)}" cx="${point[0]}" cy="${point[1]}" r="3" class="c-mask" stroke="currentColor"><title>${esc(port.label || port.id)}</title></circle>`;
+  }).join('');
   return `        <g ${focusNodeAttrs(c.id, c.label, passport, arch.meta.locale)}>
           ${focusNodeTitle(c.label, passport)}
           <rect x="${c.x}" y="${c.y}" width="${c.width}" height="${c.height}" rx="6" class="c-mask"/>
           <rect x="${c.x}" y="${c.y}" width="${c.width}" height="${c.height}" rx="6" class="${fill}"${animateAttr(arch.meta, 'node', componentSteps.get(c.id))} stroke-width="1.5"/>
           ${renderSemanticSigil(c.type, { x: c.x + 6, y: c.y + 6 })}${brand ? `\n          ${brand}` : ''}
-          <text data-node-label=""${hasSub ? ' data-detail-anchor=""' : ''} x="${cx}" y="${labelY}" class="t-primary" font-size="${labelFontSize}" font-weight="600" text-anchor="middle">${esc(c.label)}</text>${sub}${tag}
+          <text data-node-label=""${hasSub ? ' data-detail-anchor=""' : ''} x="${cx}" y="${labelY}" class="t-primary" font-size="${labelFontSize}" font-weight="600" text-anchor="middle">${esc(c.label)}</text>${sub}${tag}${portMarks}
         </g>`;
 }
 

@@ -8,6 +8,8 @@ export const panelGroups = [
       structure: "Structure",
       layout: "Auto-arrange",
       templates: "Templates",
+      packs: "Diagram packs",
+      ports: "Ports",
     },
   },
   {
@@ -18,12 +20,16 @@ export const panelGroups = [
       problems: "Problems",
       compare: "Compare layout",
       review: "Review",
+      comments: "Comments",
+      refinement: "Refinement",
+      interchange: "Interchange",
     },
   },
   {
     label: "Document",
     panels: {
       history: "History",
+      versions: "Saved versions",
       settings: "Settings",
       checkpoints: "Checkpoints",
       migration: "Migration",
@@ -31,6 +37,7 @@ export const panelGroups = [
       shortcuts: "Shortcuts",
       saveas: "Save As",
       batch: "Batch",
+      extensions: "Extensions",
     },
   },
 ];

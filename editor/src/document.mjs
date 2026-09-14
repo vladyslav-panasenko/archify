@@ -182,6 +182,14 @@ export function assertDocument(document) {
       );
   }
   const edgeIds = new Set();
+  const ports = new Map();
+  if (document.diagram_type === "architecture") {
+    for (const component of document.components) for (const port of component.ports || []) {
+      if (document.schema_version !== 2) throw new Error("Persisted ports require architecture version 2.");
+      if (ports.has(port.id)) throw new Error(`Duplicate port ID: ${port.id}`);
+      ports.set(port.id, { component: component.id, port });
+    }
+  }
   for (const edge of connections(document)) {
     if (edge.id !== undefined) {
       if (edgeIds.has(edge.id))
@@ -199,6 +207,11 @@ export function assertDocument(document) {
       throw new Error(
         `Connection ${edge.from} → ${edge.to} references a missing component.`,
       );
+    for (const [field, endpoint] of [["fromPort", "from"], ["toPort", "to"]]) if (edge[field] !== undefined) {
+      if (document.schema_version !== 2) throw new Error("Persisted ports require architecture version 2.");
+      const target = ports.get(edge[field]);
+      if (!target || target.component !== edge[endpoint]) throw new Error(`${field} ${edge[field]} does not belong to ${edge[endpoint]}.`);
+    }
   }
   for (const boundary of document.boundaries || []) {
     if (!Array.isArray(boundary.wraps) || !boundary.wraps.length)

@@ -109,6 +109,12 @@ import BatchPanel from "./BatchPanel.jsx";
 import { internalConnectionIndices, commonConnectionValue, bulkPatchConnections } from "./connection-bulk.mjs";
 import { commitEditingTransaction } from "./editing-transaction.mjs";
 import { actionCapabilities } from "./action-capabilities.mjs";
+import CommentsPanel from "./CommentsPanel.jsx";
+import InterchangePanel from "./InterchangePanel.jsx";
+import RefinementPanel from "./RefinementPanel.jsx";
+import ExtensionsPanel from "./ExtensionsPanel.jsx";
+import DiagramPacksPanel from "./DiagramPacksPanel.jsx";
+import PortsPanel from "./PortsPanel.jsx";
 
 const sides = {
   top: Position.Top,
@@ -2729,6 +2735,18 @@ function App() {
               <MigrationPanel document={state.present} onPreview={async (value) => (await (await request("migrate", value)).json())} onApply={(next) => { change(next); setNotice("Migration applied as one undoable draft change. Review and save when ready."); }} onDownload={(value, name) => download(serialize(value), name, "application/json")} />
             ) : panel === "batch" ? (
               <BatchPanel token={session.token} />
+            ) : panel === "comments" ? (
+              <CommentsPanel document={state.present} identity={session.recoveryKey} />
+            ) : panel === "interchange" ? (
+              <InterchangePanel document={state.present} onImport={(next) => act(async () => { await request("validate", next); load(importedSession(session, next, "imported-mermaid.architecture.json")); setSaved(""); setNotice("Mermaid imported as a new architecture draft. Review the loss report before saving."); })} onDownload={(value, name, type) => download(value, name, type)} />
+            ) : panel === "refinement" ? (
+              <RefinementPanel document={state.present} onValidate={validateCandidate} onApply={(next) => { change(next); setNotice("Selected stable-ID overrides applied as one undoable change."); }} onDownload={(value, name) => download(JSON.stringify(value, null, 2) + "\n", name, "application/json")} />
+            ) : panel === "extensions" ? (
+              <ExtensionsPanel document={state.present} onValidate={validateCandidate} onApply={(next) => { change(next); setNotice("Extension command applied as one undoable change."); }} onDownload={(value, name) => download(JSON.stringify(value, null, 2) + "\n", name, "application/json")} />
+            ) : panel === "packs" ? (
+              <DiagramPacksPanel onValidate={validateCandidate} onStart={(value, name) => { if (hasUnsaved && !window.confirm("Keep this draft in recovery and open the pack starter?")) return; load(importedSession(session, value, name)); setSaved(""); setRecovery(null); setNotice("Pack starter opened as a new draft."); }} onDownload={(value, name) => download(JSON.stringify(value, null, 2) + "\n", name, "application/json")} />
+            ) : panel === "ports" ? (
+              <PortsPanel document={state.present} selection={selection} edgeIndex={edgeIndex} onValidate={validateCandidate} onApply={(next) => { change(next); setNotice("Persisted port change applied."); }} />
             ) : panel === "json" ? (
               <React.Suspense fallback={<p>Loading JSON editor…</p>}>
                 <JsonEditor

@@ -31,7 +31,7 @@ export async function createWorkspace(directory, validate) {
           );
         if (
           entry.isSymbolicLink() ||
-          ["node_modules", ".git"].includes(entry.name)
+          ["node_modules", ".git", ".archify-editor-history"].includes(entry.name)
         )
           continue;
         const file = path.join(folder, entry.name);

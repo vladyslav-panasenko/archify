@@ -13,6 +13,7 @@ import { supportedTypes, sourceNodes } from "./src/adapters/index.mjs";
 import { createWorkspace } from "./workspace.mjs";
 import { assertResourceLimits } from "./src/resource-limits.mjs";
 import { migrateWorkflowToV2 } from "../archify/renderers/workflow/workflow-compiler.mjs";
+import { createServerHistory } from "./src/server-history.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const execute = promisify(execFile);
@@ -119,6 +120,7 @@ export async function createEditorServer({
   const workspace = directory
     ? await createWorkspace(directory, validate)
     : null;
+  const versionHistory = workspace ? await createServerHistory(workspace.root, validate) : null;
   const token = randomBytes(32).toString("hex");
   // Resolve once: clients cannot choose a write path or replace it with a symlink.
   const startupFilePath = file ? await fs.realpath(path.resolve(file)) : null;
@@ -162,6 +164,11 @@ export async function createEditorServer({
         if (req.method === "GET" && url.pathname === "/api/project-preferences") {
           if (!workspace) return send(200, { preferences: null, revision: null, enabled: false });
           return send(200, { ...(await workspace.readPreferences()), enabled: true });
+        }
+        if (req.method === "GET" && url.pathname === "/api/history") {
+          if (req.headers["x-editor-token"] !== token) return send(403, { error: "Editor session expired. Reload before reading saved versions." });
+          if (!workspace) return send(200, { entries: [], enabled: false });
+          return send(200, { entries: await versionHistory.list(url.searchParams.get("id")), enabled: true });
         }
         if (req.method === "GET" && url.pathname === "/api/document") {
           const workspaceId = workspace
@@ -233,6 +240,13 @@ export async function createEditorServer({
           if (!workspace) return send(403, { error: "Start with --directory to save project preferences." });
           return send(200, await workspace.savePreferences(body.preferences, body.revision));
         }
+        if (req.method === "POST" && url.pathname === "/api/history/restore") {
+          if (!workspace) return send(403, { error: "Start with --directory to restore saved versions." });
+          const filePath = await workspace.resolve(body.id), current = await fs.readFile(filePath, "utf8");
+          if (hash(current) !== body.revision) return send(409, { error: "The source changed. Reload it before restoring a saved version." });
+          const entry = await versionHistory.read(body.id, body.historyId);
+          return send(200, { document: entry.document, sourceRevision: body.revision });
+        }
         if (req.method === "POST" && url.pathname === "/api/batch") {
           if (!workspace) return send(403, { error: "Start with --directory to process project files." });
           if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > 100 || body.ids.some((id) => typeof id !== "string"))
@@ -276,6 +290,8 @@ export async function createEditorServer({
               body.document,
               body.revision,
             );
+            let historyWarning;
+            try { await versionHistory.record(result.id, result.name, "save-as", body.document, result.revision); } catch (error) { historyWarning = `Saved, but local version history failed: ${error.message}`; }
             return send(200, {
               document: body.document,
               token,
@@ -285,6 +301,7 @@ export async function createEditorServer({
               name: result.name,
               workspace: true,
               workspaceId: result.id,
+              ...(historyWarning ? { historyWarning } : {}),
             });
           } finally {
             saving = false;
@@ -325,7 +342,9 @@ export async function createEditorServer({
             if ((await fs.realpath(filePath)) !== filePath)
               throw new Error("Document location changed during saving.");
             await fs.rename(temporary, filePath);
-            return send(200, { revision: hash(text) });
+            const revision = hash(text); let historyWarning;
+            if (workspace) try { const id = url.searchParams.get("id"), entry = workspace.list().files.find((item) => item.id === id); await versionHistory.record(id, entry?.name || path.basename(filePath), "save", body.document, revision); } catch (error) { historyWarning = `Saved, but local version history failed: ${error.message}`; }
+            return send(200, { revision, ...(historyWarning ? { historyWarning } : {}) });
           } finally {
             await fs.rm(temporary, { force: true });
             saving = false;

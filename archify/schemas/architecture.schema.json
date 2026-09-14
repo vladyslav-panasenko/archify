@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": ["schema_version", "diagram_type", "meta", "components"],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "enum": [1, 2] },
     "diagram_type": { "const": "architecture" },
     "meta": {
       "type": "object",
@@ -122,6 +122,22 @@
             "items": false,
             "minItems": 2,
             "maxItems": 2
+          },
+          "ports": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "side", "offset"],
+              "properties": {
+                "id": { "$ref": "common.schema.json#/$defs/id" },
+                "side": { "enum": ["top", "right", "bottom", "left"] },
+                "offset": { "type": "number", "minimum": 0, "maximum": 1 },
+                "label": { "type": "string", "maxLength": 80 }
+              }
+            }
           }
         }
       }
@@ -158,6 +174,8 @@
           "variant": { "$ref": "common.schema.json#/$defs/variant" },
           "fromSide": { "$ref": "common.schema.json#/$defs/side" },
           "toSide": { "$ref": "common.schema.json#/$defs/side" },
+          "fromPort": { "$ref": "common.schema.json#/$defs/id" },
+          "toPort": { "$ref": "common.schema.json#/$defs/id" },
           "route": { "enum": ["auto", "straight", "orthogonal-h", "orthogonal-v"] },
           "via": {
             "type": "array",
