@@ -24,9 +24,11 @@ test('semantic relationship labels are preserved and deletion is not a geometry 
   }
 });
 
-test('schema policy documents the workflow v1/v2 compatibility boundary', () => {
+test('schema policy documents the workflow and architecture v1/v2 compatibility boundaries', () => {
   assert.match(schemaReadme, /Workflow[^\n]*schema versions? 1 and 2/i);
-  assert.match(schemaReadme, /other four[^\n]*schema_version[^\n]*1/i);
+  assert.match(schemaReadme, /Architecture[^\n]*versions? 1 and 2/i);
+  assert.match(schemaReadme, /Version 1 remains valid and\s+rejects port fields/i);
+  assert.match(schemaReadme, /Sequence, Dataflow, and Lifecycle[^\n]*schema_version[^\n]*1/i);
   assert.doesNotMatch(schemaReadme, /schema_version` is `"const": 1`/);
 });
 

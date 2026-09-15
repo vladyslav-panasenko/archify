@@ -112,7 +112,13 @@ output.
 Workflow supports schema versions 1 and 2. Version 1 remains the fixed-layout
 compatibility contract; version 2 opts into the readable workflow compiler and
 can be produced explicitly with `archify migrate workflow ... --to-schema 2`.
-The other four diagram schemas keep `schema_version` pinned to `1`.
+Architecture also supports versions 1 and 2. Architecture v2 adds explicit
+component `ports` and connection `fromPort`/`toPort` references. Ports are never
+inferred: each endpoint uses the authored side and normalized offset, and each
+reference must belong to its endpoint component. Version 1 remains valid and
+rejects port fields. The editor exposes an explicit v1-to-v2 preview that changes
+only `schema_version`; ordinary open, edit, render, and save do not migrate it.
+Sequence, Dataflow, and Lifecycle keep `schema_version` pinned to `1`.
 
 Workflow also accepts optional `semanticChecks`. `allowedRoots` and
 `allowedTerminals` close the set of intentional graph sources and sinks;

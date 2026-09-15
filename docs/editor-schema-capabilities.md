@@ -20,6 +20,11 @@ Generated from the five schemas by `editor/scripts/generate-capability-inventory
 | `/components/*/col` | Visual + JSON |
 | `/components/*/id` | Visual + JSON |
 | `/components/*/label` | Visual + JSON |
+| `/components/*/ports` | JSON |
+| `/components/*/ports/*/id` | JSON |
+| `/components/*/ports/*/label` | JSON |
+| `/components/*/ports/*/offset` | JSON |
+| `/components/*/ports/*/side` | JSON |
 | `/components/*/pos` | Visual + JSON |
 | `/components/*/row` | Visual + JSON |
 | `/components/*/size` | Visual + JSON |
@@ -33,6 +38,7 @@ Generated from the five schemas by `editor/scripts/generate-capability-inventory
 | `/components/*/type` | Visual + JSON |
 | `/connections` | JSON |
 | `/connections/*/from` | Visual + JSON |
+| `/connections/*/fromPort` | JSON |
 | `/connections/*/fromSide` | Visual + JSON |
 | `/connections/*/id` | Visual + JSON |
 | `/connections/*/label` | Visual + JSON |
@@ -42,6 +48,7 @@ Generated from the five schemas by `editor/scripts/generate-capability-inventory
 | `/connections/*/labelSegment` | JSON |
 | `/connections/*/route` | Visual + JSON |
 | `/connections/*/to` | Visual + JSON |
+| `/connections/*/toPort` | JSON |
 | `/connections/*/toSide` | Visual + JSON |
 | `/connections/*/variant` | JSON |
 | `/connections/*/via` | Visual + JSON |

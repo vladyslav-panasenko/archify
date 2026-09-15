@@ -137,3 +137,14 @@
 2. Add Playwright coverage for comments, history, interchange, refinement, extensions, packs, ports, and offline limitations.
 3. Run `npm run check:release:browser`, offline build/smoke, desktop package smoke, and `git diff --check`.
 4. Record exact results and leave F151 signing plus the existing human acceptance gates open.
+
+## Status
+
+Implemented on 2026-09-15 for editor 0.2.0. Delivered F150, F152, F156, F157, F160-F162, F165, and F166. The F151 engineering handoff includes an unsigned reproducible archive, SHA-256 manifest, and Ed25519 detached-signature verifier; signing identities, trusted publication, and signed install/update/rollback acceptance remain human-owned. Cloud-backed F153-F155, F158-F159, F163, and F164 were intentionally excluded.
+
+Verification evidence:
+
+- Editor release gate: 96 Node tests passed, both production builds passed, capability inventory regenerated, and the 1,000-node benchmark remained within the documented budget.
+- Browser suite: 76 tests passed in the combined run; the two timed-out workspace cases were rerun individually. Save As passed unchanged, and source reload passed after fixing a dropped focus-check race and adding its unit regression. This accounts for all 78 browser workflows. The offline case also passed a real browser reload after network access was disabled.
+- Compiler: generated validators were current, golden renders passed, and the focused architecture/schema policy suite passed 6/6. The repository-wide compiler command still reports unrelated failures already present on `origin/main`, including divergent localized README release fixtures; sandboxed Git ownership also prevents several Git-fixture checks in this environment.
+- Packaging: `archify-local-editor-0.2.0.tgz`, 1,582,217 bytes, 179 files, SHA-256 `6F539D41B134686DD6A11215B36294B1B074424B255AF884687665C8B4EB2653`. The checksum was independently recomputed and matched the desktop manifest.

@@ -146,6 +146,8 @@ The finished core product is a reliable local editor for all five Archify diagra
 
 These require separate scope and architecture decisions. None is necessary to finish the local JSON editor.
 
+**Local implementation status (0.2.0, 2026-09-15):** F150, F152, F156, F157, F160-F162, F165, and F166 are implemented as local-only capabilities. F151 has reproducible unsigned packaging, checksums, and detached-signature verification; release identities and signed install/update/rollback acceptance remain human-owned. F153-F155, F158-F159, F163, and F164 remain unimplemented because they require cloud storage, shared identity/collaboration, hosted operation or AI, or telemetry. See [Local product expansions](editor-local-expansions.md) for the delivered contracts and limitations.
+
 | ID | Feature or completion task | Complete when | Scope | Sol |
 | --- | --- | --- | --- | --- |
 | F150 | Desktop application | Package a native launcher/window with scoped filesystem access, lifecycle management, and platform integration. | Optional | Yes, split/review |

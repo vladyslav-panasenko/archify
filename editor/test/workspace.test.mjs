@@ -185,3 +185,26 @@ test("batch validation and export report each confined workspace file", async ()
     await fs.rm(directory, { recursive: true, force: true });
   }
 });
+
+test("workspace saves record bounded local versions and restore only against the current revision", async () => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "archify-versions-"));
+  await fs.writeFile(path.join(directory, "diagram.json"), JSON.stringify(newDocument("Initial")));
+  const server = await createEditorServer({ directory });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const workspace = await (await fetch(`${base}/api/workspace`)).json(), id = workspace.files[0].id;
+    const opened = await (await fetch(`${base}/api/document?id=${id}`)).json(), edited = newDocument("Saved version");
+    const saved = await (await fetch(`${base}/api/document?id=${id}`, { method: "PUT", headers: { "Content-Type": "application/json", "X-Editor-Token": opened.token }, body: JSON.stringify({ document: edited, revision: opened.revision }) })).json();
+    const listResponse = await fetch(`${base}/api/history?id=${id}`, { headers: { "X-Editor-Token": opened.token } }), list = await listResponse.json();
+    assert.equal(listResponse.status, 200); assert.equal(list.entries.length, 1); assert.equal(list.entries[0].operation, "save");
+    const restore = (revision) => fetch(`${base}/api/history/restore`, { method: "POST", headers: { "Content-Type": "application/json", "X-Editor-Token": opened.token }, body: JSON.stringify({ id, historyId: list.entries[0].id, revision }) });
+    assert.equal((await restore("stale")).status, 409);
+    const restored = await (await restore(saved.revision)).json(); assert.equal(restored.document.meta.title, "Saved version");
+    assert.equal((await fs.readdir(directory)).includes(".archify-editor-history"), true);
+    await fetch(`${base}/api/workspace`).then((response) => response.json()).then((value) => assert.equal(value.files.length, 1));
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});

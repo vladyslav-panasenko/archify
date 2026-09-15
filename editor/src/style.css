@@ -1,4 +1,5 @@
 :root {
+  --pack-accent: #087b72;
   font-family: Inter, "Segoe UI", sans-serif;
   color: #263640;
   background: #f5f7f8;
@@ -32,6 +33,11 @@
 .route-segment.vertical {
   cursor: ew-resize;
 }
+.persisted-port { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--pack-accent); border: 2px solid white; z-index: 5; pointer-events: none; }
+.persisted-port.port-top { top: -4px; left: var(--port-offset); transform: translateX(-50%); }
+.persisted-port.port-bottom { bottom: -4px; left: var(--port-offset); transform: translateX(-50%); }
+.persisted-port.port-left { left: -4px; top: var(--port-offset); transform: translateY(-50%); }
+.persisted-port.port-right { right: -4px; top: var(--port-offset); transform: translateY(-50%); }
 .problem-highlight {
   position: absolute;
   pointer-events: none;
@@ -226,8 +232,8 @@ select:focus-visible {
   outline-offset: 2px;
 }
 button.primary {
-  background: #087b72;
-  border-color: #087b72;
+  background: var(--pack-accent);
+  border-color: var(--pack-accent);
   color: white;
 }
 input,

@@ -8,6 +8,8 @@ The editor edits Archify JSON. Archify owns final HTML rendering. Both feature b
 
 The engineering work in the Release and Next scopes of the product-completion backlog is implemented as of 2026-09-14. Detailed contracts and verification are recorded in the [product completion plan](plans/2026-09-13-product-completion.md), [schema capability inventory](editor-schema-capabilities.md), [performance evidence](editor-performance.md), and [release contract](editor-release.md). Human-owned acceptance F122, F126, F140, and F149 remains open until named reviewers record their evidence.
 
+The local optional expansion batch is implemented in editor 0.2.0: desktop app-window launch, browser-only offline editing, local comments and version history, selected Mermaid interchange, stable-ID refinement, declarative extensions, domain packs, and architecture v2 ports. Signing identities and signed update acceptance remain human-owned, and cloud-backed optional items remain outside the product. See [Local product expansions](editor-local-expansions.md).
+
 ## Completed batch
 
 | ID  | Feature                     | Done when                                                                                                                   | Status      |

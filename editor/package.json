@@ -1,6 +1,6 @@
 {
   "name": "archify-editor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,14 +9,17 @@
   "scripts": {
     "dev": "node server.mjs --dev",
     "build": "vite build",
+    "build:offline": "node scripts/build-offline.mjs",
     "start": "node server.mjs",
+    "desktop": "node desktop/launcher.mjs",
     "test": "node --test test/*.test.mjs",
     "test:browser": "playwright test",
     "bench": "node bench/large-diagram.mjs",
     "inventory": "node scripts/generate-capability-inventory.mjs",
     "check:release": "node scripts/release-check.mjs",
     "check:release:browser": "node scripts/release-check.mjs --browser",
-    "package:release": "npm run build && node scripts/package-release.mjs"
+    "package:release": "npm run build && npm run build:offline && node scripts/package-release.mjs",
+    "package:desktop": "npm run package:release && node scripts/package-desktop.mjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.8.0",

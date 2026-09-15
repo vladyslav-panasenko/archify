@@ -96,6 +96,12 @@ Unsaved documents and unapplied JSON text are stored in this browser's local sto
 
 Zoom, selection, measurements, recovery metadata and undo history are never written into Archify JSON. See the [completed feature list](../docs/editor-features.md) for the implementation scope and commits.
 
+## Local product expansions
+
+Editor 0.2.0 adds a desktop app-window launcher, browser-only offline build, local comments and saved-version restoration, selected Mermaid architecture interchange, stable-ID refinement, permission-scoped declarative extensions, domain packs, and explicit architecture v2 ports. Run `npm run desktop` for the dedicated local window, `npm run build:offline` for the installable static edition, or `npm run package:desktop` for the unsigned release archive and verification manifest.
+
+These features keep local product records outside ordinary diagram JSON. Cloud storage, team collaboration, enterprise identity, hosted AI, and telemetry are not part of this edition. See [Local product expansions](../docs/editor-local-expansions.md) for the exact mappings, loss reports, offline restrictions, extension security model, schema migration rules, and signing handoff.
+
 ## Checks
 
 ```powershell

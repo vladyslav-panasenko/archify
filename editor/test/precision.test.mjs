@@ -168,6 +168,27 @@ test("source watchers ignore late responses after cleanup and report changes or 
   assert.equal(results.at(-1).error, "missing");
 });
 
+test("source watchers rerun a focus check queued behind the initial request", async () => {
+  const events = new EventTarget(), results = [], pending = [];
+  const stop = watchSource({
+    url: "/a",
+    revision: "a",
+    events,
+    interval: 60000,
+    onResult: (result) => results.push(result),
+    fetcher: () => new Promise((resolve) => pending.push(resolve)),
+  });
+  events.dispatchEvent(new Event("focus"));
+  assert.equal(pending.length, 1);
+  pending.shift()({ ok: true, json: async () => ({ revision: "a" }) });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(pending.length, 1);
+  pending.shift()({ ok: true, json: async () => ({ revision: "b" }) });
+  await new Promise((resolve) => setImmediate(resolve));
+  stop();
+  assert.deepEqual(results, [null, { revision: "b" }]);
+});
+
 import { automaticLabelPoint } from "../src/label-placement.mjs";
 test("optimized label placement matches exhaustive placement for dense and sparse layouts", () => {
   function reference(point, label, boxes) {

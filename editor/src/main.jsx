@@ -115,6 +115,7 @@ import RefinementPanel from "./RefinementPanel.jsx";
 import ExtensionsPanel from "./ExtensionsPanel.jsx";
 import DiagramPacksPanel from "./DiagramPacksPanel.jsx";
 import PortsPanel from "./PortsPanel.jsx";
+import VersionHistoryPanel from "./VersionHistoryPanel.jsx";
 
 const sides = {
   top: Position.Top,
@@ -185,6 +186,7 @@ function ComponentNode({ data, selected }) {
           />
         </React.Fragment>
       ))}
+      {(data.ports || []).map((port) => <span key={port.id} className={`persisted-port port-${port.side}`} style={{ "--port-offset": `${port.offset * 100}%` }} title={port.label || port.id} aria-label={`Port ${port.label || port.id}, ${port.side} ${Math.round(port.offset * 100)} percent`} />)}
       <span className="kind-icon" aria-hidden="true">
         {kinds[data.type] || "•"}
       </span>
@@ -469,6 +471,7 @@ function printRenderedHtml(html, pageSize) {
 function App() {
   const [state, setState] = useState(null),
     [draft, setDraft] = useState(null);
+  useEffect(() => { const accent = localStorage.getItem("archify-pack-theme:v1"); if (/^#[0-9a-f]{6}$/i.test(accent || "")) document.documentElement.style.setProperty("--pack-accent", accent); }, []);
   const [unsupportedSource, setUnsupportedSource] = useState(null);
   // React Flow measurements are presentation state, never diagram JSON. Keep
   // them across coordinate updates or React Flow hides and remeasures each node.
@@ -735,7 +738,9 @@ function App() {
     setEdgeIndex(null);
     setError("");
     setNotice(
-      data.writable
+      data.offline
+        ? "Browser-only offline edition. JSON editing, canvas tools, downloads, and recovery are available; compiler and workspace operations require the local edition."
+        : data.writable
         ? "Local file opened."
         : "Sample opened. Import a JSON file to begin.",
     );
@@ -1313,13 +1318,14 @@ function App() {
     visibleIds,
   ]);
   const edges = useMemo(
-    () =>
-      connections(documentModel).map((e, index) => ({
+    () => {
+      const portSides = new Map((documentModel?.components || []).flatMap((component) => (component.ports || []).map((port) => [port.id, port.side])));
+      return connections(documentModel).map((e, index) => ({
         id: `e:${index}`,
         source: `c:${e.from}`,
         target: `c:${e.to}`,
-        sourceHandle: `source-${e.fromSide || "right"}`,
-        targetHandle: `target-${e.toSide || "left"}`,
+        sourceHandle: `source-${portSides.get(e.fromPort) || e.fromSide || "right"}`,
+        targetHandle: `target-${portSides.get(e.toPort) || e.toSide || "left"}`,
         data: {
           ...(options.edgeData?.(documentModel, e) || e),
           editorBoxes: components(documentModel),
@@ -1330,7 +1336,8 @@ function App() {
         markerEnd: { type: "arrowclosed", color: "#82929c" },
         ariaLabel: `Connection ${e.from} to ${e.to}${e.label ? `, ${e.label}` : ""}`,
         hidden: !visibleIds.has(e.from) || !visibleIds.has(e.to),
-      })),
+      }));
+    },
     [documentModel, edgeIndex, visibleIds],
   );
   // Overlap diagnostics describe committed edits; dragging must not run the
@@ -1773,7 +1780,8 @@ function App() {
             )}
             <button
               className="render-button"
-              disabled={!state || busy || rawDirty || !!draft}
+               disabled={!state || busy || rawDirty || !!draft || session?.compilerAvailable === false}
+               title={session?.compilerAvailable === false ? "HTML rendering requires the local or desktop edition." : undefined}
               onClick={() =>
                 act(async () => {
                   const result = await request("render", state.present);
@@ -1790,7 +1798,8 @@ function App() {
               setNotice("Render cancelled. Your draft is unchanged.");
             }}>Cancel render</button>}
             <button
-              disabled={!state || busy || rawDirty || !!draft}
+              disabled={!state || busy || rawDirty || !!draft || session?.compilerAvailable === false}
+              title={session?.compilerAvailable === false ? "Compiler validation requires the local or desktop edition; offline edits still use the bundled JSON contract." : undefined}
               onClick={() =>
                 act(async () => {
                   await request("render", state.present);
@@ -2737,8 +2746,10 @@ function App() {
               <BatchPanel token={session.token} />
             ) : panel === "comments" ? (
               <CommentsPanel document={state.present} identity={session.recoveryKey} />
+            ) : panel === "versions" ? (
+              <VersionHistoryPanel token={session.token} workspaceId={session.workspaceId} revision={session.revision} onRestore={(next) => act(async () => { await request("validate", next); change(next); setSelection([]); setEdgeIndex(null); setNotice("Saved version restored as one undoable draft. Save remains separate."); })} />
             ) : panel === "interchange" ? (
-              <InterchangePanel document={state.present} onImport={(next) => act(async () => { await request("validate", next); load(importedSession(session, next, "imported-mermaid.architecture.json")); setSaved(""); setNotice("Mermaid imported as a new architecture draft. Review the loss report before saving."); })} onDownload={(value, name, type) => download(value, name, type)} />
+              <InterchangePanel document={state.present} onImport={(next, losses) => act(async () => { await request("validate", next); load(importedSession(session, next, "imported-mermaid.architecture.json")); setSaved(""); setNotice(`Mermaid imported as a new architecture draft with ${losses.length} unsupported statement${losses.length === 1 ? "" : "s"}. Review the loss report before saving.`); })} onDownload={(value, name, type) => download(value, name, type)} />
             ) : panel === "refinement" ? (
               <RefinementPanel document={state.present} onValidate={validateCandidate} onApply={(next) => { change(next); setNotice("Selected stable-ID overrides applied as one undoable change."); }} onDownload={(value, name) => download(JSON.stringify(value, null, 2) + "\n", name, "application/json")} />
             ) : panel === "extensions" ? (

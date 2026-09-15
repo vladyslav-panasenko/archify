@@ -15,7 +15,7 @@ const copy = async (from, to = from) => {
   await fs.mkdir(path.dirname(target), { recursive: true });
   await fs.cp(source, target, { recursive: true });
 };
-for (const entry of ["editor/dist", "editor/src", "editor/server.mjs", "editor/workspace.mjs", "archify/assets", "archify/renderers", "archify/schemas", "archify/examples", "LICENSE", "THIRD_PARTY_NOTICES.md"])
+for (const entry of ["editor/dist", "editor/offline-dist", "editor/src", "editor/desktop", "editor/server.mjs", "editor/workspace.mjs", "archify/assets", "archify/renderers", "archify/schemas", "archify/examples", "LICENSE", "THIRD_PARTY_NOTICES.md"])
   await copy(entry);
 const manifest = {
   name: "archify-local-editor",
@@ -23,7 +23,7 @@ const manifest = {
   private: true,
   type: "module",
   engines: sourcePackage.engines,
-  scripts: { start: "node editor/server.mjs" },
+  scripts: { start: "node editor/server.mjs", desktop: "node editor/desktop/launcher.mjs" },
   dependencies: sourcePackage.dependencies,
 };
 await fs.writeFile(path.join(stage, "package.json"), JSON.stringify(manifest, null, 2) + "\n");
@@ -32,7 +32,7 @@ lock.name = manifest.name;
 lock.version = manifest.version;
 lock.packages[""] = { name: manifest.name, version: manifest.version, dependencies: manifest.dependencies, engines: manifest.engines };
 await fs.writeFile(path.join(stage, "npm-shrinkwrap.json"), JSON.stringify(lock, null, 2) + "\n");
-await fs.writeFile(path.join(stage, "README.md"), "# Archify Local Editor\n\nRun `npm ci`, then `npm start`. See the repository editor guide for file and workspace options.\n");
+await fs.writeFile(path.join(stage, "README.md"), "# Archify Local Editor\n\nRun `npm ci`, then `npm start`, or run `npm run desktop` for a dedicated local app window. The `editor/offline-dist` folder is the browser-only edition and must be served from a static origin once before service-worker offline reload. See the repository editor guide for file and workspace options.\n");
 await fs.mkdir(release, { recursive: true });
 const packed = process.platform === "win32"
   ? spawnSync(process.env.ComSpec, ["/d", "/s", "/c", `npm pack --pack-destination ${path.relative(stage, release)}`], { cwd: stage, stdio: "inherit" })

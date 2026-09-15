@@ -9,9 +9,14 @@ export function watchSource({
 }) {
   let stopped = false,
     pending = false,
+    queued = false,
     controller;
   const check = async () => {
-    if (stopped || pending) return;
+    if (stopped) return;
+    if (pending) {
+      queued = true;
+      return;
+    }
     pending = true;
     controller = new AbortController();
     try {
@@ -30,6 +35,10 @@ export function watchSource({
         onResult({ error: error.message });
     } finally {
       pending = false;
+      if (queued && !stopped) {
+        queued = false;
+        void check();
+      }
     }
   };
   const timer = setInterval(check, interval);

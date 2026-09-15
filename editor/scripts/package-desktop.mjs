@@ -1,0 +1,10 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
+const editor = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."), repo = path.resolve(editor, ".."), version = JSON.parse(await fs.readFile(path.join(editor, "package.json"))).version;
+const archive = path.join(repo, "release", `archify-local-editor-${version}.tgz`), bytes = await fs.readFile(archive), sha256 = createHash("sha256").update(bytes).digest("hex").toUpperCase();
+const manifest = { format: "archify-desktop-release", version: 1, productVersion: version, archive: path.basename(archive), bytes: bytes.length, sha256, signed: false, launch: { windows: "editor\\desktop\\archify-editor.cmd", macosLinux: "editor/desktop/archify-editor.sh" }, signing: { status: "human-owned", note: "Sign the immutable archive and installer with the release owner's platform identity, then record the signature and trusted-update verification." } };
+await fs.writeFile(`${archive}.sha256`, `${sha256}  ${path.basename(archive)}\n`);
+await fs.writeFile(path.join(repo, "release", `archify-desktop-${version}.json`), JSON.stringify(manifest, null, 2) + "\n");
+console.log(JSON.stringify(manifest, null, 2));
