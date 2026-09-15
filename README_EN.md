@@ -10,6 +10,8 @@
 
 # Archify
 
+This private copy includes a **[visual JSON editor](editor/README.md)** for all five diagram types, with mouse layout editing, local draft recovery, and Archify HTML generation. See the [feature list](docs/editor-features.md). Start with `cd editor`, `npm ci`, `npm run build`, then `npm start`.
+
 **Turn a codebase or system description into a polished, interactive system map — directly in chat.**
 
 Archify is a Node.js rendering and validation system for Cursor, Claude Code, Codex CLI, and OpenCode. Agents produce typed JSON IR; Archify deterministically compiles it into HTML/SVG.
@@ -38,8 +40,11 @@ Using Cursor? Open the [agent-aware quick start](https://tt-a1i.github.io/archif
 ## ❤️ Sponsors
 
 <table>
-  <tr><td align="center" width="240"><a href="https://apinebula.ai/ref/wywnaATT"><img src="docs/assets/sponsors/apinebula-archify.jpg" alt="APINEBULA" width="200" /></a><br/><strong><a href="https://apinebula.ai/ref/wywnaATT">APINEBULA</a></strong></td><td>APINEBULA sponsors Archify with one API for Claude, GPT, Gemini, and more. <a href="https://apinebula.ai/ref/wywnaATT">Register through Archify</a> and use <strong><code>Archify</code></strong> for <strong>10% off</strong>.</td></tr>
-  <tr><td align="center" width="240"><a href="https://github.com/EverMind-AI/Raven"><img src="docs/assets/sponsors/evermind-archify-raven.png" alt="Archify × Raven" width="200" /></a><br/><strong><a href="https://github.com/EverMind-AI">EverMind</a> · <a href="https://github.com/EverMind-AI/Raven">Raven</a></strong></td><td>EverMind sponsors Archify and builds memory infrastructure for agents. Its <a href="https://github.com/EverMind-AI/Raven"><strong>Raven</strong></a> harness supports Archify as a Skill for verified, interactive system maps.</td></tr>
+<tr>
+  <td align="center" width="240"><a href="https://supercode.sh/?utm_source=archify"><img src="https://cdn.supercode.sh/sponsors/supercode-logo.png" alt="Supercode" width="200"/></a><br/><strong><a href="https://supercode.sh/?utm_source=archify">supercode.sh</a></strong></td>
+<td><a href="https://supercode.sh/?utm_source=archify">Supercode</a> sponsors Archify and enhances Codex and Cursor with token optimization, curated Skills, and spec-driven development. Archify is featured as a <a href="https://supercode.sh/en/skills/tt-a1i/archify/archify">Supercode Editor’s Choice</a> skill.<br/><br/><a href="https://supercode.sh/en/skills/tt-a1i/archify/archify"><img src="https://supercode.sh/badges/editors-choice.svg" alt="Supercode Editor’s Choice — Archify" width="240" height="55"/></a></td>
+</tr>
+<tr><td align="center" width="240"><a href="https://github.com/EverMind-AI/Raven"><img src="docs/assets/sponsors/evermind-archify-raven.png" alt="Archify × Raven" width="200" /></a><br/><strong><a href="https://github.com/EverMind-AI">EverMind</a> · <a href="https://github.com/EverMind-AI/Raven">Raven</a></strong></td><td>EverMind sponsors Archify and builds memory infrastructure for agents. Its <a href="https://github.com/EverMind-AI/Raven"><strong>Raven</strong></a> harness supports Archify as a Skill for verified, interactive system maps.</td></tr>
 </table>
 
 > Want to sponsor Archify? [Contact us by email.](mailto:2801884530@qq.com)
@@ -54,10 +59,10 @@ These are generated Archify artifacts, not product mockups. Click a frame to ope
   <sub><strong>Three real generated artifacts.</strong> Signal Flow · Blueprint · Classic · <a href="https://tt-a1i.github.io/archify/gallery.html">open the interactive Proof Lab ↗</a></sub>
 </p>
 
-| Guided story | Route probe | Semantic lens |
-|---|---|---|
+| Guided story                                                                                                                                                                                                       | Route probe                                                                                                                                                                                                       | Semantic lens                                                                                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [![Agent workflow playing one authored chapter](docs/assets/archify-demo-story.png)](https://tt-a1i.github.io/archify/gallery/artifacts/agent-tool-call.workflow.html?theme=dark&present=1&play=1#view=happy-path) | [![Cache-miss sequence showing the Web App to Postgres route](docs/assets/archify-demo-route.png)](https://tt-a1i.github.io/archify/gallery/artifacts/cache-miss.sequence.html?theme=dark&present=1#route=web~db) | [![Production architecture comparing backend and database roles](docs/assets/archify-demo-lens.png)](https://tt-a1i.github.io/archify/gallery/artifacts/production-deployment.architecture.html?theme=dark&present=1#lens=backend~database) |
-| Play one finite named chapter. | Inspect the shortest authored directed path. | Compare real traffic between semantic roles. |
+| Play one finite named chapter.                                                                                                                                                                                     | Inspect the shortest authored directed path.                                                                                                                                                                      | Compare real traffic between semantic roles.                                                                                                                                                                                                |
 
 The [Proof Lab](https://tt-a1i.github.io/archify/gallery.html) contains all 11 checked-in scenarios, their JSON sources, named views, and validation receipts.
 
@@ -71,8 +76,8 @@ Archify traced [`mco-org/mco`](https://github.com/mco-org/mco) at `9f1a1cf` and 
 
 Same diagram, two themes, one click to switch:
 
-| Dark | Light |
-|---|---|
+| Dark                                        | Light                                         |
+| ------------------------------------------- | --------------------------------------------- |
 | ![Dark theme](docs/assets/archify-dark.png) | ![Light theme](docs/assets/archify-light.png) |
 
 The Export menu copies PNG to the clipboard and downloads static or motion formats:
@@ -137,13 +142,13 @@ Continue with focused requests such as `add Redis`, `move auth to the left`, or 
 
 ## Choose the right diagram
 
-| Type | Best for | Include in your prompt |
-|---|---|---|
-| **Architecture** | Components, services, storage, boundaries | Scope, core components, primary path |
-| **Workflow** | CI/CD, approvals, tool calls, runbooks | Participants, order, branches, exceptions |
-| **Sequence** | API calls, cache fallback, auth, async traces | Callers, callees, returns, timing |
-| **Data Flow** | Pipelines, lineage, PII, consumers | Sources, transforms, stores, boundaries |
-| **Lifecycle** | States, retries, waits, terminal outcomes | States, events, retry and cancellation paths |
+| Type             | Best for                                      | Include in your prompt                       |
+| ---------------- | --------------------------------------------- | -------------------------------------------- |
+| **Architecture** | Components, services, storage, boundaries     | Scope, core components, primary path         |
+| **Workflow**     | CI/CD, approvals, tool calls, runbooks        | Participants, order, branches, exceptions    |
+| **Sequence**     | API calls, cache fallback, auth, async traces | Callers, callees, returns, timing            |
+| **Data Flow**    | Pipelines, lineage, PII, consumers            | Sources, transforms, stores, boundaries      |
+| **Lifecycle**    | States, retries, waits, terminal outcomes     | States, events, retry and cancellation paths |
 
 Architecture's optional `deployment-ownership` profile fails closed when authored owners, region placement, private database scope, or named crossings are missing; it is never implicit and does not inspect live infrastructure. See the [checked deployment proof](https://tt-a1i.github.io/archify/gallery.html#proof-deployment-ownership).
 
@@ -193,13 +198,13 @@ Archify is not a general-purpose drawing editor or a Mermaid theme. It turns tec
 
 ## How it works
 
-| Step | What happens |
-|---|---|
-| **Generate** | The agent creates typed JSON IR from your description. |
-| **Validate** | Bundled validators and layout rules check the source; failures identify the exact local repair in machine-readable JSON. |
-| **Preview (optional)** | A loopback-only desktop session watches one source and reloads only verified revisions; failures keep the last-good artifact. |
-| **Deliver** | A same-directory candidate is rendered and checked; only a passing artifact atomically replaces the target, then optional `--open` launches that exact file. |
-| **Iterate** | The agent updates the source while unrelated structure stays stable. |
+| Step                   | What happens                                                                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Generate**           | The agent creates typed JSON IR from your description.                                                                                                       |
+| **Validate**           | Bundled validators and layout rules check the source; failures identify the exact local repair in machine-readable JSON.                                     |
+| **Preview (optional)** | A loopback-only desktop session watches one source and reloads only verified revisions; failures keep the last-good artifact.                                |
+| **Deliver**            | A same-directory candidate is rendered and checked; only a passing artifact atomically replaces the target, then optional `--open` launches that exact file. |
+| **Iterate**            | The agent updates the source while unrelated structure stays stable.                                                                                         |
 
 Useful repository commands:
 
@@ -235,18 +240,18 @@ Settings:
 
 ## Explore and share the output
 
-| Action | Control |
-|---|---|
-| Open the factual Diagram Guide | <kbd>?</kbd> |
-| Find and focus a semantic node | <kbd>/</kbd> |
-| Trace upstream/downstream authored reach | Focus a node → `Upstream` / `Downstream` |
-| Probe a directed route and inspect its journey | <kbd>R</kbd> or `PATH` |
-| Compare one or two semantic roles | <kbd>L</kbd> or `LENS` |
-| Open the live overview radar | <kbd>M</kbd> or `MAP` |
-| Play a guided story / change chapter | <kbd>P</kbd> / <kbd>[</kbd> <kbd>]</kbd> |
-| Enter Presentation Stage | <kbd>F</kbd> |
+| Action                                                        | Control                                    |
+| ------------------------------------------------------------- | ------------------------------------------ |
+| Open the factual Diagram Guide                                | <kbd>?</kbd>                               |
+| Find and focus a semantic node                                | <kbd>/</kbd>                               |
+| Trace upstream/downstream authored reach                      | Focus a node → `Upstream` / `Downstream`   |
+| Probe a directed route and inspect its journey                | <kbd>R</kbd> or `PATH`                     |
+| Compare one or two semantic roles                             | <kbd>L</kbd> or `LENS`                     |
+| Open the live overview radar                                  | <kbd>M</kbd> or `MAP`                      |
+| Play a guided story / change chapter                          | <kbd>P</kbd> / <kbd>[</kbd> <kbd>]</kbd>   |
+| Enter Presentation Stage                                      | <kbd>F</kbd>                               |
 | Choose visual style (`S` cycles) / toggle theme / open Export | <kbd>S</kbd> / <kbd>T</kbd> / <kbd>E</kbd> |
-| Zoom or reset | <kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd> |
+| Zoom or reset                                                 | <kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd> |
 
 Stable links can restore `#focus=<id>`, `#focus=<id>&reach=upstream|downstream`, `#relation=<id>`, `#route=<source>~<target>`, `#lens=<kind>~<kind>`, and `#view=<view-id>`. Reader-driven motion is finite, respects `prefers-reduced-motion`, and never enters canonical exports.
 
@@ -254,15 +259,15 @@ The complete generation and viewer contract lives in [`archify/SKILL.md`](archif
 
 ## Installation options
 
-| Surface | Install location or method | Capability |
-|---|---|---|
-| **Raven** | Manual ZIP into `~/.raven/workspace/skills` → `~/.raven/workspace/skills/archify` | Full renderer + validation workflow |
-| **Claude Code** | `~/.claude/skills/` or `.claude/skills/` | Full renderer + validation workflow |
-| **Codex CLI** | `~/.agents/skills/` or `.agents/skills/` | Full renderer + validation workflow |
-| **opencode** | `~/.config/opencode/skills/`, `.opencode/skills/`, or `.agents/skills/` | Full renderer + validation workflow |
-| **Claude.ai** | Upload `archify.zip` under Settings → Capabilities → Skills | Depends on Node.js access in the sandbox |
-| **Project Knowledge** | Upload `archify.zip` to the project | Prompt-driven architecture fallback |
-| **DeepSeek Harness** | Opt-in: `dsh plugin --profile web add @tt-a1i/archify-dsh@0.1.0`. Invoke: `Use the archify skill to map this repository's runtime architecture.` Remove: `dsh plugin --profile web remove @tt-a1i/archify-dsh`. | Community integration for developer-preview `@deepseek-ai/dsh@0.1.0-rc.6`; Node `^22.19.0 \|\| >=24.0.0`; not an official DeepSeek product. No telemetry. Shell files need exact workspace paths, not Web Produced Files. [Details](integrations/deepseek-harness/README.md). |
+| Surface               | Install location or method                                                                                                                                                                                      | Capability                                                                                                                                                                                                                                                                    |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Raven**             | Manual ZIP into `~/.raven/workspace/skills` → `~/.raven/workspace/skills/archify`                                                                                                                               | Full renderer + validation workflow                                                                                                                                                                                                                                           |
+| **Claude Code**       | `~/.claude/skills/` or `.claude/skills/`                                                                                                                                                                        | Full renderer + validation workflow                                                                                                                                                                                                                                           |
+| **Codex CLI**         | `~/.agents/skills/` or `.agents/skills/`                                                                                                                                                                        | Full renderer + validation workflow                                                                                                                                                                                                                                           |
+| **opencode**          | `~/.config/opencode/skills/`, `.opencode/skills/`, or `.agents/skills/`                                                                                                                                         | Full renderer + validation workflow                                                                                                                                                                                                                                           |
+| **Claude.ai**         | Upload `archify.zip` under Settings → Capabilities → Skills                                                                                                                                                     | Depends on Node.js access in the sandbox                                                                                                                                                                                                                                      |
+| **Project Knowledge** | Upload `archify.zip` to the project                                                                                                                                                                             | Prompt-driven architecture fallback                                                                                                                                                                                                                                           |
+| **DeepSeek Harness**  | Opt-in: `dsh plugin --profile web add @tt-a1i/archify-dsh@0.1.0`. Invoke: `Use the archify skill to map this repository's runtime architecture.` Remove: `dsh plugin --profile web remove @tt-a1i/archify-dsh`. | Community integration for developer-preview `@deepseek-ai/dsh@0.1.0-rc.6`; Node `^22.19.0 \|\| >=24.0.0`; not an official DeepSeek product. No telemetry. Shell files need exact workspace paths, not Web Produced Files. [Details](integrations/deepseek-harness/README.md). |
 
 ## Reference and scope
 
@@ -284,3 +289,7 @@ Issues, pull requests, and real-world diagrams are welcome. Start with the [cont
 ## Star History
 
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/tt-a1i/archify/star-history/assets/star-history-dark.svg" /><img alt="Star History" src="https://raw.githubusercontent.com/tt-a1i/archify/star-history/assets/star-history-light.svg" /></picture></p>
+
+The editor remembers each document's zoom, pan, selected components and inspector panel locally. Views are bounded to 50 recent documents and stay outside exported JSON; recovered unapplied text takes precedence.
+
+Use Document > History to see readable edit descriptions and jump through up to 100 retained edits. Jumping preserves redo; making a new edit replaces future states. Recovered unsaved drafts can retain up to 20 past/future states within a bounded local history budget.

@@ -29,13 +29,14 @@ test("sequence reorder preserves messages; spacing cannot cross message or activ
   assert.deepEqual(moved.activations, doc.activations);
   assert.equal(moved.participants[1].pos, undefined);
   assert.equal(moved.participants[1].order, undefined);
-  const spaced = patchConnection(doc, 0, { y: 186 });
+  const spacedY = doc.messages[0].y + 10;
+  const spaced = patchConnection(doc, 0, { y: spacedY });
   validate(spaced);
-  assert.equal(spaced.messages[0].y, 186);
+  assert.equal(spaced.messages[0].y, spacedY);
   assert.throws(() => patchConnection(doc, 0, { y: 300 }), /ordering/);
   assert.equal(
-    patchConnection(doc, 0, { labelAt: [900, 900] }).messages[0].y,
-    219,
+    patchConnection(doc, 0, { labelAt: [900, spacedY - 12] }).messages[0].y,
+    spacedY,
   );
   assert.throws(
     () => patchComponent(doc, node.id, { size: [200, 90] }),
