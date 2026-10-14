@@ -1,71 +1,75 @@
-function band(lane) {
-  return lane === "main"
-    ? { xs: [94, 248, 402, 556, 710], y: 126, size: [118, 62] }
-    : lane === "terminal"
-      ? { xs: [402, 556, 710], y: 450, size: [118, 58] }
-      : { xs: [402, 556, 710], y: 278, size: [126, 58] };
+const automatic = () => {
+  throw new Error("Lifecycle v3 geometry is automatic. Edit states, transitions, or mainPath instead.");
+};
+const layouts = new WeakMap();
+function layout(document) {
+  if (layouts.has(document)) return layouts.get(document);
+  const positions = new Map((document.mainPath || []).map((id, index) => [id, [56 + index * 220, 80]]));
+  const adjacent = new Map(document.states.map((node) => [node.id, []]));
+  for (const edge of document.transitions) {
+    adjacent.get(edge.from)?.push(edge.to);
+    adjacent.get(edge.to)?.push(edge.from);
+  }
+  const queue = [...positions.keys()], occupied = new Map();
+  for (let index = 0; index < queue.length; index++) {
+    const id = queue[index], [x, y] = positions.get(id);
+    for (const other of adjacent.get(id) || []) {
+      if (positions.has(other)) continue;
+      const row = Math.round((y - 80) / 150) + 1;
+      const column = Math.max(Math.round((x - 56) / 220), occupied.get(row) || 0);
+      occupied.set(row, column + 1);
+      positions.set(other, [56 + column * 220, 80 + row * 150]);
+      queue.push(other);
+    }
+  }
+  for (const node of document.states) if (!positions.has(node.id)) positions.set(node.id, [56 + positions.size * 220, 230]);
+  layouts.set(document, positions);
+  return positions;
 }
 export const lifecycle = {
   nodesKey: "states",
   edgesKey: "transitions",
-  minSize: [48, 36],
-  columns: 5,
-  fields: ["col", "yOffset"],
-  hint: "Drag horizontally between columns. Vertical dragging adjusts the offset; lane membership stays unchanged. Event lanes share a band.",
-  routes: [
-    "auto",
-    "straight",
-    "drop",
-    "bottom-channel",
-    "top-channel",
-    "right-channel",
-    "left-channel",
-  ],
+  minSize: [140, 64],
+  fields: [],
+  movable: false,
+  resizable: false,
+  routes: [],
+  hint: "Lifecycle v3 uses automatic geometry. This canvas is a schematic topology preview; Render shows the authoritative layout. Edit the main path and connections in Structure.",
   project(document, node) {
-    const b = band(node.lane),
-      size = [node.width || b.size[0], node.height || b.size[1]];
-    return {
-      ...node,
-      size,
-      pos: [
-        (b.xs[node.col] ?? b.xs.at(-1)) - size[0] / 2,
-        b.y + (node.yOffset || 0),
-      ],
-    };
+    return { ...node, size: [180, 64], pos: layout(document).get(node.id) };
   },
-  move(document, node, [x, y]) {
-    const b = band(node.lane),
-      center = x + (node.width || b.size[0]) / 2;
-    node.col = b.xs.reduce(
-      (best, value, index) =>
-        Math.abs(value - center) < Math.abs(b.xs[best] - center) ? index : best,
-      0,
-    );
-    node.yOffset = Math.round((y - b.y) * 100) / 100;
+  move: automatic,
+  regions: () => [],
+  patchNode(document, node, key, value) {
+    if (["pos", "size", "col", "lane", "yOffset", "width", "height"].includes(key)) automatic();
+    if (["type", "step"].includes(key)) {
+      if (value === undefined) delete node[key];
+      else node[key] = value;
+      return true;
+    }
+    return false;
   },
-  regions(document) {
-    return ["main", "event", "terminal"]
-      .map((key) => {
-        const lanes = document.lanes.filter((l) =>
-          key === "event" ? !["main", "terminal"].includes(l.id) : l.id === key,
-        );
-        return {
-          id: `band:${key}`,
-          label: lanes.map((l) => l.label).join(" / "),
-          pos: [20, band(key).y - 25],
-          size: [800, 120],
-        };
-      })
-      .filter((region) => region.label);
+  patchConnection(document, index, patch) {
+    const edge = document.transitions[index];
+    for (const [key, value] of Object.entries(patch)) {
+      if (!["label", "note", "variant"].includes(key)) automatic();
+      if (value === undefined) delete edge[key];
+      else edge[key] = value;
+    }
   },
   validate(document) {
-    if (!document.lanes?.length) throw new Error("Lifecycle needs lanes.");
-    if(!document.lanes.some(l=>l.id==='main'))throw new Error('Lifecycle needs the main lane.');
-    for (const node of document.states) {
-      if (!document.lanes.some((l) => l.id === node.lane))
-        throw new Error(`Unknown lane for ${node.id}.`);
-      if (!Number.isInteger(node.col) || node.col < 0 || node.col >= band(node.lane).xs.length)
-        throw new Error(`Lane ${node.lane} supports columns 0–${band(node.lane).xs.length-1}.`);
-    }
+    if (document.schema_version !== 3)
+      throw new Error("Lifecycle v1/v2 is unsupported by Archify 3.1.0. Convert a copy explicitly to lifecycle v3; opening and saving never migrate it.");
+    const ids = new Set(document.states.map((node) => node.id));
+    const main = document.mainPath;
+    if (!Array.isArray(main) || main.length < 2 || new Set(main).size !== main.length || main.some((id) => !ids.has(id)))
+      throw new Error("Lifecycle mainPath needs at least two distinct existing states.");
+    for (let index = 1; index < main.length; index++)
+      if (!document.transitions.some((edge) => edge.from === main[index - 1] && edge.to === main[index]))
+        throw new Error(`Lifecycle mainPath needs a transition from ${main[index - 1]} to ${main[index]}.`);
+    if (document.lanes || document.states.some((node) => ["lane", "col", "yOffset", "pos", "size", "width", "height"].some((key) => node[key] !== undefined)))
+      throw new Error("Lifecycle v3 does not support authored lanes or geometry.");
+    if (document.transitions.some((edge) => ["route", "via", "labelAt", "labelDx", "labelDy", "fromSide", "toSide"].some((key) => edge[key] !== undefined)))
+      throw new Error("Lifecycle v3 does not support authored routing or label positions.");
   },
 };

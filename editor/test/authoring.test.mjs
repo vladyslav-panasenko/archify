@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 import { arrange } from "../src/arrangement.mjs";
 import { snapBox, snapPositions, snapResize } from "../src/arrangement.mjs";
 import { validate } from "../server.mjs";
-test("saving rejects dangling guided-view references before rendering", () => {
+test("saving rejects unsupported guided views before rendering without changing source", () => {
   const doc = createDiagram("architecture", "Views");
   doc.meta.views = [{ id: "v", label: "Missing", focus: ["missing"] }];
-  assert.throws(() => validate(doc), /unknown semantic id/);
+  const before = JSON.stringify(doc);
+  assert.throws(() => validate(doc), /Guided views.*unsupported/);
+  assert.equal(JSON.stringify(doc), before);
 });
 import {
   createDiagram,
@@ -15,6 +17,7 @@ import {
   saveLane,
   deleteLane,
   deleteNode,
+  saveMainPath,
 } from "../src/topology.mjs";
 import { saveStage, deleteStage } from "../src/topology.mjs";
 import {
@@ -147,13 +150,11 @@ test("sequence structural edits require explicit range policy and preserve inter
     deleteLane(createDiagram("lifecycle", "X"), 0, "terminal"),
   );
 });
-test("lifecycle authoring creates state types and reassigns terminal membership", () => {
+test("lifecycle v3 authoring edits states, transitions and an explicit main path", () => {
   let doc = createDiagram("lifecycle", "Lifecycle");
   doc = addNode(doc, {
     label: "Done",
     type: "success",
-    lane: "terminal",
-    col: 0,
   });
   doc = saveEdge(doc, null, {
     from: "node-2",
@@ -161,10 +162,13 @@ test("lifecycle authoring creates state types and reassigns terminal membership"
     label: "Complete",
   });
   validate(doc);
-  const reassigned = deleteLane(doc, 2, "main");
-  assert.equal(reassigned.states[2].lane, "main");
-  assert.deepEqual(reassigned.transitions, doc.transitions);
-  validate(reassigned);
+  const extended = saveMainPath(doc, ["node-1", "node-2", "node-3"]);
+  assert.equal(extended.schema_version, 3);
+  assert.equal(extended.states[2].lane, undefined);
+  assert.deepEqual(extended.transitions, doc.transitions);
+  validate(extended);
+  assert.throws(() => saveMainPath(doc, ["node-1", "node-3"]), /transition/);
+  assert.throws(() => deleteLane(doc, 0, "main"), /does not support lanes/);
   assert.throws(() => deleteNode(createDiagram("lifecycle", "X"), "node-1"));
 });
 test("dataflow stage deletion remaps indices and retains flow endpoints", () => {
@@ -208,21 +212,11 @@ import {
   saveView,
   deleteView,
 } from "../src/structure.mjs";
-test("guided views retain identity and topology deletion cleans focus references", () => {
-  let doc = saveView(sample(), null, {
-    label: "Overview",
-    note: "Focus",
-    focus: ["a", "b"],
-  });
-  const id = doc.meta.views[0].id;
-  doc = saveView(doc, 0, { label: "Renamed", focus: ["b"] });
-  assert.equal(doc.meta.views[0].id, id);
-  assert.equal(doc.meta.views[0].note, "Focus");
-  assert.throws(() =>
-    saveView(doc, null, { label: "Missing", focus: ["missing"] }),
-  );
-  assert.equal(removeSelection(doc, ["b"]).meta.views, undefined);
-  assert.equal(deleteView(doc, 0).meta.views, undefined);
+test("guided-view authoring is explicitly unavailable in Archify 3.1.0", () => {
+  const doc = sample(), before = JSON.stringify(doc);
+  assert.throws(() => saveView(doc, null, { label: "Overview", focus: ["a"] }), /unsupported/);
+  assert.throws(() => deleteView(doc, 0), /unsupported/);
+  assert.equal(JSON.stringify(doc), before);
 });
 test("boundary creation, membership and group movement preserve components and edges", () => {
   const doc = sample(),
@@ -272,7 +266,6 @@ test("reset removes only optional overrides and preserves required coordinates",
 test("bulk editing preserves individual geometry and deletion cleans references atomically", () => {
   const doc = sample();
   doc.boundaries = [{ kind: "region", label: "Group", wraps: ["a", "b"] }];
-  doc.meta.views = [{ id: "v", label: "View", focus: ["a", "c"] }];
   assert.equal(commonValue(doc, ["a", "b"], "width"), undefined);
   const next = bulkPatch(doc, ["a", "b"], "width", 150);
   assert.deepEqual(
@@ -283,7 +276,6 @@ test("bulk editing preserves individual geometry and deletion cleans references 
   const removed = removeSelection(doc, ["a", "b"]);
   assert.equal(removed.connections.length, 0);
   assert.equal(removed.boundaries.length, 0);
-  assert.deepEqual(removed.meta.views[0].focus, ["c"]);
   assert.throws(() => removeSelection(doc, ["a", "b", "c"]));
   assert.equal(doc.components.length, 3);
 });
@@ -336,7 +328,7 @@ test("clipboard remaps internal edges and positions without losing unknown field
 const sample = () => ({
   schema_version: 1,
   diagram_type: "architecture",
-  meta: { title: "Arrange" },
+  meta: { title: "Arrange", output: "diagram.html" },
   components: [
     {
       id: "a",

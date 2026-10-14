@@ -64,7 +64,8 @@ for (const [type, file, delta] of cases)
       node = components(original)[0],
       nk = nodeKey(original),
       ek = edgeKey(original);
-    const moved = roundtrip(
+    if (type === "lifecycle") assert.throws(() => moveComponents(original, new Map([[node.id, node.pos]])), /automatic/);
+    const moved = type === "lifecycle" ? original : roundtrip(
       original,
       moveComponents(
         original,
@@ -102,7 +103,8 @@ for (const [type, file, delta] of cases)
       connections(labeled).slice(1),
     );
     const routePatch = { labelAt: [200, 174] };
-    const routed = roundtrip(edged, patchConnection(edged, 0, routePatch));
+    if (type === "lifecycle") assert.throws(() => patchConnection(edged, 0, routePatch), /automatic/);
+    const routed = type === "lifecycle" ? edged : roundtrip(edged, patchConnection(edged, 0, routePatch));
     assert.deepEqual(omit(routed, [ek]), omit(edged, [ek]));
     assert.deepEqual(
       omit(connections(routed)[0], ["labelAt", "y"]),

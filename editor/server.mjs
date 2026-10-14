@@ -7,12 +7,11 @@ import { randomBytes, createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { validateSchema } from "../archify/renderers/shared/validator.mjs";
-import { validateGuidedViews } from "../archify/renderers/shared/cli.mjs";
-import { assertDocument, serialize } from "./src/document.mjs";
+import { assertCompatibility, assertDocument, serialize } from "./src/document.mjs";
 import { supportedTypes, sourceNodes } from "./src/adapters/index.mjs";
 import { createWorkspace } from "./workspace.mjs";
 import { assertResourceLimits } from "./src/resource-limits.mjs";
-import { migrateWorkflowToV2 } from "../archify/renderers/workflow/workflow-compiler.mjs";
+import { migrateWorkflowDocument } from "../archify/migrations/workflow-v2.mjs";
 import { createServerHistory } from "./src/server-history.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -23,8 +22,8 @@ export function validate(document) {
   assertResourceLimits(document);
   if (!supportedTypes.includes(document?.diagram_type))
     throw new Error("Unsupported diagram type.");
+  assertCompatibility(document);
   validateSchema(document.diagram_type, document);
-  validateGuidedViews(document.diagram_type, document);
   return assertDocument(document);
 }
 
@@ -272,7 +271,15 @@ export async function createEditorServer({
         if (req.method === "POST" && url.pathname === "/api/validate")
           return send(200, { valid: true });
         if (req.method === "POST" && url.pathname === "/api/migrate") {
-          const migration = migrateWorkflowToV2(body.document);
+          const migration = migrateWorkflowDocument(body.document);
+          if (!migration.ok) {
+            const diagnostics = [
+              ...migration.preExistingDiagnostics,
+              ...migration.migrationDiagnostics,
+              ...migration.newSchemaDiagnostics,
+            ];
+            throw Object.assign(new Error(`Workflow migration failed: ${diagnostics.map((entry) => entry.message).join("; ") || "No valid migration was produced."}`), { archifyDiagnostics: diagnostics });
+          }
           validate(migration.document);
           return send(200, migration);
         }

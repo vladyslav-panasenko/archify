@@ -8,6 +8,7 @@ import {
   deleteNode,
   saveLane,
   deleteLane,
+  saveMainPath,
   componentKinds,
   stateKinds,
 } from "./topology.mjs";
@@ -36,9 +37,21 @@ export default function TopologyPanel({ document, onChange, onSelect }) {
         Every edit can be undone.
       </p>
       <>
+        {document.diagram_type === "lifecycle" && (
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            onChange(() => saveMainPath(document, new FormData(event.currentTarget).get("mainPath").trim().split(/\s+/)));
+          }}>
+            <p className="muted">Lifecycle v3 layout and routes are automatic. Add states and transitions first, then choose the main path. Render shows the final geometry.</p>
+            <label className="field">Main path · state IDs in order
+              <input name="mainPath" defaultValue={document.mainPath.join(" ")} required />
+            </label>
+            <button>Save main path</button>
+          </form>
+        )}
         {document.diagram_type === "dataflow" ? (
           <StagesPanel document={document} onChange={onChange} />
-        ) : (
+        ) : document.diagram_type === "workflow" ? (
           <details>
             <summary>Lanes</summary>
             {document.lanes.map((lane, index) => (
@@ -110,26 +123,10 @@ export default function TopologyPanel({ document, onChange, onSelect }) {
                 New lane label
                 <input name="label" required />
               </label>
-              <>
-                {document.diagram_type === "lifecycle" && (
-                  <label className="field">
-                    Lane band
-                    <select name="id">
-                      {["main", "event", "event-2", "terminal"]
-                        .filter(
-                          (id) => !document.lanes.some((l) => l.id === id),
-                        )
-                        .map((id) => (
-                          <option key={id}>{id}</option>
-                        ))}
-                    </select>
-                  </label>
-                )}
-              </>
               <button>Add lane</button>
             </form>
           </details>
-        )}
+        ) : null}
       </>
       <details open>
         <summary>Add node</summary>
@@ -180,7 +177,7 @@ export default function TopologyPanel({ document, onChange, onSelect }) {
                   />
                 </label>
               </>
-            ) : (
+            ) : document.diagram_type === "workflow" ? (
               <>
                 <label className="field">
                   Node lane
@@ -198,15 +195,12 @@ export default function TopologyPanel({ document, onChange, onSelect }) {
                     type="number"
                     name="col"
                     min="0"
-                    max={document.diagram_type === "lifecycle" ? 4 : 5}
-                    defaultValue={Math.min(
-                      nodes.length,
-                      document.diagram_type === "lifecycle" ? 4 : 5,
-                    )}
+                    max={5}
+                    defaultValue={Math.min(nodes.length, 5)}
                   />
                 </label>
               </>
-            )}
+            ) : null}
           </>
           <button>Create node</button>
         </form>

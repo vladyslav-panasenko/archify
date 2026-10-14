@@ -16,8 +16,8 @@ export function resetFields(document, ids, kind, index = null) {
       }
   };
   if (index !== null) {
-    if (document.diagram_type === "sequence")
-      throw new Error("Sequence message Y is required and cannot be reset.");
+    if (["sequence", "lifecycle"].includes(document.diagram_type))
+      throw new Error("Sequence message Y and automatic lifecycle geometry cannot be reset.");
     const edge = connections(next)[index];
     if (!edge) throw new Error("Select a connection.");
     clear(
@@ -85,7 +85,7 @@ export function bulkPatch(document, ids, field, value) {
   return next;
 }
 export function deletionSummary(document, ids) {
-  return `${document.components.filter((c) => ids.includes(c.id)).length} components, ${(document.connections || []).filter((e) => ids.includes(e.from) || ids.includes(e.to)).length} connections, ${(document.boundaries || []).filter((b) => b.wraps.some((id) => ids.includes(id))).length} affected boundaries and ${(document.meta.views || []).filter((v) => v.focus.some((id) => ids.includes(id))).length} affected views`;
+  return `${document.components.filter((c) => ids.includes(c.id)).length} components, ${(document.connections || []).filter((e) => ids.includes(e.from) || ids.includes(e.to)).length} connections and ${(document.boundaries || []).filter((b) => b.wraps.some((id) => ids.includes(id))).length} affected boundaries`;
 }
 export function removeSelection(document, ids) {
   if (document.diagram_type !== "architecture")

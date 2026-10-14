@@ -1,5 +1,6 @@
 import * as validators from "../../archify/renderers/shared/generated-validators.mjs";
 import { schemaFor, resolveSchema } from "./settings.mjs";
+import { assertCompatibility } from "./document.mjs";
 const escapeKey = (key) => String(key).replace(/~/g, "~0").replace(/\//g, "~1");
 export const lineAt = (text, offset) =>
   text.slice(0, offset).split("\n").length;
@@ -97,6 +98,8 @@ export function inspectJson(text) {
           line: lineAt(text, start),
         };
       });
+  try { assertCompatibility(index.value); }
+  catch (error) { issues.push({ path: "", message: error.message, start: 0, line: 1 }); }
   return { ...index, issues };
 }
 export function pathAt(ranges, offset) {
@@ -149,7 +152,7 @@ export function suggestions(index, path) {
     }));
   if (!value || typeof value !== "object" || Array.isArray(value)) return [];
   return Object.entries(spec.properties || {})
-    .filter(([key]) => !Object.hasOwn(value, key))
+    .filter(([key]) => !Object.hasOwn(value, key) && !(path === "/meta" && ["views", "story"].includes(key)))
     .map(([key, property]) => {
       const s = resolveSchema(property, schemaFor(index.value.diagram_type));
       const value =

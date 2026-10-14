@@ -45,7 +45,7 @@ test("sequence reorder preserves messages; spacing cannot cross message or activ
   assert.match(await render(spaced), /<svg/);
 });
 
-test("lifecycle movement preserves lane membership and authored transitions", async () => {
+test("lifecycle v3 preserves automatic geometry while editing semantic states and transitions", async () => {
   const doc = JSON.parse(
     await fs.readFile(
       new URL(
@@ -55,17 +55,14 @@ test("lifecycle movement preserves lane membership and authored transitions", as
     ),
   );
   const node = components(doc)[0];
-  const moved = moveComponents(
-    doc,
-    new Map([[node.id, [node.pos[0] + 154, node.pos[1] + 5]]]),
-  );
-  validate(moved);
-  assert.equal(moved.states[0].col, 1);
-  assert.equal(moved.states[0].yOffset, 5);
-  assert.equal(moved.states[0].lane, doc.states[0].lane);
-  assert.deepEqual(moved.transitions, doc.transitions);
-  assert.equal(moved.states[0].pos, undefined);
-  assert.match(await render(doc), /<svg/);
+  assert.throws(() => moveComponents(doc, new Map([[node.id, [200, 200]]])), /automatic/);
+  assert.throws(() => patchComponent(doc, node.id, { size: [200, 80] }), /automatic/);
+  assert.throws(() => patchConnection(doc, 0, { labelAt: [200, 200] }), /automatic/);
+  const edited = patchConnection(patchComponent(doc, node.id, { label: "Ready" }), 0, { label: "Begin" });
+  validate(edited);
+  assert.deepEqual(edited.mainPath, doc.mainPath);
+  assert.equal(edited.states[0].pos, undefined);
+  assert.match(await render(edited), /<svg/);
 });
 
 test("dataflow movement updates stage/row and retains flows and metadata", async () => {

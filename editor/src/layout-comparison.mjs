@@ -4,11 +4,13 @@ const fields = {
   architecture: ["pos", "size"],
   workflow: ["col", "yOffset", "width", "height"],
   dataflow: ["stage", "row", "yOffset", "width", "height"],
-  lifecycle: ["col", "yOffset", "width", "height"],
+  lifecycle: [],
   sequence: [],
 };
 const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 export function compareLayout(current, candidate, locked = []) {
+  if (current.diagram_type === "lifecycle")
+    throw new Error("Lifecycle v3 layout is automatic. Compare source changes instead.");
   assertDocument(candidate);
   if (
     current.diagram_type !== candidate.diagram_type ||

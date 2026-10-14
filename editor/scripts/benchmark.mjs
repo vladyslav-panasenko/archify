@@ -14,6 +14,7 @@ export const diagram = {
   diagram_type: "architecture",
   meta: {
     title: "500-node benchmark",
+    output: "diagram.html",
     viewBox: [3600, 2200],
     quality_profile: "standard",
   },

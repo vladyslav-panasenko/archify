@@ -336,7 +336,12 @@ function ConnectionEdge(props) {
         labelBgStyle={{ fill: "#f8fafb", fillOpacity: 0.96 }}
         labelBgPadding={[5, 3]}
       />
-      {data.label && (
+      {data.label && data.labelEditing === false && (
+        <EdgeLabelRenderer>
+          <div className="connection-label nodrag nopan" style={{ position: "absolute", transform: `translate(-50%, -50%) translate(${point[0]}px, ${point[1]}px)` }}>{data.label}</div>
+        </EdgeLabelRenderer>
+      )}
+      {data.label && data.labelEditing !== false && (
         <EdgeLabelRenderer>
           <DragPoint
             point={point}
@@ -350,7 +355,7 @@ function ConnectionEdge(props) {
           </DragPoint>
         </EdgeLabelRenderer>
       )}
-      {props.selected && (
+      {props.selected && data.labelEditing !== false && (
         <EdgeLabelRenderer>
           {data.segmentEditing &&
             routeSegments(data).map((segment) => (
@@ -1300,7 +1305,7 @@ function App() {
         position: { x: c.pos[0], y: c.pos[1] },
         data: { ...c, locked: locked.includes(c.id) },
         draggable:
-          !locked.includes(c.id) && !busy && !rawDirty && !drawConnections,
+          options.movable !== false && !locked.includes(c.id) && !busy && !rawDirty && !drawConnections,
         selected: selection.includes(c.id),
         style: { width: c.size[0], height: c.size[1] },
         ariaLabel: `${c.label}, ${c.type}`,
@@ -1330,6 +1335,7 @@ function App() {
           ...(options.edgeData?.(documentModel, e) || e),
           editorBoxes: components(documentModel),
           segmentEditing: documentModel?.diagram_type === "architecture",
+          labelEditing: documentModel?.diagram_type !== "lifecycle",
         },
         type: "connection",
         selected: index === edgeIndex,
@@ -1406,6 +1412,7 @@ function App() {
     !state ||
     busy ||
     !!draft ||
+    (key === "compare" && state.present.diagram_type === "lifecycle") ||
     (rawDirty && !["json", "inspector"].includes(key));
   function openPanel(key) {
     if (panelDisabled(key)) return;
@@ -1573,6 +1580,7 @@ function App() {
     if (delta && selection.length) {
       event.preventDefault();
       event.stopPropagation();
+      if (options.movable === false) { setNotice(options.hint); return; }
       const step = event.shiftKey ? 10 : 1;
       change(
         moveComponents(
@@ -2401,8 +2409,7 @@ function App() {
                 )}
             </div>
             <div className="canvas-help">
-              Drag to move · Shift to select several · Space + drag to pan ·
-              Arrow keys to nudge
+              {options.movable === false ? "Automatic layout · Select to edit · Space + drag to pan" : "Drag to move · Shift to select several · Space + drag to pan · Arrow keys to nudge"}
             </div>
           </main>
           <aside
@@ -2876,7 +2883,7 @@ function App() {
                           </details>
                         )}
                       <legend>Component</legend>
-                      {documentModel.diagram_type !== "sequence" && (
+                      {!["sequence", "lifecycle"].includes(documentModel.diagram_type) && (
                         <details>
                           <summary>Reset manual layout</summary>
                           <div className="button-row">
@@ -2959,7 +2966,7 @@ function App() {
                             <summary>Batch connection properties · {internalEdges.length}</summary>
                             <p className="muted">Only connections whose two endpoints are selected are changed. The complete batch validates and commits as one undo step.</p>
                             <Field label="Connection labels" value={commonConnectionValue(documentModel, internalEdges, "label")} mixed={commonConnectionValue(documentModel, internalEdges, "label") === undefined} onCommit={(label) => { try { change(bulkPatchConnections(state.present, internalEdges, { label })); } catch (cause) { setError(cause.message); } }} />
-                            {documentModel.diagram_type !== "sequence" && <label className="field">Routes<select value={commonConnectionValue(documentModel, internalEdges, "route") || ""} onChange={(event) => { try { change(bulkPatchConnections(state.present, internalEdges, { route: event.target.value })); } catch (cause) { setError(cause.message); } }}><option value="">Mixed / automatic</option>{options.routes.map((route) => <option key={route}>{route}</option>)}</select></label>}
+                            {options.routes.length > 0 && documentModel.diagram_type !== "sequence" && <label className="field">Routes<select value={commonConnectionValue(documentModel, internalEdges, "route") || ""} onChange={(event) => { try { change(bulkPatchConnections(state.present, internalEdges, { route: event.target.value })); } catch (cause) { setError(cause.message); } }}><option value="">Mixed / automatic</option>{options.routes.map((route) => <option key={route}>{route}</option>)}</select></label>}
                           </details>}
                         </>
                       )}
@@ -3090,6 +3097,9 @@ function App() {
                             value={selected.sublabel}
                             onCommit={(sublabel) => applyPatch({ sublabel })}
                           />
+                          {documentModel.diagram_type === "lifecycle" && (
+                            <Field label="Step" value={selected.step} onCommit={(step) => applyPatch({ step })} />
+                          )}
                           {options.resizable !== false && (
                             <div className="field-grid">
                               <Field
@@ -3177,7 +3187,7 @@ function App() {
                     </div>
                     <fieldset disabled={busy}>
                       <legend>Routing</legend>
-                      {documentModel.diagram_type !== "sequence" && (
+                      {!["sequence", "lifecycle"].includes(documentModel.diagram_type) && (
                         <details>
                           <summary>Reset manual routing</summary>
                           <div className="button-row">
@@ -3262,6 +3272,12 @@ function App() {
                             activation/segment boundaries. Messages on a
                             boundary stay pinned.
                           </p>
+                        </>
+                      ) : documentModel.diagram_type === "lifecycle" ? (
+                        <>
+                          <p className="muted">{options.hint}</p>
+                          <Field label="Transition label" value={edge.label} onCommit={(label) => edgePatch({ label })} />
+                          <Field label="Transition note" value={edge.note} onCommit={(note) => edgePatch({ note })} />
                         </>
                       ) : (
                         <>
@@ -3518,10 +3534,5 @@ function App() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
-
-
-
-
-
 
 

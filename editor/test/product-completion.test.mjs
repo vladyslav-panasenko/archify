@@ -5,8 +5,8 @@ import { assertResourceLimits, documentLimits } from "../src/resource-limits.mjs
 import { importedSession } from "../src/session-identity.mjs";
 import { createRequestGeneration } from "../src/request-generation.mjs";
 import { compilerProblems } from "../src/problems.mjs";
-import { createDiagram } from "../src/topology.mjs";
-import { migrateWorkflowToV2 } from "../../archify/renderers/workflow/workflow-compiler.mjs";
+import { createDiagram, addNode, saveEdge } from "../src/topology.mjs";
+import { migrateWorkflowDocument } from "../../archify/migrations/workflow-v2.mjs";
 import { supportBundle } from "../src/support-bundle.mjs";
 import { exportPresets, importPresets } from "../src/layout-presets.mjs";
 import { visibleNodeIds } from "../src/visibility.mjs";
@@ -98,14 +98,24 @@ test("compiler diagnostics retain severity and align paths with canvas subjects"
 });
 
 test("workflow migration is explicit, produces a valid v2 copy and retains the original", () => {
-  const original = createDiagram("workflow", "Migration");
+  const empty = createDiagram("workflow", "Migration");
+  const minimal = migrateWorkflowDocument(empty);
+  assert.equal(minimal.ok, true);
+  assert.equal(minimal.document.schema_version, 2);
+  const original = saveEdge(addNode(empty, { label: "Complete", type: "backend", lane: "lane-1", col: 1 }), null, { from: "node-1", to: "node-2", label: "Next" });
   original.meta.note = undefined;
   const before = serialize(original);
-  const migration = migrateWorkflowToV2(original);
+  const migration = migrateWorkflowDocument(original);
+  assert.equal(migration.ok, true, JSON.stringify(migration));
   assert.equal(migration.document.schema_version, 2);
   assert.equal(serialize(original), before);
   assert.equal(original.schema_version, 1);
   assert.notEqual(migration.document, original);
+  const unsupported = migrateWorkflowDocument({ ...original, schema_version: 999 });
+  assert.equal(unsupported.ok, false);
+  assert.equal(unsupported.document, undefined);
+  assert.ok(unsupported.preExistingDiagnostics.length);
+  assert.equal(serialize(original), before);
 });
 
 test("all five starters validate and support bundles exclude sensitive content", async () => {

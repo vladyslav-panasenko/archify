@@ -28,13 +28,11 @@ test("topology creation and deletion preserve schema and remove dangling referen
   doc.boundaries = [
     { kind: "region", label: "Region", wraps: ["component-2"] },
   ];
-  doc.meta.views = [{ id: "view", label: "View", focus: ["component-2"] }];
   validate(doc);
   const next = removeComponent(doc, "component-2");
   validate(next);
   assert.equal(next.connections.length, 0);
   assert.equal(next.boundaries.length, 0);
-  assert.equal(next.meta.views, undefined);
   assert.equal(doc.components.length, 2);
 });
 import {

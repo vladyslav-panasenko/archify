@@ -18,6 +18,7 @@ Generated from the five schemas by `editor/scripts/generate-capability-inventory
 | `/components` | JSON |
 | `/components/*/brand` | Visual + JSON |
 | `/components/*/col` | Visual + JSON |
+| `/components/*/icon` | JSON |
 | `/components/*/id` | Visual + JSON |
 | `/components/*/label` | Visual + JSON |
 | `/components/*/ports` | JSON |
@@ -90,19 +91,22 @@ Generated from the five schemas by `editor/scripts/generate-capability-inventory
 | `/meta/legend/entries/security/visible` | JSON |
 | `/meta/legend/mode` | JSON |
 | `/meta/locale` | Visual + JSON |
-| `/meta/output` | JSON |
+| `/meta/output` | Visual + JSON |
 | `/meta/quality_profile` | Visual + JSON |
 | `/meta/repository` | JSON |
+| `/meta/repository/link_mode` | JSON |
+| `/meta/repository/provider` | JSON |
 | `/meta/repository/revision` | JSON |
 | `/meta/repository/url` | JSON |
 | `/meta/subtitle` | Visual + JSON |
 | `/meta/title` | Visual + JSON |
+| `/meta/translations` | JSON |
 | `/meta/viewBox` | Visual + JSON |
-| `/meta/views` | JSON |
-| `/meta/views/*/focus` | Visual + JSON |
-| `/meta/views/*/id` | Visual + JSON |
-| `/meta/views/*/label` | Visual + JSON |
-| `/meta/views/*/note` | Visual + JSON |
+| `/meta/views` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/focus` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/id` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/label` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/note` | Unsupported by Archify 3.1.0; read-only source |
 | `/meta/visual_preset` | Visual + JSON |
 | `/schema_version` | JSON |
 
@@ -173,24 +177,36 @@ Generated from the five schemas by `editor/scripts/generate-capability-inventory
 | `/meta/legend/entries/security/visible` | JSON |
 | `/meta/legend/mode` | JSON |
 | `/meta/locale` | Visual + JSON |
-| `/meta/output` | JSON |
+| `/meta/output` | Visual + JSON |
 | `/meta/quality_profile` | Visual + JSON |
+| `/meta/repository` | JSON |
+| `/meta/repository/link_mode` | JSON |
+| `/meta/repository/provider` | JSON |
+| `/meta/repository/revision` | JSON |
+| `/meta/repository/url` | JSON |
 | `/meta/subtitle` | Visual + JSON |
 | `/meta/title` | Visual + JSON |
+| `/meta/translations` | JSON |
 | `/meta/viewBox` | Visual + JSON |
-| `/meta/views` | JSON |
-| `/meta/views/*/focus` | Visual + JSON |
-| `/meta/views/*/id` | Visual + JSON |
-| `/meta/views/*/label` | Visual + JSON |
-| `/meta/views/*/note` | Visual + JSON |
+| `/meta/views` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/focus` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/id` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/label` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/note` | Unsupported by Archify 3.1.0; read-only source |
 | `/meta/visual_preset` | Visual + JSON |
 | `/nodes` | JSON |
 | `/nodes/*/brand` | Visual + JSON |
 | `/nodes/*/col` | Visual + JSON |
 | `/nodes/*/height` | Visual + JSON |
+| `/nodes/*/icon` | JSON |
 | `/nodes/*/id` | Visual + JSON |
 | `/nodes/*/label` | Visual + JSON |
 | `/nodes/*/lane` | Visual + JSON |
+| `/nodes/*/sources` | JSON |
+| `/nodes/*/sources/*/end_line` | JSON |
+| `/nodes/*/sources/*/label` | JSON |
+| `/nodes/*/sources/*/line` | JSON |
+| `/nodes/*/sources/*/path` | JSON |
 | `/nodes/*/sublabel` | Visual + JSON |
 | `/nodes/*/tag` | Visual + JSON |
 | `/nodes/*/type` | Visual + JSON |
@@ -261,23 +277,35 @@ Generated from the five schemas by `editor/scripts/generate-capability-inventory
 | `/meta/legend/entries/security/visible` | JSON |
 | `/meta/legend/mode` | JSON |
 | `/meta/locale` | Visual + JSON |
-| `/meta/output` | JSON |
+| `/meta/output` | Visual + JSON |
 | `/meta/quality_profile` | Visual + JSON |
+| `/meta/repository` | JSON |
+| `/meta/repository/link_mode` | JSON |
+| `/meta/repository/provider` | JSON |
+| `/meta/repository/revision` | JSON |
+| `/meta/repository/url` | JSON |
 | `/meta/subtitle` | Visual + JSON |
 | `/meta/title` | Visual + JSON |
+| `/meta/translations` | JSON |
 | `/meta/viewBox` | Visual + JSON |
-| `/meta/views` | JSON |
-| `/meta/views/*/focus` | Visual + JSON |
-| `/meta/views/*/id` | Visual + JSON |
-| `/meta/views/*/label` | Visual + JSON |
-| `/meta/views/*/note` | Visual + JSON |
+| `/meta/views` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/focus` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/id` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/label` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/note` | Unsupported by Archify 3.1.0; read-only source |
 | `/meta/visual_preset` | Visual + JSON |
 | `/nodes` | JSON |
 | `/nodes/*/brand` | Visual + JSON |
 | `/nodes/*/height` | Visual + JSON |
+| `/nodes/*/icon` | JSON |
 | `/nodes/*/id` | Visual + JSON |
 | `/nodes/*/label` | Visual + JSON |
 | `/nodes/*/row` | Visual + JSON |
+| `/nodes/*/sources` | JSON |
+| `/nodes/*/sources/*/end_line` | JSON |
+| `/nodes/*/sources/*/label` | JSON |
+| `/nodes/*/sources/*/line` | JSON |
+| `/nodes/*/sources/*/path` | JSON |
 | `/nodes/*/stage` | Visual + JSON |
 | `/nodes/*/sublabel` | Visual + JSON |
 | `/nodes/*/tag` | Visual + JSON |
@@ -297,9 +325,7 @@ Generated from the five schemas by `editor/scripts/generate-capability-inventory
 | `/cards/*/items` | JSON |
 | `/cards/*/title` | JSON |
 | `/diagram_type` | JSON |
-| `/lanes` | JSON |
-| `/lanes/*/id` | Visual + JSON |
-| `/lanes/*/label` | Visual + JSON |
+| `/mainPath` | Visual + JSON |
 | `/meta` | JSON |
 | `/meta/animation` | Visual + JSON |
 | `/meta/legend` | JSON |
@@ -330,50 +356,44 @@ Generated from the five schemas by `editor/scripts/generate-capability-inventory
 | `/meta/legend/entries/waiting/visible` | JSON |
 | `/meta/legend/mode` | JSON |
 | `/meta/locale` | Visual + JSON |
-| `/meta/output` | JSON |
+| `/meta/output` | Visual + JSON |
 | `/meta/quality_profile` | Visual + JSON |
+| `/meta/repository` | JSON |
+| `/meta/repository/link_mode` | JSON |
+| `/meta/repository/provider` | JSON |
+| `/meta/repository/revision` | JSON |
+| `/meta/repository/url` | JSON |
 | `/meta/subtitle` | Visual + JSON |
 | `/meta/title` | Visual + JSON |
-| `/meta/viewBox` | Visual + JSON |
-| `/meta/views` | JSON |
-| `/meta/views/*/focus` | Visual + JSON |
-| `/meta/views/*/id` | Visual + JSON |
-| `/meta/views/*/label` | Visual + JSON |
-| `/meta/views/*/note` | Visual + JSON |
+| `/meta/translations` | JSON |
+| `/meta/views` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/focus` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/id` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/label` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/note` | Unsupported by Archify 3.1.0; read-only source |
 | `/meta/visual_preset` | Visual + JSON |
 | `/schema_version` | JSON |
 | `/states` | JSON |
 | `/states/*/brand` | Visual + JSON |
-| `/states/*/col` | Visual + JSON |
-| `/states/*/height` | Visual + JSON |
+| `/states/*/icon` | JSON |
 | `/states/*/id` | Visual + JSON |
 | `/states/*/label` | Visual + JSON |
-| `/states/*/lane` | Visual + JSON |
-| `/states/*/step` | JSON |
+| `/states/*/sources` | JSON |
+| `/states/*/sources/*/end_line` | JSON |
+| `/states/*/sources/*/label` | JSON |
+| `/states/*/sources/*/line` | JSON |
+| `/states/*/sources/*/path` | JSON |
+| `/states/*/step` | Visual + JSON |
 | `/states/*/sublabel` | Visual + JSON |
 | `/states/*/tag` | Visual + JSON |
 | `/states/*/type` | Visual + JSON |
-| `/states/*/width` | Visual + JSON |
-| `/states/*/yOffset` | Visual + JSON |
 | `/transitions` | JSON |
-| `/transitions/*/channelX` | JSON |
-| `/transitions/*/channelY` | JSON |
-| `/transitions/*/cornerRadius` | JSON |
 | `/transitions/*/from` | Visual + JSON |
-| `/transitions/*/fromSide` | Visual + JSON |
 | `/transitions/*/id` | Visual + JSON |
 | `/transitions/*/label` | Visual + JSON |
-| `/transitions/*/labelAt` | Visual + JSON |
-| `/transitions/*/labelDx` | JSON |
-| `/transitions/*/labelDy` | JSON |
-| `/transitions/*/labelSegment` | JSON |
 | `/transitions/*/note` | JSON |
-| `/transitions/*/route` | Visual + JSON |
 | `/transitions/*/to` | Visual + JSON |
-| `/transitions/*/toSide` | Visual + JSON |
 | `/transitions/*/variant` | JSON |
-| `/transitions/*/via` | Visual + JSON |
-| `/transitions/*/width` | JSON |
 
 ## sequence
 
@@ -419,21 +439,33 @@ Generated from the five schemas by `editor/scripts/generate-capability-inventory
 | `/meta/legend/entries/security/visible` | JSON |
 | `/meta/legend/mode` | JSON |
 | `/meta/locale` | Visual + JSON |
-| `/meta/output` | JSON |
+| `/meta/output` | Visual + JSON |
 | `/meta/quality_profile` | Visual + JSON |
+| `/meta/repository` | JSON |
+| `/meta/repository/link_mode` | JSON |
+| `/meta/repository/provider` | JSON |
+| `/meta/repository/revision` | JSON |
+| `/meta/repository/url` | JSON |
 | `/meta/subtitle` | Visual + JSON |
 | `/meta/title` | Visual + JSON |
+| `/meta/translations` | JSON |
 | `/meta/viewBox` | Visual + JSON |
-| `/meta/views` | JSON |
-| `/meta/views/*/focus` | Visual + JSON |
-| `/meta/views/*/id` | Visual + JSON |
-| `/meta/views/*/label` | Visual + JSON |
-| `/meta/views/*/note` | Visual + JSON |
+| `/meta/views` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/focus` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/id` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/label` | Unsupported by Archify 3.1.0; read-only source |
+| `/meta/views/*/note` | Unsupported by Archify 3.1.0; read-only source |
 | `/meta/visual_preset` | Visual + JSON |
 | `/participants` | JSON |
 | `/participants/*/brand` | Visual + JSON |
+| `/participants/*/icon` | JSON |
 | `/participants/*/id` | Visual + JSON |
 | `/participants/*/label` | Visual + JSON |
+| `/participants/*/sources` | JSON |
+| `/participants/*/sources/*/end_line` | JSON |
+| `/participants/*/sources/*/label` | JSON |
+| `/participants/*/sources/*/line` | JSON |
+| `/participants/*/sources/*/path` | JSON |
 | `/participants/*/sublabel` | Visual + JSON |
 | `/participants/*/type` | Visual + JSON |
 | `/schema_version` | JSON |
@@ -446,11 +478,13 @@ Generated from the five schemas by `editor/scripts/generate-capability-inventory
 
 | Operation | Support |
 | --- | --- |
-| Open, validate, edit, undo/redo, recovery, canonical JSON export, compiler check/render | All five types |
-| Free positioning, resizing, route waypoints and endpoint sides | Architecture where represented by its schema |
-| Lane/stage/state/participant/message/range structure | Visual controls use each constrained type's native fields |
+| Open, validate, edit, undo/redo, recovery, canonical JSON export, compiler check/render | All five current types; lifecycle requires v3 |
+| Free positioning, resizing, route waypoints and endpoint sides | Architecture where represented by its schema; lifecycle geometry is automatic |
+| Lane/stage/state/participant/message/range structure | Visual controls use each constrained type's native fields; lifecycle uses states/transitions/mainPath |
 | Fields without a visual control | Validated JSON editing; preserved by visual edits |
-| Unknown diagram type, schema version, field, or invalid construct | Read-only original-source view with download; visual editing, migration, direct save and render are blocked |
+| Guided views/story, legacy lifecycle, unknown diagram type, schema version, field, or invalid construct | Read-only original-source view with download; visual editing, migration, direct save and render are blocked |
+| Required meta.output | New documents use diagram.html; existing documents are not defaulted or migrated on open/save |
 | Schema migration | Explicit preview/apply only; ordinary open/save never upgrades a document |
-| Persisted ports or inferred runtime topology | Unsupported because the compiler schemas do not define those contracts |
+| Persisted ports | Architecture v2 supports component ports and connection port references |
+| Inferred runtime topology | Unsupported; topology remains authored |
 | Editor preferences, recovery, tabs, locks, filters and viewport | Local session/project state; excluded from exported diagram JSON |

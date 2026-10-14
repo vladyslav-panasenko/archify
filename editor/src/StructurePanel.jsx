@@ -8,7 +8,6 @@ import {
 } from "./structure.mjs";
 import TopologyPanel from "./TopologyPanel.jsx";
 import SequencePanel from "./SequencePanel.jsx";
-import ViewsPanel from "./ViewsPanel.jsx";
 
 function BoundaryForm({ document, boundary, index, onChange, onSelect }) {
   const [padding, setPadding] = useState(boundary?.pad ?? 30);
@@ -149,7 +148,6 @@ export default function StructurePanel({ document, onChange, onSelect }) {
     );
   return (
     <div className="properties">
-      <ViewsPanel document={document} onChange={onChange} onSelect={onSelect} />
       <h2>Boundaries</h2>
       <p className="muted">
         Select members to drag them together, or enter an offset. Deleting a

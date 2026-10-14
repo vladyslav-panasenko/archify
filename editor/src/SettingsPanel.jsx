@@ -2,6 +2,7 @@ import React from "react";
 import { settingFields, minimumCanvas, patchSettings } from "./settings.mjs";
 const labels = {
   title: "Title",
+  output: "HTML output path · portable relative path",
   subtitle: "Subtitle / description",
   locale: "Locale",
   animation: "Animation",
@@ -45,12 +46,12 @@ export default function SettingsPanel({ document, onChange }) {
             <input
               name={spec.key}
               defaultValue={document.meta[spec.key] || ""}
-              required={spec.key === "title"}
+              required={["title", "output"].includes(spec.key)}
             />
           )}
         </label>
       ))}
-      <div className="field-grid">
+      {minimum && <div className="field-grid">
         {["canvasWidth", "canvasHeight"].map((key, i) => (
           <label className="field" key={key}>
             {i ? "Canvas height" : "Canvas width"}
@@ -62,10 +63,10 @@ export default function SettingsPanel({ document, onChange }) {
             />
           </label>
         ))}
-      </div>
-      <p className="muted">
+      </div>}
+      {minimum && <p className="muted">
         Leave both dimensions blank for the renderer defaults.
-      </p>
+      </p>}
       {document.diagram_type === "architecture" && (
         <details>
           <summary>Grid layout</summary>

@@ -21,7 +21,7 @@ export function newDocument(title = "Untitled diagram") {
   return {
     schema_version: 1,
     diagram_type: "architecture",
-    meta: { title },
+    meta: { title, output: "diagram.html" },
     components: [
       {
         id: "component-1",
@@ -71,6 +71,7 @@ export function addConnection(document, { from, to, label }) {
   return next;
 }
 export function removeComponent(document, id) {
+  assertCompatibility(document);
   if (document.components.length <= 1)
     throw new Error("Keep at least one component in the diagram.");
   const next = clone(document);
@@ -83,11 +84,6 @@ export function removeComponent(document, id) {
     next.boundaries = next.boundaries
       .map((b) => ({ ...b, wraps: b.wraps.filter((member) => member !== id) }))
       .filter((b) => b.wraps.length);
-  if (next.meta.views)
-    next.meta.views = next.meta.views
-      .map((v) => ({ ...v, focus: v.focus.filter((member) => member !== id) }))
-      .filter((v) => v.focus.length);
-  if (next.meta.views?.length === 0) delete next.meta.views;
   return next;
 }
 export function removeConnection(document, index) {
@@ -118,8 +114,15 @@ export function reconnectConnection(
   return next;
 }
 
+export function assertCompatibility(document) {
+  if (document?.meta?.views !== undefined || document?.story !== undefined || document?.meta?.story !== undefined)
+    throw new Error("Guided views and story are unsupported by Archify 3.1.0. Source is preserved; remove these fields explicitly in a copy before editing or rendering.");
+  if (document?.diagram_type === "lifecycle" && document.schema_version !== 3)
+    throw new Error("Lifecycle v1/v2 is unsupported by Archify 3.1.0. Convert a copy explicitly to lifecycle v3; opening and saving never migrate it.");
+}
 export function assertDocument(document) {
   assertResourceLimits(document);
+  assertCompatibility(document);
   if (!supportedTypes.includes(document?.diagram_type))
     throw new Error(
       `Unsupported diagram type. Supported: ${supportedTypes.join(", ")}.`,

@@ -54,7 +54,7 @@ test("sequence participants reorder and message spacing remains schema-compatibl
   await expect(page.getByRole("dialog")).toBeVisible();
 });
 
-test("lifecycle JSON edits offsets and renders its original schema", async ({
+test("lifecycle v3 edits semantic labels without persisting automatic geometry", async ({
   page,
 }) => {
   const doc = JSON.parse(
@@ -77,11 +77,16 @@ test("lifecycle JSON edits offsets and renders its original schema", async ({
       buffer: Buffer.from(JSON.stringify(doc)),
     });
   await page.locator(".component-list button").first().click();
-  await page.getByLabel("Vertical offset", { exact: true }).fill("4");
-  await page.getByLabel("Vertical offset", { exact: true }).press("Tab");
+  await expect(page.getByLabel("Vertical offset", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Width", { exact: true })).toHaveCount(0);
+  await page.getByLabel("Label", { exact: true }).fill("Ready");
+  await page.getByLabel("Label", { exact: true }).press("Tab");
   await page.getByRole("button", { name: "JSON", exact: true }).click();
   const edited = JSON.parse(await page.getByLabel("Diagram JSON").inputValue());
-  expect(edited.states[0].yOffset).toBe(4);
+  expect(edited.states[0].label).toBe("Ready");
+  expect(edited.states[0].yOffset).toBeUndefined();
+  expect(edited.schema_version).toBe(3);
+  expect(edited.mainPath).toEqual(doc.mainPath);
   expect(edited.transitions).toEqual(doc.transitions);
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await page.getByRole("button", { name: "Render HTML", exact: true }).click();

@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { createEditorServer, render } from "../server.mjs";
+import { createDiagram } from "../src/topology.mjs";
 const example = JSON.parse(
   await fs.readFile(
     new URL(
@@ -115,4 +116,54 @@ test("Archify renders original JSON and strictly rejects overlapping output", as
   const remote = structuredClone(example);
   remote.components[0].brand = { url: "https://example.org/icon.svg" };
   await assert.rejects(render(remote));
+});
+test("3.1.0 legacy contracts open read-only and cannot overwrite authored source", async () => {
+  const missingOutput = createDiagram("architecture", "Missing output");
+  delete missingOutput.meta.output;
+  const guided = createDiagram("architecture", "Legacy views");
+  guided.meta.views = [{ id: "view", label: "Focus", focus: ["component-1"] }];
+  const legacy = { schema_version: 1, diagram_type: "lifecycle", meta: { title: "Legacy", output: "legacy.html" }, lanes: [{ id: "main", label: "Main" }], states: [{ id: "a", type: "start", label: "Start", lane: "main", col: 0 }, { id: "b", type: "active", label: "Work", lane: "main", col: 1 }], transitions: [{ from: "a", to: "b" }] };
+  const story = createDiagram("architecture", "Legacy story");
+  story.meta.story = ["Authored step"];
+  const directory = await fs.mkdtemp(path.resolve("compatibility-test-"));
+  try {
+    for (const document of [missingOutput, guided, legacy, story]) {
+      const file = path.join(directory, "source.json");
+      const text = JSON.stringify(document, null, 4) + "\n";
+      await fs.writeFile(file, text);
+      const server = await createEditorServer({ file });
+      await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+      try {
+        const base = `http://127.0.0.1:${server.address().port}`;
+        const session = await (await fetch(`${base}/api/document`)).json();
+        assert.equal(session.rawOnly, true);
+        assert.equal(session.sourceText, text);
+        const saved = await fetch(`${base}/api/document`, { method: "PUT", headers: { "Content-Type": "application/json", "X-Editor-Token": session.token }, body: JSON.stringify({ document, revision: session.revision }) });
+        assert.equal(saved.status, 400);
+        assert.equal(await fs.readFile(file, "utf8"), text);
+      } finally { await new Promise((resolve) => server.close(resolve)); }
+    }
+  } finally { await fs.rm(directory, { recursive: true, force: true }); }
+});
+test("migration API uses upstream receipts and reports failure diagnostics", async () => {
+  const server = await createEditorServer();
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const { token } = await (await fetch(`${base}/api/document`)).json();
+    const migrate = (document) => fetch(`${base}/api/migrate`, { method: "POST", headers: { "Content-Type": "application/json", "X-Editor-Token": token }, body: JSON.stringify({ document }) });
+    const original = createDiagram("workflow", "Migration");
+    const result = await migrate(original), receipt = await result.json();
+    assert.equal(result.status, 200);
+    assert.equal(receipt.ok, true);
+    assert.equal(receipt.document.schema_version, 2);
+    assert.equal(original.schema_version, 1);
+    assert.ok(Array.isArray(receipt.preExistingDiagnostics));
+    assert.ok(Array.isArray(receipt.migrationDiagnostics));
+    assert.ok(Array.isArray(receipt.newSchemaDiagnostics));
+    const failed = await migrate(createDiagram("architecture", "Wrong type")), error = await failed.json();
+    assert.equal(failed.status, 400);
+    assert.match(error.error, /Workflow migration failed/);
+    assert.ok(error.diagnostics.length);
+  } finally { await new Promise((resolve) => server.close(resolve)); }
 });

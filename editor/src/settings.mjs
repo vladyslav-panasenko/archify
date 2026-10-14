@@ -27,6 +27,7 @@ export function settingFields(type) {
   const properties = schemas[type].properties.meta.properties;
   return [
     "title",
+    "output",
     "subtitle",
     "locale",
     "animation",
@@ -46,7 +47,7 @@ export function settingFields(type) {
     });
 }
 export function minimumCanvas(type) {
-  return schemas[type].properties.meta.properties.viewBox.prefixItems.map(
+  return schemas[type].properties.meta.properties.viewBox?.prefixItems.map(
     (p) => p.minimum,
   );
 }
@@ -55,8 +56,8 @@ export function patchSettings(document, fields) {
   for (const spec of settingFields(document.diagram_type)) {
     if (!(spec.key in fields)) continue;
     const value = fields[spec.key];
-    if (spec.key === "title" && !value.trim())
-      throw new Error("A title is required.");
+    if (["title", "output"].includes(spec.key) && !value.trim())
+      throw new Error(`A ${spec.key} is required.`);
     if (value === "") {
       delete next.meta[spec.key];
       continue;
@@ -66,6 +67,8 @@ export function patchSettings(document, fields) {
     next.meta[spec.key] = value;
   }
   if ("canvasWidth" in fields) {
+    if (!minimumCanvas(document.diagram_type))
+      throw new Error("This diagram type uses automatic canvas dimensions.");
     const values = [fields.canvasWidth, fields.canvasHeight];
     if (values.every((v) => v === "")) delete next.meta.viewBox;
     else {

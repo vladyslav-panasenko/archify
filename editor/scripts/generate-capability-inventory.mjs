@@ -12,12 +12,11 @@ const deref = (spec, root) => {
   return pointer.split("/").slice(1).reduce((node, key) => node?.[key.replace(/~1/g, "/").replace(/~0/g, "~")], file === "common.schema.json" ? common : root) || {};
 };
 const visual = [
-  /^\/meta\/(title|subtitle|locale|animation|visual_preset|quality_profile|column_fit|viewBox)/,
-  /^\/(components|nodes|states|participants)\/\*\/(id|label|sublabel|tag|type|pos|size|width|height|lane|col|stage|row|yOffset|brand)$/,
+  /^\/meta\/(title|output|subtitle|locale|animation|visual_preset|quality_profile|column_fit|viewBox)/,
+  /^\/(components|nodes|states|participants)\/\*\/(id|label|sublabel|tag|step|type|pos|size|width|height|lane|col|stage|row|yOffset|brand)$/,
   /^\/(connections|edges|flows|transitions|messages)\/\*\/(id|from|to|label|via|labelAt|route|fromSide|toSide|y|kind|style)$/,
   /^\/(lanes|stages)\/\*\/(id|label)$/,
   /^\/(boundaries|groups)\/\*\/(kind|label|wraps|lane|pad)$/,
-  /^\/meta\/views\/\*\/(id|label|note|focus)$/,
   /^\/(activations|segments)\/\*\/(participant|label|from|to)$/,
 ];
 function fields(spec, root, at = "", seen = new Set()) {
@@ -38,8 +37,8 @@ for (const type of types) {
   const schema = JSON.parse(await fs.readFile(path.join(repo, `archify/schemas/${type}.schema.json`)));
   const paths = [...new Set(fields(schema, schema))].sort();
   output += `## ${type}\n\n| Schema field | Editing mode |\n| --- | --- |\n`;
-  for (const field of paths) output += `| \`${field}\` | ${visual.some((rule) => rule.test(field)) ? "Visual + JSON" : "JSON"} |\n`;
+  for (const field of paths) output += `| \`${field}\` | ${field === "/meta/views" || field.startsWith("/meta/views/") ? "Unsupported by Archify 3.1.0; read-only source" : (type === "lifecycle" && field === "/mainPath") || visual.some((rule) => rule.test(field)) ? "Visual + JSON" : "JSON"} |\n`;
   output += "\n";
 }
-output += `## Operations and explicit limits\n\n| Operation | Support |\n| --- | --- |\n| Open, validate, edit, undo/redo, recovery, canonical JSON export, compiler check/render | All five types |\n| Free positioning, resizing, route waypoints and endpoint sides | Architecture where represented by its schema |\n| Lane/stage/state/participant/message/range structure | Visual controls use each constrained type's native fields |\n| Fields without a visual control | Validated JSON editing; preserved by visual edits |\n| Unknown diagram type, schema version, field, or invalid construct | Read-only original-source view with download; visual editing, migration, direct save and render are blocked |\n| Schema migration | Explicit preview/apply only; ordinary open/save never upgrades a document |\n| Persisted ports or inferred runtime topology | Unsupported because the compiler schemas do not define those contracts |\n| Editor preferences, recovery, tabs, locks, filters and viewport | Local session/project state; excluded from exported diagram JSON |\n`;
+output += `## Operations and explicit limits\n\n| Operation | Support |\n| --- | --- |\n| Open, validate, edit, undo/redo, recovery, canonical JSON export, compiler check/render | All five current types; lifecycle requires v3 |\n| Free positioning, resizing, route waypoints and endpoint sides | Architecture where represented by its schema; lifecycle geometry is automatic |\n| Lane/stage/state/participant/message/range structure | Visual controls use each constrained type's native fields; lifecycle uses states/transitions/mainPath |\n| Fields without a visual control | Validated JSON editing; preserved by visual edits |\n| Guided views/story, legacy lifecycle, unknown diagram type, schema version, field, or invalid construct | Read-only original-source view with download; visual editing, migration, direct save and render are blocked |\n| Required meta.output | New documents use diagram.html; existing documents are not defaulted or migrated on open/save |\n| Schema migration | Explicit preview/apply only; ordinary open/save never upgrades a document |\n| Persisted ports | Architecture v2 supports component ports and connection port references |\n| Inferred runtime topology | Unsupported; topology remains authored |\n| Editor preferences, recovery, tabs, locks, filters and viewport | Local session/project state; excluded from exported diagram JSON |\n`;
 await fs.writeFile(path.join(repo, "docs/editor-schema-capabilities.md"), output);

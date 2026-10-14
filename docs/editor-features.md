@@ -4,6 +4,8 @@ For the remaining path to a finished product, see the [product completion backlo
 
 The editor edits Archify JSON. Archify owns final HTML rendering. Both feature batches are implemented. No feature requires visual parity with Archify's HTML.
 
+Compatibility with Archify 3.1.0 supersedes historical acceptance wording below: new documents include required `meta.output`; lifecycle uses v3 automatic geometry with visual state/transition/main-path authoring, not lanes or manual placement. F28 guided-view authoring is retired because upstream no longer renders it. Legacy lifecycle versions and documents with guided views/story open read-only with exact original source retained, never silently converted or stripped.
+
 ## Product-completion scopes
 
 The engineering work in the Release and Next scopes of the product-completion backlog is implemented as of 2026-09-14. Detailed contracts and verification are recorded in the [product completion plan](plans/2026-09-13-product-completion.md), [schema capability inventory](editor-schema-capabilities.md), [performance evidence](editor-performance.md), and [release contract](editor-release.md). Human-owned acceptance F122, F126, F140, and F149 remains open until named reviewers record their evidence.
@@ -22,7 +24,7 @@ The local optional expansion batch is implemented in editor 0.2.0: desktop app-w
 | F06 | Draft recovery              | Recover unsaved local drafts after refresh; keep recovery separate from the source file and detect a changed source.        | Implemented |
 | F07 | Workflow support            | Open/edit/save/render workflow JSON using its lane/column constraints.                                                      | Implemented |
 | F08 | Dataflow support            | Open/edit/save/render dataflow JSON using its supported placement fields.                                                   | Implemented |
-| F09 | Lifecycle support           | Open/edit/save/render lifecycle JSON using its supported placement fields.                                                  | Implemented |
+| F09 | Lifecycle support           | Open/edit/save/render lifecycle v3 semantic JSON; canvas schematic and final automatic renderer layout remain separate.      | Implemented |
 | F10 | Sequence support            | Open/edit/save/render sequence JSON with participant ordering and message semantics preserved.                              | Implemented |
 
 The existing editor already has component dragging, multi-selection, numeric properties, JSON import/export, direct saving, undo/redo and HTML generation. Later diagram types expose only edits their schemas can represent; they do not acquire invented free-position fields. Tests must cover JSON round trips and the type's renderer as well as browser interaction.
@@ -50,7 +52,7 @@ The existing editor already has component dragging, multi-selection, numeric pro
 | F18 | Architecture boundaries         | Create and edit boundary labels and membership, and move their members together. Update existing boundary fields and component positions without introducing editor-only groups into JSON.                    |
 | F19 | Workflow creation and topology  | Create workflow documents, lanes, nodes and edges visually. Reassignment and deletion keep lane references and edges valid; preserve the imported schema version.                                             |
 | F20 | Dataflow creation and topology  | Create dataflow documents, stages, nodes and flows visually. Stage edits and deletions handle affected references explicitly and produce renderer-valid JSON.                                                 |
-| F21 | Lifecycle creation and topology | Create lifecycle documents, states and transitions visually, including supported event and terminal lanes. Keep lane membership and transition references valid.                                              |
+| F21 | Lifecycle creation and topology | Create lifecycle v3 documents, states, transitions and ordered main paths visually. Geometry is automatic; legacy lane/column authoring is unsupported.                                                       |
 | F22 | Sequence creation and structure | Create participants and messages, edit sender/receiver and supported message properties, and manage activations and segments. Inserting, reordering or deleting messages handles dependent ranges explicitly. |
 | F23 | Diagram settings inspector      | Edit supported title, description, theme and layout settings through schema-specific controls. Preserve unknown metadata and clearly distinguish preview-affecting settings from editor preferences.          |
 
@@ -62,7 +64,7 @@ The existing editor already has component dragging, multi-selection, numeric pro
 | F25 | JSON change review         | Show changes since the last opened or saved version, grouped by item and field, before saving or downloading. Distinguish topology edits from layout edits; leave the source untouched until an explicit save.   |
 | F26 | Source conflict comparison | When a source revision changes, compare the original, current source and local draft. Offer explicit choices for conflicting edits, validate the combined result, and recheck the source revision before saving. |
 | F27 | Named local checkpoints    | Save and restore named document snapshots with timestamps and a clear local-storage limit. Restoring is undoable and does not overwrite the source file; checkpoints can be exported.                            |
-| F28 | Guided views editor        | Create and edit architecture guided views using the existing schema, select referenced components, and validate those references after topology changes. Archify remains responsible for rendering the views.    |
+| F28 | Guided views editor        | Retired in Archify 3.1.0: upstream no longer renders guided views. Existing authored fields are preserved in read-only source, not silently dropped.                                                               |
 
 ### Suggested order and acceptance rules
 

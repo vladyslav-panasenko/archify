@@ -1,5 +1,6 @@
-import { clone, newDocument } from "./document.mjs";
+import { assertCompatibility, clone, newDocument } from "./document.mjs";
 import {
+  adapterFor,
   sourceNodes,
   connections,
   nodeKey,
@@ -42,7 +43,7 @@ export function createDiagram(type, title) {
     return {
       schema_version: 1,
       diagram_type: type,
-      meta: { title },
+      meta: { title, output: "diagram.html" },
       lanes: [{ id: "lane-1", label: "Main" }],
       nodes: [
         {
@@ -59,7 +60,7 @@ export function createDiagram(type, title) {
     return {
       schema_version: 1,
       diagram_type: type,
-      meta: { title },
+      meta: { title, output: "diagram.html" },
       stages: [{ label: "Source" }, { label: "Destination" }],
       nodes: [
         { id: "node-1", type: "backend", label: "Source", stage: 0, row: 0 },
@@ -69,25 +70,21 @@ export function createDiagram(type, title) {
     };
   if (type === "lifecycle")
     return {
-      schema_version: 1,
+      schema_version: 3,
       diagram_type: type,
-      meta: { title },
-      lanes: [
-        { id: "main", label: "Main" },
-        { id: "event", label: "Events" },
-        { id: "terminal", label: "Terminal" },
-      ],
+      meta: { title, output: "diagram.html" },
+      mainPath: ["node-1", "node-2"],
       states: [
-        { id: "node-1", type: "start", label: "Start", lane: "main", col: 0 },
-        { id: "node-2", type: "active", label: "Active", lane: "main", col: 1 },
+        { id: "node-1", type: "start", label: "Start" },
+        { id: "node-2", type: "active", label: "Active" },
       ],
-      transitions: [],
+      transitions: [{ id: "edge-1", from: "node-1", to: "node-2" }],
     };
   if (type === "sequence")
     return {
       schema_version: 1,
       diagram_type: type,
-      meta: { title },
+      meta: { title, output: "diagram.html" },
       participants: [
         { id: "node-1", type: "frontend", label: "Client" },
         { id: "node-2", type: "backend", label: "Service" },
@@ -111,16 +108,16 @@ export function addNode(document, fields) {
   const node = {
     id: freshId(nodes, "node"),
     label: fields.label,
-    type: fields.type || "backend",
+    type: fields.type || (document.diagram_type === "lifecycle" ? "active" : "backend"),
   };
-  if (["workflow", "lifecycle"].includes(document.diagram_type))
+  if (document.diagram_type === "workflow")
     Object.assign(node, { lane: fields.lane, col: Number(fields.col) });
   else if (document.diagram_type === "dataflow")
     Object.assign(node, {
       stage: Number(fields.stage),
       row: Number(fields.row),
     });
-  else if (document.diagram_type === "sequence") {
+  else if (["sequence", "lifecycle"].includes(document.diagram_type)) {
   } // Participants have no free position fields.
   else throw new Error("Unsupported node creation.");
   nodes.push(node);
@@ -142,9 +139,20 @@ export function saveEdge(document, index, fields) {
     throw new Error("A flow label is required.");
   if (index === null) edges.push(edge);
   else edges[index] = edge;
+  if (document.diagram_type === "lifecycle") adapterFor(next).validate(next);
+  return next;
+}
+export function saveMainPath(document, ids) {
+  if (document.diagram_type !== "lifecycle") throw new Error("Main-path editing supports lifecycle v3.");
+  const next = clone(document);
+  next.mainPath = [...ids];
+  adapterFor(next).validate(next);
   return next;
 }
 export function deleteEdge(document, index) {
+  const edge = connections(document)[index];
+  if (document.diagram_type === "lifecycle" && document.mainPath.some((id, i) => id === edge.from && document.mainPath[i + 1] === edge.to))
+    throw new Error("Edit mainPath before deleting a required main-path transition.");
   const next = clone(document);
   connections(next).splice(index, 1);
   return next;
@@ -156,12 +164,6 @@ function cleanNodeReferences(next, ids) {
   if (next.mainPath) {
     next.mainPath = next.mainPath.filter((id) => !ids.includes(id));
     if (next.mainPath.length < 2) delete next.mainPath;
-  }
-  if (next.meta.views) {
-    next.meta.views = next.meta.views
-      .map((v) => ({ ...v, focus: v.focus.filter((id) => !ids.includes(id)) }))
-      .filter((v) => v.focus.length);
-    if (!next.meta.views.length) delete next.meta.views;
   }
   if (next.semanticChecks) {
     for (const key of ["allowedRoots", "allowedTerminals"])
@@ -177,6 +179,9 @@ function cleanNodeReferences(next, ids) {
   }
 }
 export function deleteNode(document, id) {
+  assertCompatibility(document);
+  if (document.diagram_type === "lifecycle" && document.mainPath.includes(id))
+    throw new Error("Edit mainPath before deleting a main-path state.");
   const next = clone(document),
     minimum = ["dataflow", "lifecycle", "sequence"].includes(
       document.diagram_type,
@@ -198,6 +203,7 @@ export function deleteNode(document, id) {
   return next;
 }
 export function saveLane(document, index, fields) {
+  if (document.diagram_type === "lifecycle") throw new Error("Lifecycle v3 does not support lanes.");
   const next = clone(document);
   if (!fields.label.trim()) throw new Error("A lane label is required.");
   if (
@@ -219,6 +225,7 @@ export function saveLane(document, index, fields) {
   return next;
 }
 export function deleteLane(document, index, reassign) {
+  if (document.diagram_type === "lifecycle") throw new Error("Lifecycle v3 does not support lanes.");
   const next = clone(document),
     lane = next.lanes[index];
   if (document.diagram_type === "lifecycle" && lane.id === "main")

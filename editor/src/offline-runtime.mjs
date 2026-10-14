@@ -17,7 +17,10 @@ export function installOfflineRuntime(storage = localStorage) {
     if (!url.pathname.startsWith("/api/")) return nativeFetch(input, init);
     try {
       if (url.pathname === "/api/document" && (!init.method || init.method === "GET")) {
-        let document; try { document = validate(JSON.parse(storage.getItem(key))); } catch { document = newDocument("Offline architecture"); }
+        const text = storage.getItem(key);
+        let document;
+        try { document = text ? validate(JSON.parse(text)) : newDocument("Offline architecture"); }
+        catch (error) { return response(200, { rawOnly: true, sourceText: text, limitation: error.message, token: "offline", revision: null, writable: false, recoveryKey: "offline-browser", name: "offline.architecture.json", workspace: false, offline: true, compilerAvailable: false }); }
         return response(200, { document, token: "offline", revision: null, writable: false, recoveryKey: "offline-browser", name: "offline.architecture.json", workspace: false, workspaceId: null, offline: true, compilerAvailable: false });
       }
       if (["/api/workspace", "/api/workspace/search"].includes(url.pathname)) return response(200, { files: [], folders: [], results: [], enabled: false });

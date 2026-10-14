@@ -80,18 +80,12 @@ test("authoring panels remain usable at desktop and narrow widths", async ({
   expect(errors).toEqual([]);
 });
 
-test("guided views save focus references and render through Archify", async ({
+test("guided-view authoring is unavailable in Archify 3.1.0", async ({
   page,
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Structure", exact: true }).click();
-  await page.getByText("Guided views", { exact: true }).click();
-  const form = page.locator("form").filter({
-    has: page.getByRole("button", { name: "Create view", exact: true }),
-  });
-  await form.getByLabel("View label").fill("Entry");
-  await form.getByLabel("Users", { exact: true }).check();
-  await form.getByRole("button", { name: "Create view", exact: true }).click();
+  await expect(page.getByText("Guided views", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Render HTML", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
 });
@@ -211,10 +205,12 @@ test("new lifecycle creates a transition and renders", async ({ page }) => {
     .selectOption("lifecycle");
   await page.getByRole("button", { name: "Create", exact: true }).click();
   await page.getByRole("button", { name: "Structure", exact: true }).click();
+  await expect(page.getByLabel("Main path · state IDs in order")).toHaveValue("node-1 node-2");
   await page
     .locator(".properties summary")
     .filter({ hasText: /^Connections$/ })
     .click();
+  await page.getByRole("combobox", { name: "To", exact: true }).last().selectOption("node-2");
   await page
     .getByRole("button", { name: "Create connection", exact: true })
     .click();

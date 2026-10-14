@@ -64,3 +64,12 @@ test("browser-only edition precaches once, reloads offline, and disables compile
   await page.reload();
   await expect(page.getByRole("status")).toContainText("Browser-only offline edition");
 });
+
+test("offline legacy source remains exact and read-only instead of becoming a new diagram", async ({ page }) => {
+  const text = '{\n  "schema_version": 1,\n  "diagram_type": "architecture",\n  "meta": { "title": "Legacy without output" },\n  "components": [{ "id": "a", "type": "backend", "label": "Keep", "pos": [80, 120] }],\n  "connections": []\n}\n';
+  await page.addInitScript((source) => localStorage.setItem("archify-offline-source:v1", source), text);
+  await page.goto("/offline.html");
+  await expect(page.getByRole("heading", { name: "Source opened read-only" })).toBeVisible();
+  await expect(page.getByLabel("Unsupported diagram JSON")).toHaveValue(text);
+  expect(await page.evaluate(() => localStorage.getItem("archify-offline-source:v1"))).toBe(text);
+});

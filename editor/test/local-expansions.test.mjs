@@ -78,7 +78,7 @@ test("desktop launcher validates arguments and owns the loopback server lifecycl
   assert.throws(() => desktopOptions(["--file", "a.json", "--directory", "."]), /either/);
   assert.ok(browserCandidates("win32", { PROGRAMFILES: "C:\\Apps" })[0].endsWith("msedge.exe"));
   const desktop = await launchDesktop(["--no-launch"]);
-  try { const response = await fetch(desktop.url); assert.equal(response.status, 200); }
+  try { const response = await fetch(new URL("/api/document", desktop.url)); assert.equal(response.status, 200); assert.equal((await response.json()).document.diagram_type, "architecture"); }
   finally { await desktop.close(); }
 });
 

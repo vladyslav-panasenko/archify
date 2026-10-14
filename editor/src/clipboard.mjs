@@ -24,7 +24,7 @@ export function copySelection(document, ids) {
 function shifted(node, type, offset) {
   const next = clone(node);
   if (Array.isArray(next.pos)) next.pos = next.pos.map((value) => value + offset);
-  else if (["workflow", "lifecycle"].includes(type) && Number.isInteger(next.col)) next.col += 1;
+  else if (type === "workflow" && Number.isInteger(next.col)) next.col += 1;
   else if (type === "dataflow" && Number.isInteger(next.row)) next.row += 1;
   return next;
 }

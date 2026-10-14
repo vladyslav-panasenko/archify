@@ -43,7 +43,8 @@ test("layout comparison accepts only chosen placements and preserves topology an
   const bad = structuredClone(other);
   bad.components[0].id = "different";
   assert.throws(() => compareLayout(doc, bad));
-  for (const type of ["workflow", "dataflow", "lifecycle"]) {
+  assert.throws(() => compareLayout(createDiagram("lifecycle", "Test"), createDiagram("lifecycle", "Test")), /automatic/);
+  for (const type of ["workflow", "dataflow"]) {
     const base = createDiagram(type, "Test"),
       candidate = structuredClone(base),
       collection = type === "lifecycle" ? "states" : "nodes";
@@ -67,7 +68,7 @@ test("layout comparison accepts only chosen placements and preserves topology an
 
 test("JSON indexing handles escaped strings, schema refs and located diagnostics", () => {
   const text = JSON.stringify(
-      { ...newDocument(), meta: { title: 'Escaped " { } / ~ \\ text' } },
+      { ...newDocument(), meta: { title: 'Escaped " { } / ~ \\ text', output: "diagram.html" } },
       null,
       2,
     ),
@@ -124,7 +125,7 @@ test("auto-arrange is deterministic, avoids locked obstacles and preserves autho
   const doc = {
     schema_version: 1,
     diagram_type: "architecture",
-    meta: { title: "Grid" },
+    meta: { title: "Grid", output: "diagram.html" },
     components: ["a", "b", "c"].map((id, i) => ({
       id,
       type: "backend",

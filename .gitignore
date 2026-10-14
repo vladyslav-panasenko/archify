@@ -4,6 +4,9 @@ node_modules/
 /release/
 /.tmp/
 /editor/offline-dist/
+.wrangler/
 .claude/
 .lore/
 /.impeccable/
+__pycache__/
+*.py[cod]
