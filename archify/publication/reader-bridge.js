@@ -17,7 +17,6 @@
   let frame = 0;
   let restoreGeneration = 0;
   let previousSnapshot = '';
-  const badges = [];
   const replace = history.replaceState.bind(history);
   function snapshot() {
     return {
@@ -54,23 +53,25 @@
   const style = document.createElement('style');
   style.textContent = `
     [data-publication-hidden] * { animation-play-state: paused !important; }
-    [data-publication-navigation] { cursor: pointer; }
-    [data-publication-navigation]:focus-visible circle { stroke-width: 3; stroke: var(--text-primary, #38bdf8); }
-    .publication-explore { color: var(--text-primary, inherit); background: transparent; border: 1px solid currentColor;
-      border-radius: 5px; padding: 5px 8px; font: inherit; cursor: pointer; margin-top: 6px; }
+    .publication-explore { display: block; padding: 0.7rem 0.75rem; border-bottom: 1px solid var(--toolbar-border);
+      color: var(--frontend-stroke); background: var(--frontend-fill); font: inherit; font-weight: 600;
+      text-decoration: underline; text-underline-offset: 0.2em; overflow-wrap: anywhere; }
+    .publication-explore[hidden] { display: none; }
+    .publication-explore:hover { background: var(--toolbar-hover); }
+    .publication-explore:focus-visible { outline: 2px solid currentColor; outline-offset: -3px; }
   `;
   document.head.appendChild(style);
-  const explore = document.createElement('button');
-  explore.type = 'button';
+  const explore = document.createElement('a');
   explore.className = 'publication-explore';
   explore.id = 'publication-explore';
   explore.hidden = true;
-  chip.appendChild(explore);
+  chip.querySelector('.relationship-lens-head').after(explore);
   let activeLink = null;
   function navigate(link) {
     publish('navigate', { component: link.component, target: link.target, snapshot: snapshot() });
   }
   explore.addEventListener('click', event => {
+    event.preventDefault();
     event.stopPropagation();
     if (activeLink) navigate(activeLink);
   });
@@ -83,68 +84,10 @@
     explore.hidden = !activeLink;
     if (activeLink) {
       explore.textContent = `${viewerText('viewer.publication.explore')}: ${activeLink.label}`;
+      explore.href = config.readingLink.split('#')[0] + `#diagram=${encodeURIComponent(activeLink.target)}`;
       Archify.focus.reposition();
-    }
+    } else explore.removeAttribute('href');
   }
-  function positionBadges() {
-    const rootMatrix = svg.getCTM();
-    if (!rootMatrix) return;
-    for (const { node, badge } of badges) {
-      const hidden = !!node.closest('[data-tree-hidden]');
-      badge.style.display = hidden ? 'none' : '';
-      if (hidden) continue;
-      const matrix = node.getCTM();
-      if (!matrix) continue;
-      const local = rootMatrix.inverse().multiply(matrix);
-      const box = node.getBBox();
-      badge.setAttribute('transform', `matrix(${local.a} ${local.b} ${local.c} ${local.d} ${local.e} ${local.f}) translate(${box.x + box.width - 10} ${box.y + box.height - 10})`);
-    }
-  }
-  for (const link of config.links) {
-    const node = Array.from(svg.querySelectorAll('[data-node-id]'))
-      .find(element => element.getAttribute('data-node-id') === link.component);
-    if (!node) {
-      publish('error', { message: `Missing rendered component: ${link.component}` });
-      continue;
-    }
-    const ns = 'http://www.w3.org/2000/svg';
-    const badge = document.createElementNS(ns, 'g');
-    badge.setAttribute('data-publication-navigation', link.component);
-    badge.setAttribute('role', 'button');
-    badge.setAttribute('tabindex', '0');
-    badge.setAttribute('aria-label', `${viewerText('viewer.publication.explore')}: ${link.label}`);
-    const title = document.createElementNS(ns, 'title');
-    title.textContent = `${viewerText('viewer.publication.explore')}: ${link.label}`;
-    badge.appendChild(title);
-    const circle = document.createElementNS(ns, 'circle');
-    circle.setAttribute('r', '9');
-    circle.setAttribute('fill', 'var(--bg-primary, #111827)');
-    circle.setAttribute('stroke', 'var(--accent-cyan, #38bdf8)');
-    badge.appendChild(circle);
-    const arrow = document.createElementNS(ns, 'path');
-    arrow.setAttribute('d', 'M-4 0H4M0-4L4 0 0 4');
-    arrow.setAttribute('fill', 'none');
-    arrow.setAttribute('stroke', 'var(--accent-cyan, #38bdf8)');
-    arrow.setAttribute('stroke-width', '1.5');
-    badge.appendChild(arrow);
-    badge.addEventListener('click', event => {
-      event.preventDefault();
-      event.stopPropagation();
-      navigate(link);
-    });
-    badge.addEventListener('keydown', event => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
-      event.stopPropagation();
-      navigate(link);
-    });
-    svg.appendChild(badge);
-    badges.push({ node, badge });
-  }
-  positionBadges();
-  new MutationObserver(positionBadges).observe(svg, {
-    attributes: true, subtree: true, attributeFilter: ['data-tree-hidden'],
-  });
   new MutationObserver(schedule).observe(svg, { attributes: true });
   new MutationObserver(schedule).observe(chip, { attributes: true, attributeFilter: ['hidden'] });
   window.addEventListener('scroll', schedule, { passive: true });
@@ -157,7 +100,6 @@
       if (message.visible) {
         document.documentElement.removeAttribute('data-publication-hidden');
         if (releaseMotion) { releaseMotion(); releaseMotion = null; }
-        positionBadges();
       } else {
         document.documentElement.setAttribute('data-publication-hidden', '');
         if (!releaseMotion && Archify.motionGovernor?.suspend) releaseMotion = Archify.motionGovernor.suspend('publication-hidden');

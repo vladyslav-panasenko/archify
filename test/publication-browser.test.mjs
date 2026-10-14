@@ -85,7 +85,11 @@ test('offline publication supports drill-down, restored history, deep links, key
   await navigate(pathToFileURL(output).href);
   await wait(selected('overview'));
   assert.equal(await run("document.querySelectorAll('iframe').length"), 1, 'readers load lazily');
-  assert.equal(await probe('overview', "document.querySelectorAll('[data-publication-navigation]').length"), 2);
+  assert.equal(await probe('overview', "document.querySelectorAll('[data-publication-navigation]').length"), 0, 'navigation does not overlay component arrows');
+  assert.equal(await probe('overview', "document.getElementById('publication-explore').hidden"), true);
+  await probe('overview', 'Archify.focus.set("db", {toggle:false}); true');
+  await wait("new URLSearchParams(location.hash.slice(1)).get('reader') === 'focus=db'");
+  assert.equal(await probe('overview', "document.getElementById('publication-explore').hidden"), true, 'unlinked components have no drill-down link');
   await probe('overview', `(() => {
     document.querySelector('[data-node-id="api"]').dispatchEvent(new MouseEvent('click', {bubbles:true}));
     Archify.view.zoomIn();
@@ -95,13 +99,17 @@ test('offline publication supports drill-down, restored history, deep links, key
   const saved = await probe('overview', 'Archify.view.state()');
   assert.equal(await probe('overview', 'Archify.focus.active()'), 'api', 'normal node clicks retain focus');
   assert.equal(await probe('overview', "document.getElementById('publication-explore').hidden"), false);
+  assert.equal(await probe('overview', "document.getElementById('publication-explore').textContent"), 'Explore inside: API internals');
+  assert.equal(await probe('overview', "document.getElementById('publication-explore').previousElementSibling.className"), 'relationship-lens-head');
   await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   assert.equal(await probe('overview', `(async () => {
     await new Promise(requestAnimationFrame);
     Archify.motionGovernor.setMode('live', {persist:false});
     return Archify.motionGovernor.isPaused();
   })()`), false, 'the visible reader can run Live motion');
-  await probe('overview', "document.getElementById('publication-explore').click(); true");
+  await probe('overview', "document.getElementById('publication-explore').focus(); true");
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
   await wait(selected('api'));
   assert.equal(await run("document.getElementById('publication-back').disabled"), false);
   assert.equal(await probe('overview', "document.documentElement.hasAttribute('data-publication-hidden')"), true);
@@ -115,7 +123,8 @@ test('offline publication supports drill-down, restored history, deep links, key
   assert.equal(await probe('overview', 'Archify.motionGovernor.isPaused()'), false, 'Back releases the hidden-reader suspension without changing Live');
   await run("history.forward()");
   await wait(selected('api'));
-  await probe('api', `document.querySelector('[data-publication-navigation="router"]').dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true})); true`);
+  await probe('api', 'Archify.focus.set("router", {toggle:false}); true');
+  await probe('api', "document.getElementById('publication-explore').click(); true");
   await wait(selected('request'));
   await probe('request', 'Archify.focus.set("api", {toggle:false}); true');
   await wait("new URLSearchParams(location.hash.slice(1)).get('reader') === 'focus=api'");
@@ -143,7 +152,7 @@ test('offline publication supports drill-down, restored history, deep links, key
         format: document.documentElement.getAttribute('data-last-export-format'),
         error: document.documentElement.getAttribute('data-last-export-error'),
         svg, pngBytes: png?.size,
-        badges: document.querySelectorAll('[data-publication-navigation]').length
+        linkVisible: !document.getElementById('publication-explore').hidden
       };
     } finally { URL.createObjectURL = create; }
   })()`);
@@ -151,8 +160,8 @@ test('offline publication supports drill-down, restored history, deep links, key
   assert.equal(exported.format, 'png');
   assert.ok(exported.pngBytes > 1000);
   assert.ok(exported.svg.includes('data-node-id="api"'));
-  assert.ok(!exported.svg.includes('data-publication-navigation'), 'canonical export excludes navigation badges');
-  assert.equal(exported.badges, 1, 'export leaves the live navigation intact');
+  assert.ok(!exported.svg.includes('publication-explore'), 'canonical export excludes passport navigation');
+  assert.equal(exported.linkVisible, true, 'export leaves passport navigation intact');
   assert.equal(await probe('request', `performance.getEntriesByType('resource').every(entry => !/^https?:/.test(entry.name))`), true);
   await navigate(copied.value);
   await wait(selected('request'));
@@ -196,29 +205,25 @@ test('offline publication supports drill-down, restored history, deep links, key
   for (const entry of corpus) {
     await run(`document.getElementById('publication-tab-${entry.id}').click()`);
     await wait(selected(entry.id));
-    const geometry = await probe(entry.id, `(() => {
-      const node = document.querySelector('[data-node-id="${entry.node.id}"]');
-      const badge = document.querySelector('[data-publication-navigation="${entry.node.id}"]');
-      const body = node.getBoundingClientRect(), button = badge.getBoundingClientRect();
-      return { label: badge.getAttribute('aria-label'), x: button.x + button.width / 2,
-        y: button.y + button.height / 2, left: body.left, right: body.right, top: body.top, bottom: body.bottom };
+    const destination = corpus[(corpus.indexOf(entry) + 1) % corpus.length].id;
+    const action = await probe(entry.id, `(() => {
+      Archify.focus.set(${JSON.stringify(entry.node.id)}, {toggle:false});
+      return new Promise(resolve => requestAnimationFrame(() => {
+        const link = document.getElementById('publication-explore');
+        resolve({visible:!link.hidden, label:link.textContent, tag:link.tagName, href:link.hash,
+          arrows:document.querySelectorAll('[data-publication-navigation]').length});
+      }));
     })()`);
-    assert.match(geometry.label, /Explore inside/);
-    assert.ok(geometry.x >= geometry.left - 1 && geometry.x <= geometry.right + 1, `${entry.id}: badge tracks the node's transformed X`);
-    assert.ok(geometry.y >= geometry.top - 1 && geometry.y <= geometry.bottom + 1, `${entry.id}: badge tracks the node's transformed Y`);
-    if (entry.id === 'tree') {
-      const collapsed = await probe('tree', `(async () => {
-        Archify.treeBranches.collapse(${JSON.stringify(entry.node.parent)});
-        await new Promise(requestAnimationFrame);
-        const hidden = getComputedStyle(document.querySelector('[data-publication-navigation="${entry.node.id}"]')).display;
-        Archify.treeBranches.expand(${JSON.stringify(entry.node.parent)});
-        await new Promise(requestAnimationFrame);
-        return {hidden, shown:getComputedStyle(document.querySelector('[data-publication-navigation="${entry.node.id}"]')).display};
-      })()`);
-      assert.equal(collapsed.hidden, 'none');
-      assert.notEqual(collapsed.shown, 'none');
-    }
+    assert.equal(action.visible, true, `${entry.id}: linked component exposes passport navigation`);
+    assert.equal(action.label, `Explore inside: ${destination}`);
+    assert.equal(action.tag, 'A');
+    assert.equal(action.href, `#diagram=${destination}`);
+    assert.equal(action.arrows, 0);
+    await probe(entry.id, "document.getElementById('publication-explore').click(); true");
+    await wait(selected(destination));
   }
+  await run("document.getElementById('publication-tab-waterfall').click()");
+  await wait(selected('waterfall'));
   const previewUrl = await run(`(() => {
     const clone = document.documentElement.cloneNode(true);
     clone.querySelector('#publication-tabs').replaceChildren();

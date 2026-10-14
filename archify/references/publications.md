@@ -80,9 +80,10 @@ referenced JSON files together. Rendering uses saved source files.
 
 ## Reading
 
-Tabs expose every diagram. A linked node has an accessible arrow action and an
-**Explore inside** button in its details panel. Ordinary node clicks still
-select and explore the node; they do not navigate automatically.
+Tabs expose every diagram. Select a linked node to open its semantic passport,
+then follow the **Explore inside: destination** link directly below the passport
+header. Components have no navigation arrows overlaid on the diagram. Ordinary
+node clicks still select and explore the node; they do not navigate automatically.
 
 Back and browser Back/Forward follow actual navigation, restoring the prior
 reader selection, camera, and scroll position. There is no authored parent or
@@ -91,7 +92,7 @@ invented Up action. A direct shared address starts without a parent history.
 Addresses use `#diagram=<id>&reader=<opaque native state>`. The publication's
 Copy link action and native reader copy actions point to the publication, not
 temporary reader URLs. Existing PNG/JPEG/WebP/SVG/WebM exports operate on the
-active diagram. Navigation badges do not enter canonical diagram exports.
+active diagram. Passport navigation does not enter canonical diagram exports.
 Combined multi-page export is outside version 1.
 
 An editor's temporary Blob preview is not a shareable publication address.
