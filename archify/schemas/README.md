@@ -18,6 +18,12 @@ against one of the schemas in this folder before any layout work happens.
 | `timeline.schema.json` | `diagram_type: "timeline"` | `events` (`lanes` optional) |
 | `waterfall.schema.json` | `diagram_type: "waterfall"` | `spans` (each with optional `parent`) |
 | `common.schema.json` | shared `$defs` only (no top-level document) | — |
+| `publication.schema.json` | linked-diagram manifest, compiled with `publication` | `diagrams`, `links` |
+
+Publications reference independent typed source files and publish one tabbed
+HTML reader. See [Linked diagram publications](../references/publications.md)
+for navigation, source containment, and build contracts. Publication manifests
+are not ordinary diagram IR and do not have `diagram_type` or `meta`.
 
 Every diagram schema requires `schema_version`, `diagram_type`, `meta` (with
 `title` and a durable portable `output`), and its structural arrays — except `segments`, `activations`, ERD and class

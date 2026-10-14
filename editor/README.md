@@ -24,6 +24,45 @@ The path is resolved relative to the terminal's working directory. **Save file**
 
 For development, use `npm run dev` (also accepts `-- --file ...` and `-- --port 4174`). Assets are local; there are no runtime CDN dependencies.
 
+## Linked publications
+
+Start with `npm start -- --directory "D:\Diagrams"` and choose **Publication**.
+Open an existing manifest, or choose a new relative manifest filename, diagram ID
+and JSON source, then **Create publication draft**. A publication keeps each
+diagram in its own file; it does not replace the editor's document tabs.
+
+Use the panel to add diagrams, edit labels and optional C4 labels, reorder the
+diagram list, and choose the initial diagram. Select a diagram and its source
+component, then choose a target diagram or **No link**. Each source component
+has at most one optional target. Links are free navigation, not a parent tree;
+removing an entry removes its incoming/outgoing manifest links, never its file.
+**Edit diagram** opens its referenced JSON through the existing document tabs,
+preserving other diagram drafts. Compiler-supported sources outside the visual
+editor's supported contracts can be included, but open read-only for editing.
+
+**Save publication** explicitly writes only the manifest. New manifests cannot
+replace an existing file; open that manifest first. Existing saves check the
+opened revision. **Download publication JSON** backs up the current draft without
+marking the manifest saved. Sources are portable relative JSON paths under the manifest's
+folder; absolute paths, traversal and symbolic-link redirection are rejected.
+Publication output is a portable relative HTML path under that same folder.
+
+Save all referenced diagram drafts before **Render publication**. Rendering
+checks the saved manifest and each source revision, writes the HTML output, and
+shows a preview. If an external source changed, use **Reload publication** to
+refresh its revisions; this never discards diagram-tab drafts. Changes during a
+render discard the stale preview. The preview uses a session-only Blob URL:
+its **Copy link** is not shareable, and its reader's **Copy reading link** is
+unavailable there. For durable reading links, open the saved HTML output locally
+or host it at a stable HTTP(S) URL, then copy links from that exported publication.
+Local file links require access to the same file; use HTTP(S) hosting to share
+with others.
+Closing the panel retains its draft for this
+session, but publication drafts are not persisted across browser reloads: save
+before closing the editor. Browser-only offline publication authoring is
+explicitly unavailable because it cannot load referenced disk files. Standalone
+`--file` diagram editing is unchanged.
+
 ## Editing
 
 - Drag components; Shift-click to select several. Drag a selection to move it together.

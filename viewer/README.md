@@ -30,6 +30,12 @@ node archify/bin/archify.mjs compare architecture archify/examples/checkout-plat
 bytes. Rebuild other affected examples and distribution outputs according to
 [Contributing](../CONTRIBUTING.md#packages-and-generated-artifacts).
 
+The publication shell and native-reader bridge live in `archify/publication/`
+because they are package runtime sources, not template fragments.
+`Archify.view.restore(snapshot)` restores a validated camera snapshot for
+publication history; invalid snapshots throw. Export cleanup removes publication
+navigation badges from clones without changing the live reader.
+
 Assembly inserts JavaScript fragments verbatim at fixed markers.
 The CSS fragment is authored at column zero and reindented four spaces when it
 is inserted into the shell's `<style>` block; this preserves the delivered

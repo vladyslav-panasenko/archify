@@ -30,7 +30,7 @@ export default function WorkspacePanel({ id, disabled, onSwitch, onRename, pendi
       const [response, preferencesResponse] = await Promise.all([fetch("/api/workspace"), fetch("/api/project-preferences")]), data = await response.json(), preferencesData = await preferencesResponse.json();
       if (!response.ok) throw new Error(data.error);
       if (!preferencesResponse.ok) throw new Error(preferencesData.error);
-      setFiles(data.files); setFolders(data.folders || []); setSkipped(data.skipped); setError("");
+      setFiles(data.files.filter((file) => file.type !== "publication")); setFolders(data.folders || []); setSkipped(data.skipped); setError("");
       setSharedPreferences(preferencesData.preferences); setPreferencesRevision(preferencesData.revision);
       const current = data.files.find((file) => file.id === id);
       if (current) { rememberRecent(current); setMoveName((value) => value || current.name); }

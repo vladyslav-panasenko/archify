@@ -272,6 +272,15 @@ For design or PR review, Architecture Delta compares validated Before / Delta / 
 
 `node archify/bin/archify.mjs compare architecture base.json head.json architecture-delta.html --json`
 
+For C4-like exploration, [linked diagram publications](archify/references/publications.md)
+put multiple diagrams in one offline HTML with tabs and optional **Explore inside**
+component actions. Links are authored in a manifest; diagrams stay independently
+reusable. The editor also supports publication authoring.
+
+```bash
+node archify/bin/archify.mjs publication archify/examples/web-app.publication.json web-app-publication.html --json
+```
+
 [![Architecture Delta showing added, removed, changed, and moved authored facts](docs/assets/architecture-delta-proof.jpg)](examples/checkout-platform-delta.html)
 
 Not sure which one fits? Use the [interactive scenario guide](https://archify.si/guide.html), or ask the zero-dependency CLI:

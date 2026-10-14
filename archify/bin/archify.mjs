@@ -2189,6 +2189,7 @@ function invalidProvenance(artifactPath, sidecar, reason, evidence = {}) {
 }
 
 const COMMAND_USAGE = {
+  publication: '<manifest.json> [output.html] [--json]',
   render: '<type> <input.json> [output.html] [--quality standard|showcase] [--repo-root path]',
   compare: 'architecture <base.json> <head.json> [output.html] [--receipt path] [--json] [--quality standard|showcase] [--repo-root path]',
   deliver: '<type> <input.json> [output.html] [--json] [--open] [--quality standard|showcase] [--repo-root path]',
@@ -4246,6 +4247,35 @@ function commandRender(args) {
     env: rendererEnv(qualityArgs.quality, repoArgs.repoRoot),
   });
   if (result.status !== 0) exitFrom(result);
+}
+
+async function commandPublication(args) {
+  const json = args.includes('--json');
+  const positional = args.filter(arg => arg !== '--json');
+  try {
+    if (args.filter(arg => arg === '--json').length > 1 || positional.length < 1 ||
+        positional.length > 2 || positional.some(arg => arg.startsWith('-'))) {
+      rejectCliArgument('Usage: archify publication <manifest.json> [output.html] [--json]', {
+        subject: { command: 'publication' },
+      });
+    }
+    const { compilePublication } = await import('../publication/publication.mjs');
+    const receipt = await compilePublication(positional[0], positional[1] ? path.resolve(positional[1]) : undefined);
+    if (json) console.log(JSON.stringify({ schemaVersion: 1, command: 'publication', ...receipt }, null, 2));
+    else console.log(receipt.output);
+  } catch (error) {
+    reportArtifactFailure({
+      command: 'publication', json, stage: 'publication', input: positional[0],
+      error: error.message,
+      diagnostics: error.archifyDiagnostics || [{
+        code: error.archifyArgument?.code || error.code || 'publication/failed',
+        severity: 'error', message: error.message,
+        subject: error.archifyArgument?.subject || { input: positional[0] },
+        evidence: { systemCode: error.code },
+        supportedFixes: error.archifyArgument?.supportedFixes || ['resolve the reported publication error and retry'],
+      }],
+    });
+  }
 }
 
 function reportArtifactFailure({ command, json, stage, type, input, output, error, diagnostics = [], status = 1, checker, receiptId, provenance, update }) {
@@ -7072,6 +7102,9 @@ try {
       break;
     case 'render':
       commandRender(args);
+      break;
+    case 'publication':
+      await commandPublication(args);
       break;
     case 'compare':
       await commandCompare(args);

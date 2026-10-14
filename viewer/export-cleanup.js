@@ -1,5 +1,5 @@
       function cleanExportClone(clone) {
-        Array.prototype.forEach.call(clone.querySelectorAll('[data-ambient-flow-overlay]'), function (el) {
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-ambient-flow-overlay], [data-publication-navigation]'), function (el) {
           el.remove();
         });
         // Route interaction rewrites CSS declarations through CSSOM. Normalize

@@ -14,6 +14,15 @@ Read this only when the user asks for a reader-facing capability. Ordinary gener
 - Direct Relationship Pin makes a unique compiled relationship operable while preserving the authored line and stable relationship identity. It must fail closed on conflicting source/target/label/ID metadata.
 - Route Probe resolves exactly two endpoints over authored directed relationships. It never infers a route from geometry.
 
+## Linked publications
+
+[Publications](publications.md) package multiple native readers into one
+self-contained HTML with tabs and optional component destinations. They preserve
+ordinary node selection and add explicit Explore inside actions. History restores
+selection, camera, and scroll; copy actions retain the publication address.
+Hidden readers suspend motion, and canonical exports exclude navigation badges.
+Standalone diagrams do not acquire publication controls.
+
 ## Embedded reading addresses
 
 A host displaying the native reader in an opaque `srcdoc` frame may set

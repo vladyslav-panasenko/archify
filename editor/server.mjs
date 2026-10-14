@@ -13,6 +13,7 @@ import { createWorkspace } from "./workspace.mjs";
 import { assertResourceLimits } from "./src/resource-limits.mjs";
 import { migrateWorkflowDocument } from "../archify/migrations/workflow-v2.mjs";
 import { createServerHistory } from "./src/server-history.mjs";
+import { createPublicationService } from "./publication.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const execute = promisify(execFile);
@@ -120,6 +121,7 @@ export async function createEditorServer({
     ? await createWorkspace(directory, validate)
     : null;
   const versionHistory = workspace ? await createServerHistory(workspace.root, validate) : null;
+  const publications = workspace ? createPublicationService(workspace) : null;
   const token = randomBytes(32).toString("hex");
   // Resolve once: clients cannot choose a write path or replace it with a symlink.
   const startupFilePath = file ? await fs.realpath(path.resolve(file)) : null;
@@ -151,6 +153,11 @@ export async function createEditorServer({
         });
       const url = new URL(req.url, origins[0]);
       if (url.pathname.startsWith("/api/")) {
+        if (req.method === "GET" && url.pathname === "/api/publication") {
+          if (req.headers["x-editor-token"] !== token) return send(403, { error: "Editor session expired. Reload before opening a publication." });
+          if (!publications) return send(403, { error: "Start with --directory to author linked publications." });
+          return send(200, await publications.open(url.searchParams.get("id")));
+        }
         if (req.method === "GET" && url.pathname === "/api/workspace") {
           if (!workspace) return send(200, { files: [], enabled: false });
           await workspace.refresh();
@@ -171,7 +178,7 @@ export async function createEditorServer({
         }
         if (req.method === "GET" && url.pathname === "/api/document") {
           const workspaceId = workspace
-            ? url.searchParams.get("id") || workspace.list().files[0]?.id
+            ? url.searchParams.get("id") || workspace.list().files.find((entry) => entry.type !== "publication")?.id
             : null;
           const readPath = workspaceId
             ? await workspace.resolve(workspaceId)
@@ -218,6 +225,20 @@ export async function createEditorServer({
           return send(415, { error: "Send a JSON request." });
         const body = await readBody(req);
         if (body.document !== undefined) validate(body.document);
+        if (req.method === "POST" && url.pathname === "/api/publication/save") {
+          if (!publications) return send(403, { error: "Start with --directory to author linked publications." });
+          if (saving || rendering) return send(409, { error: "A save or render is in progress. Try again." });
+          saving = true;
+          try { return send(200, await publications.save(body)); }
+          finally { saving = false; }
+        }
+        if (req.method === "POST" && url.pathname === "/api/publication/render") {
+          if (!publications) return send(403, { error: "Start with --directory to render linked publications." });
+          if (rendering || saving) return send(409, { error: "A save or render is in progress. Try again." });
+          rendering = true;
+          try { return send(200, await publications.render(body)); }
+          finally { rendering = false; }
+        }
         if (req.method === "POST" && url.pathname === "/api/workspace/folder") {
           if (!workspace) return send(403, { error: "Start with --directory to manage project folders." });
           return send(200, await workspace.createFolder(body.name));

@@ -606,6 +606,20 @@
         reset: reset,
         reveal: reveal,
         centerAt: centerAt,
+        restore: function (snapshot) {
+          if (!snapshot || !Number.isFinite(snapshot.scale) || !Number.isFinite(snapshot.x) ||
+              !Number.isFinite(snapshot.y) || snapshot.scale < minimumZoom || snapshot.scale > maximumZoom ||
+              ['overview', 'manual', 'semantic'].indexOf(snapshot.mode) === -1) {
+            throw new TypeError('Invalid reader camera snapshot.');
+          }
+          interruptCamera('restore');
+          state.scale = snapshot.scale;
+          state.x = snapshot.x;
+          state.y = snapshot.y;
+          state.mode = snapshot.mode;
+          apply();
+          return true;
+        },
         logicalViewport: logicalViewport,
         sync: syncSemantic,
         state: function () { return { scale: state.scale, x: state.x, y: state.y, mode: state.mode }; }

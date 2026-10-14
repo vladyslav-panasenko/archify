@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "title": "Web Application Explorer",
+  "output": "web-app-publication.html",
+  "initial_diagram": "overview",
+  "diagrams": [
+    { "id": "overview", "label": "System overview", "source": "web-app.architecture.json", "c4_level": "Containers" },
+    { "id": "api", "label": "API internals", "source": "api-internals.architecture.json", "c4_level": "Components" },
+    { "id": "request", "label": "Cache miss request", "source": "cache-miss-request.sequence.json" },
+    { "id": "workflow", "label": "Agent tool workflow", "source": "agent-tool-call.workflow.json" }
+  ],
+  "links": [
+    { "from": { "diagram": "overview", "component": "api" }, "to": { "diagram": "api" } },
+    { "from": { "diagram": "overview", "component": "cache" }, "to": { "diagram": "request" } },
+    { "from": { "diagram": "api", "component": "router" }, "to": { "diagram": "request" } },
+    { "from": { "diagram": "api", "component": "service" }, "to": { "diagram": "workflow" } },
+    { "from": { "diagram": "request", "component": "api" }, "to": { "diagram": "api" } }
+  ]
+}

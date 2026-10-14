@@ -116,6 +116,7 @@ import ExtensionsPanel from "./ExtensionsPanel.jsx";
 import DiagramPacksPanel from "./DiagramPacksPanel.jsx";
 import PortsPanel from "./PortsPanel.jsx";
 import VersionHistoryPanel from "./VersionHistoryPanel.jsx";
+import PublicationPanel from "./PublicationPanel.jsx";
 
 const sides = {
   top: Position.Top,
@@ -487,6 +488,7 @@ function App() {
   const [panelSizes,setPanelSizes]=useState(readPanels),[focusMode,setFocusMode]=useState(false);
   const [contextMenu,setContextMenu]=useState(null);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [publicationVisible, setPublicationVisible] = useState(false);
   const [creation, setCreation] = useState(null);
   const [recovery, setRecovery] = useState(null);
   const recoveredText = useRef(null);
@@ -779,7 +781,7 @@ function App() {
     )
       return;
     await act(async () => {
-      if (session.workspaceId && session.writable)
+      if (session.workspaceId && session.writable && state)
         workspaceDrafts.current.set(session.workspaceId, {
           session,
           state,
@@ -812,7 +814,8 @@ function App() {
         );
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
-        load(data);
+        if (data.rawOnly) loadUnsupported(data);
+        else load(data);
         setRecovery(null);
         try {
           const stored = JSON.parse(
@@ -1159,6 +1162,7 @@ function App() {
   }
   useEffect(() => {
     const onCopy = (event) => {
+      if (publicationVisible) return;
       if (
         event.target.closest("input,textarea,select,[contenteditable]") ||
         !selection.length ||
@@ -1178,6 +1182,7 @@ function App() {
       }
     };
     const onPaste = (event) => {
+      if (publicationVisible) return;
       if (
         event.target.closest("input,textarea,select,[contenteditable]") ||
         !state ||
@@ -1381,7 +1386,7 @@ function App() {
   const documentTabs = session?.workspace
     ? [
         ...(session.workspaceId ? [{ id: session.workspaceId, name: session.name, dirty: hasUnsaved }] : []),
-        ...[...workspaceDrafts.current.entries()].map(([id, cached]) => ({
+        ...[...workspaceDrafts.current.entries()].filter(([id]) => id !== session.workspaceId).map(([id, cached]) => ({
           id,
           name: cached.session.name,
           dirty: cached.saved !== serialize(cached.state.present) || cached.rawText !== null,
@@ -1389,13 +1394,17 @@ function App() {
       ]
     : [];
   void tabsVersion;
+  const publicationUi = <PublicationPanel visible={publicationVisible} session={session} drafts={documentTabs} disabled={busy || rawDirty || !!draft} onOpenDiagram={switchWorkspace} onClose={() => setPublicationVisible(false)} />;
 
   if (unsupportedSource)
     return (
+      <>
+      {publicationUi}
       <div className="unsupported-document">
         <header className="toolbar">
           <div className="brand"><span className="brand-mark" aria-hidden="true">A</span><strong>Archify Editor</strong></div>
           <button onClick={() => picker.current?.click()}>Open another JSON</button>
+          <button onClick={() => setPublicationVisible(true)}>Publication</button>
           <button className="primary" onClick={() => download(unsupportedSource.text, session.name, "application/json")}>Download original JSON</button>
         </header>
         <main>
@@ -1406,6 +1415,7 @@ function App() {
           <input ref={picker} hidden type="file" accept=".json,application/json" onChange={(e) => { void importFile(e.target.files[0]); e.target.value = ""; }} />
         </main>
       </div>
+      </>
     );
 
   const panelDisabled = (key) =>
@@ -1484,6 +1494,7 @@ function App() {
     const rect=event.target.getBoundingClientRect();setContextMenu({ids,x:event.clientX||rect.left,y:event.clientY||rect.top});
   }
   function onKeys(event) {
+    if (publicationVisible) return;
     if(contextMenu)return;
     if(event.key==='F10'&&event.shiftKey){const node=event.target.closest('.react-flow__node');if(node)openContext(event,node.getAttribute('data-id')?.slice(2));return;}
     if (dialog.current?.open) return;
@@ -1599,6 +1610,8 @@ function App() {
   }
 
   return (
+    <>
+    {publicationUi}
     <Editing.Provider
       value={{
         enabled: !busy && !rawDirty,
@@ -1759,6 +1772,7 @@ function App() {
             >
               Open JSON
             </button>
+            <button disabled={!session || busy} onClick={() => setPublicationVisible(true)}>Publication</button>
             <button
               disabled={!state?.past.length || busy || rawDirty || !!draft}
               onClick={() => setState(undo)}
@@ -3530,9 +3544,8 @@ function App() {
         </dialog>
       </div>
     </Editing.Provider>
+    </>
   );
 }
 
 createRoot(document.getElementById("root")).render(<App />);
-
-

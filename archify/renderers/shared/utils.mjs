@@ -133,7 +133,7 @@ const SUBTITLE_SLOT_RE = /^([ \t]*)<p class="subtitle">\[Subtitle description\]<
 const SOURCE_EVIDENCE_PLACEHOLDER = '    <!-- ARCHIFY:SOURCE_EVIDENCE_DATA -->';
 const I18N_PLACEHOLDER = '    <!-- ARCHIFY:I18N_DATA -->';
 
-function serializeScriptJson(value) {
+export function serializeScriptJson(value) {
   return JSON.stringify(value)
     .replaceAll('<', '\\u003c')
     .replaceAll('>', '\\u003e')

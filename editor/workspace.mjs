@@ -47,6 +47,8 @@ export async function createWorkspace(directory, validate) {
               throw new Error("Too large");
             const document = JSON.parse(await fs.readFile(file, "utf8"));
             let type = "unsupported";
+            if (document?.schema_version === 1 && Array.isArray(document.diagrams) && !document.diagram_type)
+              type = "publication";
             try {
               validate(document);
               type = document.diagram_type;
@@ -102,9 +104,11 @@ export async function createWorkspace(directory, validate) {
       throw new Error("Use a safe path within the opened workspace.");
     return parts;
   }
-  async function target(name) {
+  async function target(name, extension = ".json") {
     await checkRoot();
-    const parts = safeParts(name, true);
+    const parts = safeParts(name, extension === ".json");
+    if (!name.endsWith(extension))
+      throw new Error(`Use a relative filename ending in ${extension}.`);
     const file = path.join(root, ...parts),
       parent = path.dirname(file);
     if ((await fs.realpath(parent)) !== parent)
@@ -232,8 +236,8 @@ export async function createWorkspace(directory, validate) {
     finally { await fs.rm(temporary, { force: true }); }
     return path.relative(root, file).split(path.sep).join("/");
   }
-  async function saveAs(name, document, revision) {
-    validate(document);
+  async function saveAs(name, document, revision, validator = validate) {
+    validator(document);
     const entry = await target(name),
       { file, stat } = entry;
     if (stat?.size > 5 * 1024 * 1024)
@@ -286,7 +290,7 @@ export async function createWorkspace(directory, validate) {
       await fs.rm(temporary, { force: true });
     }
     const id = digest(entry.name);
-    files.set(id, { id, name: entry.name, type: document.diagram_type, file });
+    files.set(id, { id, name: entry.name, type: document.diagram_type || "publication", file });
     return { id, name: entry.name, file, revision: digest(text) };
   }
   await refresh();
@@ -301,6 +305,8 @@ export async function createWorkspace(directory, validate) {
     readPreferences,
     savePreferences,
     writeOutput,
+    outputTarget: (name) => target(name, ".html"),
+    publicationTarget: (name) => target(name),
     list: () => ({
       files: [...files.values()].map(({ file, ...entry }) => entry),
       folders,

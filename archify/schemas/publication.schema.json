@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tt-a1i/archify/schemas/publication.schema.json",
+  "title": "Archify Linked Diagram Publication",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "title", "output", "initial_diagram", "diagrams", "links"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "output": { "$ref": "common.schema.json#/$defs/portableOutputPath" },
+    "initial_diagram": { "$ref": "common.schema.json#/$defs/id" },
+    "diagrams": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "source"],
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/id" },
+          "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "source": { "type": "string", "minLength": 1, "maxLength": 2048 },
+          "c4_level": { "type": "string", "minLength": 1, "maxLength": 48 }
+        }
+      }
+    },
+    "links": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to"],
+        "properties": {
+          "from": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["diagram", "component"],
+            "properties": {
+              "diagram": { "$ref": "common.schema.json#/$defs/id" },
+              "component": { "$ref": "common.schema.json#/$defs/id" }
+            }
+          },
+          "to": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["diagram"],
+            "properties": {
+              "diagram": { "$ref": "common.schema.json#/$defs/id" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -26,6 +26,7 @@ export function installOfflineRuntime(storage = localStorage) {
       if (["/api/workspace", "/api/workspace/search"].includes(url.pathname)) return response(200, { files: [], folders: [], results: [], enabled: false });
       if (url.pathname === "/api/project-preferences") return response(200, { preferences: null, revision: null, enabled: false });
       if (url.pathname === "/api/history") return response(200, { entries: [], enabled: false });
+      if (url.pathname.startsWith("/api/publication")) return response(501, { error: "Publication authoring is unavailable in the browser-only offline edition because referenced disk JSON files cannot be loaded. Use the local or desktop edition with --directory." });
       const body = init.body ? JSON.parse(init.body) : {};
       if (url.pathname === "/api/validate") { validate(body.document); return response(200, { valid: true, offline: true }); }
       if (url.pathname === "/api/migrate") {
