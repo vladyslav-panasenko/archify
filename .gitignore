@@ -3,6 +3,7 @@
 node_modules/
 /release/
 /.tmp/
+/.archify/
 /editor/offline-dist/
 .wrangler/
 .claude/
