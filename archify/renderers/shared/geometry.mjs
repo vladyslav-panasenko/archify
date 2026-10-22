@@ -2,7 +2,7 @@
 // pure; renderers own their layout tables and pass measured rects
 // ({x, y, width, height, cx, cy}) in.
 
-import { recordDiagnostic } from './diagnostics.mjs';
+import { recordDiagnostic } from './diagnostic-recording.mjs';
 
 // In degraded mode (no ajv) a type-wrong top-level field reaches the renderer.
 // Coerce non-arrays to [] so the module-level Maps build without throwing and

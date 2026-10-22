@@ -1,6 +1,8 @@
 # Archify Editor
 
-A local visual editor for all five Archify JSON diagram types. React Flow provides the editing canvas; Archify generates the final HTML. The canvas is a working representation, not an exact preview of the compiler's routing, typography, or themes.
+A local visual editor for all five Archify JSON diagram types. React Flow provides the editing canvas; Archify generates the final HTML. Architecture connections use the same routing and endpoint geometry as the HTML renderer, including automatic ports and authored waypoints. The canvas remains a working representation, not an exact preview of final label placement, typography, themes, or the routing of other diagram types.
+
+Architecture routing runs in a background worker so large diagrams remain editable. A status message identifies temporary canvas routes while the final routes are being calculated; newer edits cancel stale calculations.
 
 ## Start
 

@@ -11,8 +11,8 @@ import { brandLabelFitWidth, brandMetadataFor, brandTopRailProblem, renderBrandM
 import { minimumReadableSourceTextPx } from '../shared/desktop-readability.mjs';
 import { translateMessage as i18nText } from '../shared/i18n.mjs';
 import { gridLayout, resolveComponentPos, validateGridPlacement } from './grid.mjs';
-import { createRouter } from './routing.mjs';
-import { placeAutomaticLabels, reservedLabelRect } from '../shared/automatic-labels.mjs';
+import { architectureBoundaryRect, connectionLabelBoxAt, createArchitectureRouter } from './scene-routing.mjs';
+import { placeAutomaticLabels } from '../shared/automatic-labels.mjs';
 import { cleanRouteDetourProblems } from '../shared/route-quality.mjs';
 import {
   asArray,
@@ -64,11 +64,6 @@ const layout = {
   defaultW: 120,
   defaultH: 60,
   margin: 40,
-  // Boundary padding — the 30/50 rule that was a hand-arithmetic footgun
-  // (CHANGELOG v2.2.1): 30px on top/left/right, plus 20px extra at the bottom.
-  boundaryPad: 30,
-  boundaryExtraBottom: 20,
-  boundaryLabelBaseline: 18,
   boundaryLabelClearance: 4,
   boundaryLabelFontPreferred: 9,
   boundaryLabelFontMinimum: 6,
@@ -108,35 +103,7 @@ for (const [index, c] of asArray(arch.components).entries()) {
 
 // ---- Boundaries computed from the `wraps` id list ---------------------------
 function boundaryRect(boundary) {
-  const members = asArray(boundary.wraps).map((id) => components.get(id)).filter(Boolean);
-  if (!members.length) return null;
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const member of members) {
-    minX = Math.min(minX, member.x);
-    minY = Math.min(minY, member.y);
-    maxX = Math.max(maxX, member.x + member.width);
-    maxY = Math.max(maxY, member.y + member.height);
-  }
-  const pad = boundary.pad ?? layout.boundaryPad;
-  const topPad = Math.max(
-    pad,
-    layout.boundaryLabelBaseline + layout.boundaryLabelClearance,
-    // Routes must avoid the title rail that the final frame will contain.
-    enforcesBoundaryTitleComposition
-      ? layout.boundaryLabelMaskHeight + layout.boundaryLabelClearance + layout.boundaryLabelFrameInset
-      : 0,
-  );
-  return {
-    ...boundary,
-    x: minX - pad,
-    y: minY - topPad,
-    width: maxX - minX + pad * 2,
-    height: maxY - minY + topPad + layout.boundaryExtraBottom,
-    memberTop: minY,
-  };
+  return architectureBoundaryRect(arch, boundary, components);
 }
 
 function rectContains(outer, inner) {
@@ -164,11 +131,6 @@ const resolvedLabelPoints = new Map();
 function connectionLabelBox(conn) {
   if (!conn.label) return null;
   return connectionLabelBoxAt(conn, resolvedLabelPoints.get(conn) || labelPoint(conn, pathFor(conn).points));
-}
-
-function connectionLabelBoxAt(conn, [lx, ly]) {
-  const width = Math.max(30, textUnits(conn.label) * 4.8 + 10);
-  return { x: lx - width / 2, y: ly - 10, width, height: 14, lx, ly };
 }
 
 function connectionLabelRects() {
@@ -355,25 +317,7 @@ function layoutBoundaryTitles(rawBoundaries, minimumFontSize) {
 // automatic route never borrows a frame border as its corridor), never the
 // title-expanded frames or the viewBox.
 const rawBoundaries = asArray(arch.boundaries).map(boundaryRect).filter(Boolean);
-const routerOptions = {
-  distinctAutomaticPorts: true,
-  preferReadableRoutes: true,
-  // A single outward stub below the scene can remove a crossing without
-  // widening the canvas or shrinking its text. Fixed canvases keep their bounds.
-  readabilityBottomMargin: arch.meta?.viewBox ? 0 : 24,
-  frames: rawBoundaries.map((boundary) => ({
-    ...boundary,
-    radius: boundary.kind === 'security-group' ? 8 : 12,
-  })),
-  labelRectFor: (conn, points, { routes, labels }) => (conn.label ? reservedLabelRect({
-    label: { relation: conn, label: conn.label, ...connectionLabelBoxAt(conn, labelPoint(conn, points)) },
-    points,
-    routes: routes.map((route, index) => ({ relationIndex: index, points: route })),
-    labels,
-    components: [...components.values()],
-  }) : null),
-};
-const { pathFor, connectionSides, connectionEndpointSide, authoredPort } = createRouter(components, arch.connections, routerOptions);
+const { pathFor, connectionSides, connectionEndpointSide, authoredPort } = createArchitectureRouter(arch, components, rawBoundaries);
 function hasAutomaticRouteGeometry(connection) {
   return !Array.isArray(connection?.via)
     && (!connection?.route || connection.route === 'auto')

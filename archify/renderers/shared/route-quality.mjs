@@ -1,4 +1,4 @@
-import { recordDiagnostic } from './diagnostics.mjs';
+import { recordDiagnostic } from './diagnostic-recording.mjs';
 import {
   asArray,
   isFinitePoint,

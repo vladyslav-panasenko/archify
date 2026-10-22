@@ -312,10 +312,14 @@ function ConnectionEdge(props) {
         .join(" "),
       ...data.labelAt,
     ];
+  if (data.architectureRoute)
+    result = [data.architectureRoute.d, ...data.architectureRoute.labelPoint];
   const point =
     data.labelAt ||
     automaticLabelPoint(
-      [result[1] + (data.labelDx || 0), result[2] + (data.labelDy || 0)],
+      data.architectureRoute
+        ? [result[1], result[2]]
+        : [result[1] + (data.labelDx || 0), result[2] + (data.labelDy || 0)],
       data.label || "",
       data.editorBoxes || [],
     );
@@ -1327,6 +1331,23 @@ function App() {
     drawConnections,
     visibleIds,
   ]);
+  const [architecturePreview, setArchitecturePreview] = useState(null);
+  useEffect(() => {
+    if (documentModel?.diagram_type !== "architecture") return;
+    const worker = new Worker(new URL("./architecture-routing.worker.mjs", import.meta.url), { type: "module" });
+    worker.onmessage = ({ data }) => {
+      setArchitecturePreview({ document: documentModel, routes: data });
+      worker.terminate();
+    };
+    worker.onerror = (event) => {
+      setError(`Architecture route preview failed: ${event.message || "Could not load or execute the routing worker."}`);
+      setArchitecturePreview({ document: documentModel, routes: null, failed: true });
+      worker.terminate();
+    };
+    worker.postMessage(documentModel);
+    return () => worker.terminate();
+  }, [documentModel]);
+  const architectureGeometry = architecturePreview && architecturePreview.document === documentModel ? architecturePreview.routes : null;
   const edges = useMemo(
     () => {
       const portSides = new Map((documentModel?.components || []).flatMap((component) => (component.ports || []).map((port) => [port.id, port.side])));
@@ -1334,10 +1355,11 @@ function App() {
         id: `e:${index}`,
         source: `c:${e.from}`,
         target: `c:${e.to}`,
-        sourceHandle: `source-${portSides.get(e.fromPort) || e.fromSide || "right"}`,
-        targetHandle: `target-${portSides.get(e.toPort) || e.toSide || "left"}`,
+        sourceHandle: `source-${architectureGeometry?.[index].fromSide || portSides.get(e.fromPort) || e.fromSide || "right"}`,
+        targetHandle: `target-${architectureGeometry?.[index].toSide || portSides.get(e.toPort) || e.toSide || "left"}`,
         data: {
           ...(options.edgeData?.(documentModel, e) || e),
+          architectureRoute: architectureGeometry?.[index],
           editorBoxes: components(documentModel),
           segmentEditing: documentModel?.diagram_type === "architecture",
           labelEditing: documentModel?.diagram_type !== "lifecycle",
@@ -1349,7 +1371,7 @@ function App() {
         hidden: !visibleIds.has(e.from) || !visibleIds.has(e.to),
       }));
     },
-    [documentModel, edgeIndex, visibleIds],
+    [documentModel, edgeIndex, visibleIds, architectureGeometry],
   );
   // Overlap diagnostics describe committed edits; dragging must not run the
   // quadratic all-pairs check on every pointer event.
@@ -2056,7 +2078,13 @@ function App() {
             <div className="canvas-heading">
               <div>
                 <h1>{documentModel?.meta?.title || "Archify diagram"}</h1>
-                <p>Arrange the diagram. Save the JSON.</p>
+                <p aria-live="polite">
+                  {documentModel?.diagram_type === "architecture" && !architectureGeometry
+                    ? architecturePreview?.document === documentModel && architecturePreview?.failed
+                      ? "Final routes unavailable; temporary routes shown. See error."
+                      : "Calculating final routes; temporary routes shown."
+                    : "Arrange the diagram. Save the JSON."}
+                </p>
               </div>
               <label className="snap">
                 <input
@@ -3382,7 +3410,9 @@ function App() {
                           />
                           <p className="muted">
                             Blank coordinates restore automatic placement.
-                            Archify computes the final route when rendering.
+                            {documentModel.diagram_type === "architecture"
+                              ? " The canvas updates to the HTML renderer's connection routes after calculation."
+                              : " Archify computes the final route when rendering."}
                           </p>
                         </>
                       )}
